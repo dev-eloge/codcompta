@@ -18,4 +18,12 @@ abstract class Controller
 
         return $merchant;
     }
+
+    /**
+     * Stop with a 404 when a record does not belong to the merchant of the signed-in user.
+     */
+    protected function ensureOwned(Request $request, ?int $merchantId): void
+    {
+        abort_unless($merchantId !== null && $merchantId === $this->merchantOf($request)->id, 404);
+    }
 }

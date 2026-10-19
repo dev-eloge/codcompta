@@ -16,7 +16,7 @@ return new class extends Migration
             $table->json('parsed')->nullable()->after('status');
             $table->timestamp('parsed_at')->nullable()->after('parsed');
 
-            $table->index(['agency_id', 'body_hash']);
+            $table->index('body_hash');
         });
     }
 
@@ -26,7 +26,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('raw_messages', function (Blueprint $table) {
-            $table->dropIndex(['agency_id', 'body_hash']);
+            $table->dropIndex(['body_hash']);
             $table->dropColumn(['body_hash', 'parsed', 'parsed_at']);
         });
     }

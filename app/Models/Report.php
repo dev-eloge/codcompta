@@ -29,6 +29,8 @@ class Report extends Model
     protected $fillable = [
         'agency_id',
         'raw_message_id',
+        'sheet_source_id',
+        'sheet_row_key',
         'validated_by',
         'period_start',
         'period_end',
@@ -56,6 +58,19 @@ class Report extends Model
     public function validator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'validated_by');
+    }
+
+    public function sheetSource(): BelongsTo
+    {
+        return $this->belongsTo(SheetSource::class);
+    }
+
+    /**
+     * Ad spend written on the same sheet row as this report.
+     */
+    public function adSpends(): HasMany
+    {
+        return $this->hasMany(AdSpend::class);
     }
 
     public function lines(): HasMany

@@ -1,6 +1,7 @@
 import FlashMessage from '@/components/flash-message';
 import InputError from '@/components/input-error';
 import { NativeSelect } from '@/components/native-select';
+import { DeleteButton, EditButton } from '@/components/row-actions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,7 +9,7 @@ import AppLayout from '@/layouts/app-layout';
 import { formatNumber, formatPeriod } from '@/lib/format';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, useForm } from '@inertiajs/react';
-import { FormEventHandler } from 'react';
+import { FormEventHandler, useRef, useState } from 'react';
 
 interface Country {
     id: number;
@@ -18,6 +19,8 @@ interface Country {
 
 interface AdSpend {
     id: number;
+    country_id: number;
+    agency_id: number | null;
     country: string;
     agency: string | null;
     period_start: string;
@@ -38,19 +41,48 @@ const breadcrumbs: BreadcrumbItem[] = [{ title: 'Pub', href: '/pub' }];
 const platformLabels: Record<string, string> = { meta: 'Meta (Facebook, Instagram)', tiktok: 'TikTok', autre: 'Autre' };
 
 export default function AdSpendsIndex({ countries, adSpends, platforms, today }: Props) {
-    const { data, setData, post, processing, errors, reset } = useForm({
+    const blank = {
         country_id: countries.length > 0 ? String(countries[0].id) : '',
         agency_id: '',
         period_start: today,
         period_end: today,
         amount: '',
         platform: 'meta',
-    });
+    };
+    const { data, setData, post, put, processing, errors, reset, clearErrors } = useForm(blank);
+    const [editingId, setEditingId] = useState<number | null>(null);
+    const formRef = useRef<HTMLFormElement>(null);
+
+    const startEditing = (adSpend: AdSpend) => {
+        clearErrors();
+        setEditingId(adSpend.id);
+        setData({
+            country_id: String(adSpend.country_id),
+            agency_id: adSpend.agency_id === null ? '' : String(adSpend.agency_id),
+            period_start: adSpend.period_start,
+            period_end: adSpend.period_end,
+            amount: String(adSpend.amount),
+            platform: adSpend.platform,
+        });
+        formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+
+    const stopEditing = () => {
+        setEditingId(null);
+        clearErrors();
+        setData(blank);
+    };
 
     const agencies = countries.find((country) => String(country.id) === data.country_id)?.agencies ?? [];
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
+        if (editingId !== null) {
+            put(route('ad-spends.update', editingId), { preserveScroll: true, onSuccess: stopEditing });
+
+            return;
+        }
+
         post(route('ad-spends.store'), { preserveScroll: true, onSuccess: () => reset('amount') });
     };
 
@@ -78,7 +110,12 @@ export default function AdSpendsIndex({ countries, adSpends, platforms, today }:
                         .
                     </p>
                 ) : (
-                    <form onSubmit={submit} className="glass grid gap-4 rounded-2xl p-5 sm:grid-cols-2 md:p-6">
+                    <form
+                        ref={formRef}
+                        onSubmit={submit}
+                        className={`glass grid scroll-mt-4 gap-4 rounded-2xl p-5 transition-shadow sm:grid-cols-2 md:p-6 ${editingId !== null ? 'ring-primary/50 ring-2' : ''}`}
+                    >
+                        {editingId !== null && <p className="text-primary text-sm font-semibold sm:col-span-2">Modification d'une dépense</p>}
                         <div className="grid gap-2">
                             <Label htmlFor="country_id">Pays</Label>
                             <NativeSelect
@@ -151,10 +188,15 @@ export default function AdSpendsIndex({ countries, adSpends, platforms, today }:
                             <InputError message={errors.platform} />
                         </div>
 
-                        <div className="sm:col-span-2">
+                        <div className="flex gap-2 sm:col-span-2">
                             <Button type="submit" disabled={processing}>
-                                Enregistrer la dépense
+                                {editingId !== null ? 'Enregistrer les modifications' : 'Enregistrer la dépense'}
                             </Button>
+                            {editingId !== null && (
+                                <Button type="button" variant="ghost" onClick={stopEditing}>
+                                    Annuler
+                                </Button>
+                            )}
                         </div>
                     </form>
                 )}
@@ -165,7 +207,7 @@ export default function AdSpendsIndex({ countries, adSpends, platforms, today }:
                         <p className="text-muted-foreground text-sm">Aucune dépense pub enregistrée.</p>
                     ) : (
                         <div className="glass overflow-x-auto rounded-2xl">
-                            <table className="w-full min-w-[560px] text-sm">
+                            <table className="w-full min-w-[640px] text-sm">
                                 <thead className="bg-primary/8 text-left">
                                     <tr>
                                         <th scope="col" className="px-4 py-3 font-semibold">
@@ -183,6 +225,9 @@ export default function AdSpendsIndex({ countries, adSpends, platforms, today }:
                                         <th scope="col" className="px-4 py-3 text-right font-semibold">
                                             Montant (F)
                                         </th>
+                                        <th scope="col" className="w-20 px-2 py-3">
+                                            <span className="sr-only">Actions</span>
+                                        </th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -195,6 +240,21 @@ export default function AdSpendsIndex({ countries, adSpends, platforms, today }:
                                             <td className="px-3 py-2.5">{adSpend.agency ?? 'Toutes'}</td>
                                             <td className="px-3 py-2.5">{platformLabels[adSpend.platform] ?? adSpend.platform}</td>
                                             <td className="px-4 py-2.5 text-right font-semibold tabular-nums">{formatNumber(adSpend.amount)}</td>
+                                            <td className="px-2 py-1.5">
+                                                <div className="flex justify-end">
+                                                    <EditButton
+                                                        label="Modifier cette dépense"
+                                                        active={editingId === adSpend.id}
+                                                        onClick={() => (editingId === adSpend.id ? stopEditing() : startEditing(adSpend))}
+                                                    />
+                                                    <DeleteButton
+                                                        label="Supprimer cette dépense"
+                                                        title="Supprimer cette dépense pub ?"
+                                                        description={`${formatNumber(adSpend.amount)} F, ${formatPeriod(adSpend.period_start, adSpend.period_end)}. Le bénéfice de la période sera recalculé.`}
+                                                        url={route('ad-spends.destroy', adSpend.id)}
+                                                    />
+                                                </div>
+                                            </td>
                                         </tr>
                                     ))}
                                 </tbody>

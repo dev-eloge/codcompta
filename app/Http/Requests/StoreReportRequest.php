@@ -106,6 +106,7 @@ class StoreReportRequest extends FormRequest
         return Report::query()
             ->where('agency_id', $this->input('agency_id'))
             ->counted()
+            ->when($this->route('report'), fn ($query, $report) => $query->whereKeyNot($report->id))
             ->whereDate('period_start', '<=', $this->input('period_end'))
             ->whereDate('period_end', '>=', $this->input('period_start'))
             ->exists();

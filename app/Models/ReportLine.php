@@ -15,9 +15,11 @@ class ReportLine extends Model
     protected $fillable = [
         'report_id',
         'product_id',
+        'label',
         'quantity',
         'amount',
         'unit_cost_applied',
+        'purchase_cost',
     ];
 
     public function report(): BelongsTo
@@ -30,9 +32,12 @@ class ReportLine extends Model
         return $this->belongsTo(Product::class);
     }
 
+    /**
+     * A line imported from a sheet carries its own purchase cost; otherwise quantity × unit cost.
+     */
     public function purchaseCost(): int
     {
-        return $this->quantity * $this->unit_cost_applied;
+        return $this->purchase_cost ?? $this->quantity * $this->unit_cost_applied;
     }
 
     /**
@@ -46,6 +51,7 @@ class ReportLine extends Model
             'quantity' => 'integer',
             'amount' => 'integer',
             'unit_cost_applied' => 'integer',
+            'purchase_cost' => 'integer',
         ];
     }
 }

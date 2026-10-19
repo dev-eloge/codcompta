@@ -11,13 +11,14 @@ import { useInitials } from '@/hooks/use-initials';
 import { cn } from '@/lib/utils';
 import { type BreadcrumbItem, type NavItem, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
-import { ClipboardPlus, Megaphone, Menu, Search, Settings2, TableProperties } from 'lucide-react';
+import { ClipboardPlus, FileSpreadsheet, Megaphone, Menu, MessageSquareText, Search, Settings2, TableProperties } from 'lucide-react';
 import AppLogo from './app-logo';
 import AppLogoIcon from './app-logo-icon';
 
 const mainNavItems: NavItem[] = [
     { title: 'Rapports', url: '/rapports', icon: TableProperties },
     { title: 'Coller un message', url: '/messages/coller', icon: MessageSquareText },
+    { title: 'Google Sheets', url: '/sheets', icon: FileSpreadsheet },
     { title: 'Saisir un rapport', url: '/rapports/saisie', icon: ClipboardPlus },
     { title: 'Pub', url: '/pub', icon: Megaphone },
     { title: 'Référentiel', url: '/referentiel', icon: Settings2 },

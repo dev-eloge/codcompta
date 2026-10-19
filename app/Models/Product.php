@@ -45,9 +45,13 @@ class Product extends Model
      */
     public function costAt(Carbon|string $date): ?int
     {
-        return $this->costs()
+        $cost = $this->costs()
             ->whereDate('valid_from', '<=', Carbon::parse($date))
             ->orderByDesc('valid_from')
             ->value('unit_cost');
+
+        // Before its first recorded cost, a product is still bought at that first cost:
+        // a report dated earlier than the day the product was added must not ask for it again.
+        return $cost ?? $this->costs()->orderBy('valid_from')->value('unit_cost');
     }
 }

@@ -42,3 +42,10 @@ it('explique en français une clé manquante ou refusée', function () {
     expect(fn () => (new ClaudeMessageParser('bad', 'claude-sonnet-5-5'))->parse($this->agency, 'Rapport', '2026-10-19'))
         ->toThrow(MessageParsingException::class, 'refusée');
 });
+
+it('explique en français un compte sans crédit', function () {
+    Http::fake(['api.anthropic.com/*' => Http::response(['type' => 'error', 'error' => ['type' => 'invalid_request_error', 'message' => 'Your credit balance is too low to access the Anthropic API.']], 400)]);
+
+    expect(fn () => (new ClaudeMessageParser('cle', 'claude-sonnet-5-5'))->parse($this->agency, 'Rapport', '2026-10-19'))
+        ->toThrow(MessageParsingException::class, "n'a plus de crédit");
+});

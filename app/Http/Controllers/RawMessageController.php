@@ -130,6 +130,19 @@ class RawMessageController extends Controller
     }
 
     /**
+     * Removes a pasted message; reports already recorded from it stay.
+     */
+    public function destroy(Request $request, RawMessage $message): RedirectResponse
+    {
+        $message->load('agency.country');
+        $this->ensureOwned($request, $message->agency->country->merchant_id);
+
+        $message->delete();
+
+        return to_route('messages.create')->with('success', 'Message supprimé. Les rapports déjà enregistrés depuis ce message sont gardés.');
+    }
+
+    /**
      * @param  array<string, mixed>  $proposal
      * @param  list<Report>  $recorded
      * @return array<string, mixed>

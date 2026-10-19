@@ -1,6 +1,7 @@
 import FlashMessage from '@/components/flash-message';
 import InputError from '@/components/input-error';
 import { NativeSelect } from '@/components/native-select';
+import { DeleteButton } from '@/components/row-actions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -116,9 +117,17 @@ export default function MessagesShow({ message, warnings, proposals, products }:
                             {messageStatus[message.status].label}
                         </span>
                     </div>
-                    <p className="text-muted-foreground text-xs">
-                        {message.agency.name}, {message.agency.country}
-                    </p>
+                    <div className="flex items-center justify-between gap-2">
+                        <p className="text-muted-foreground text-xs">
+                            {message.agency.name}, {message.agency.country}
+                        </p>
+                        <DeleteButton
+                            label="Supprimer ce message"
+                            title="Supprimer ce message ?"
+                            description="Le texte collé et sa lecture seront supprimés. Les rapports déjà enregistrés depuis ce message sont gardés."
+                            url={route('messages.destroy', message.id)}
+                        />
+                    </div>
                     <pre className="bg-background/70 max-h-[28rem] overflow-auto rounded-xl border p-3 font-mono text-xs leading-relaxed whitespace-pre-wrap">
                         {message.body}
                     </pre>

@@ -30,6 +30,12 @@ return [
         'timeout' => (int) env('ANTHROPIC_TIMEOUT', 90),
     ],
 
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect' => env('GOOGLE_REDIRECT_URI'),
+    ],
+
     'resend' => [
         'key' => env('RESEND_KEY'),
     ],

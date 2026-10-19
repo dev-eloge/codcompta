@@ -7,8 +7,8 @@ import { Head, useForm } from '@inertiajs/react';
 import { FormEventHandler, useRef } from 'react';
 
 import HeadingSmall from '@/components/heading-small';
+import { PasswordInput } from '@/components/password-input';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -60,12 +60,11 @@ export default function Password() {
                         <div className="grid gap-2">
                             <Label htmlFor="current_password">Mot de passe actuel</Label>
 
-                            <Input
+                            <PasswordInput
                                 id="current_password"
                                 ref={currentPasswordInput}
                                 value={data.current_password}
                                 onChange={(e) => setData('current_password', e.target.value)}
-                                type="password"
                                 className="mt-1 block w-full"
                                 autoComplete="current-password"
                                 placeholder="Mot de passe actuel"
@@ -77,12 +76,11 @@ export default function Password() {
                         <div className="grid gap-2">
                             <Label htmlFor="password">Nouveau mot de passe</Label>
 
-                            <Input
+                            <PasswordInput
                                 id="password"
                                 ref={passwordInput}
                                 value={data.password}
                                 onChange={(e) => setData('password', e.target.value)}
-                                type="password"
                                 className="mt-1 block w-full"
                                 autoComplete="new-password"
                                 placeholder="Nouveau mot de passe"
@@ -94,11 +92,10 @@ export default function Password() {
                         <div className="grid gap-2">
                             <Label htmlFor="password_confirmation">Confirmer le mot de passe</Label>
 
-                            <Input
+                            <PasswordInput
                                 id="password_confirmation"
                                 value={data.password_confirmation}
                                 onChange={(e) => setData('password_confirmation', e.target.value)}
-                                type="password"
                                 className="mt-1 block w-full"
                                 autoComplete="new-password"
                                 placeholder="Confirmer le mot de passe"

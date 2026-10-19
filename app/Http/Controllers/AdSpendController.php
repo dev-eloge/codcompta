@@ -36,6 +36,8 @@ class AdSpendController extends Controller
                 ->get()
                 ->map(fn (AdSpend $adSpend) => [
                     'id' => $adSpend->id,
+                    'country_id' => $adSpend->country_id,
+                    'agency_id' => $adSpend->agency_id,
                     'country' => $adSpend->country->name,
                     'agency' => $adSpend->agency?->name,
                     'period_start' => $adSpend->period_start->toDateString(),
@@ -53,5 +55,23 @@ class AdSpendController extends Controller
         AdSpend::create($request->validated());
 
         return to_route('ad-spends.index')->with('success', 'Dépense pub enregistrée.');
+    }
+
+    public function update(StoreAdSpendRequest $request, AdSpend $adSpend): RedirectResponse
+    {
+        $this->ensureOwned($request, $adSpend->country->merchant_id);
+
+        $adSpend->update($request->validated());
+
+        return to_route('ad-spends.index')->with('success', 'Dépense pub modifiée.');
+    }
+
+    public function destroy(Request $request, AdSpend $adSpend): RedirectResponse
+    {
+        $this->ensureOwned($request, $adSpend->country->merchant_id);
+
+        $adSpend->delete();
+
+        return to_route('ad-spends.index')->with('success', 'Dépense pub supprimée.');
     }
 }

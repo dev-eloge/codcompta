@@ -1,5 +1,7 @@
+import FlashMessage from '@/components/flash-message';
 import InputError from '@/components/input-error';
 import { NativeSelect } from '@/components/native-select';
+import { DeleteButton } from '@/components/row-actions';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/app-layout';
@@ -77,6 +79,9 @@ export default function MessagesCreate({ agencies, recent, parserReady }: Props)
             <Head title="Coller un message" />
 
             <div className="mx-auto grid w-full max-w-6xl gap-6 p-4 md:p-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+                <div className="empty:hidden lg:col-span-2">
+                    <FlashMessage />
+                </div>
                 <form onSubmit={submit} className="glass flex flex-col gap-6 rounded-2xl p-5 md:p-8">
                     <div className="space-y-1">
                         <h1 className="text-2xl font-semibold tracking-tight">Coller le message d'une agence</h1>
@@ -148,10 +153,10 @@ export default function MessagesCreate({ agencies, recent, parserReady }: Props)
                     ) : (
                         <ul className="-mx-2 space-y-1">
                             {recent.map((message) => (
-                                <li key={message.id}>
+                                <li key={message.id} className="flex items-start gap-1">
                                     <Link
                                         href={route('messages.show', message.id)}
-                                        className="hover:bg-primary/6 block rounded-xl px-2 py-2.5 transition-colors"
+                                        className="hover:bg-primary/6 block min-w-0 flex-1 rounded-xl px-2 py-2.5 transition-colors"
                                     >
                                         <div className="flex items-center justify-between gap-2">
                                             <span className="truncate text-sm font-semibold">{message.agency}</span>
@@ -168,6 +173,14 @@ export default function MessagesCreate({ agencies, recent, parserReady }: Props)
                                                 `, ${message.recorded} sur ${message.proposals} enregistré${message.recorded > 1 ? 's' : ''}`}
                                         </p>
                                     </Link>
+                                    <div className="pt-1.5">
+                                        <DeleteButton
+                                            label={`Supprimer le message de ${message.agency}`}
+                                            title="Supprimer ce message ?"
+                                            description="Le texte collé et sa lecture seront supprimés. Les rapports déjà enregistrés depuis ce message sont gardés."
+                                            url={route('messages.destroy', message.id)}
+                                        />
+                                    </div>
                                 </li>
                             ))}
                         </ul>

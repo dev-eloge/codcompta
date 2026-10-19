@@ -54,9 +54,13 @@ class ClaudeMessageParser implements MessageParser
         if ($response->failed()) {
             Log::warning('Claude message parsing failed', ['status' => $response->status(), 'body' => $response->json('error')]);
 
-            throw new MessageParsingException(match ($response->status()) {
-                401, 403 => 'La clé ANTHROPIC_API_KEY est refusée. Vérifiez-la dans le fichier .env.',
-                429, 529 => 'Le service de lecture est saturé. Réessayez dans quelques minutes.',
+            $apiMessage = (string) $response->json('error.message', '');
+
+            throw new MessageParsingException(match (true) {
+                str_contains(strtolower($apiMessage), 'credit balance') => 'Votre compte Anthropic n\'a plus de crédit. Ajoutez du crédit sur console.anthropic.com (Plans & Billing), puis relisez le message.',
+                str_contains(strtolower($apiMessage), 'model') => 'Le modèle indiqué dans ANTHROPIC_MODEL n\'est pas reconnu. Vérifiez-le dans le fichier .env.',
+                in_array($response->status(), [401, 403], true) => 'La clé ANTHROPIC_API_KEY est refusée. Vérifiez-la dans le fichier .env.',
+                in_array($response->status(), [429, 529], true) => 'Le service de lecture est saturé. Réessayez dans quelques minutes.',
                 default => 'Le message n\'a pas pu être lu (erreur '.$response->status().'). Réessayez.',
             });
         }

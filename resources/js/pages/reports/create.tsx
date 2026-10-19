@@ -42,34 +42,72 @@ type ReportForm = {
     lines: Line[];
 };
 
+interface EditedReport {
+    id: number;
+    agency_id: number;
+    period_start: string;
+    period_end: string;
+    status: ReportForm['status'];
+    delivery_fees: number;
+    closing_fees: number;
+    other_fees: number;
+    announced_total: number | null;
+    note: string | null;
+    lines: { product_id: number; quantity: number; amount: number }[];
+}
+
 interface Props {
     agencies: Agency[];
     products: Product[];
     today: string;
+    report?: EditedReport;
 }
-
-const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Rapports', href: '/rapports' },
-    { title: 'Saisir un rapport', href: '/rapports/saisie' },
-];
 
 const emptyLine: Line = { product_id: '', quantity: '1', amount: '' };
 
 const toNumber = (value: string) => (value === '' ? 0 : Number(value));
 
-export default function ReportsCreate({ agencies, products, today }: Props) {
-    const { data, setData, post, processing, errors } = useForm<ReportForm>({
-        agency_id: agencies.length === 1 ? String(agencies[0].id) : '',
-        period_start: today,
-        period_end: today,
-        status: 'counted',
-        delivery_fees: '',
-        closing_fees: '',
-        other_fees: '',
-        announced_total: '',
-        note: '',
-        lines: [{ ...emptyLine }],
-    });
+const amountText = (value: number | null) => (value === null || value === 0 ? '' : String(value));
+
+export default function ReportsCreate({ agencies, products, today, report }: Props) {
+    const editing = report !== undefined;
+    const title = editing ? 'Modifier un rapport' : 'Saisir un rapport';
+    const breadcrumbs: BreadcrumbItem[] = [
+        { title: 'Rapports', href: '/rapports' },
+        { title, href: editing ? `/rapports/${report.id}/modifier` : '/rapports/saisie' },
+    ];
+
+    const { data, setData, post, put, processing, errors } = useForm<ReportForm>(
+        report
+            ? {
+                  agency_id: String(report.agency_id),
+                  period_start: report.period_start,
+                  period_end: report.period_end,
+                  status: report.status,
+                  delivery_fees: amountText(report.delivery_fees),
+                  closing_fees: amountText(report.closing_fees),
+                  other_fees: amountText(report.other_fees),
+                  announced_total: report.announced_total === null ? '' : String(report.announced_total),
+                  note: report.note ?? '',
+                  lines: report.lines.map((line) => ({
+                      product_id: String(line.product_id),
+                      quantity: String(line.quantity),
+                      amount: String(line.amount),
+                  })),
+              }
+            : {
+                  agency_id: agencies.length === 1 ? String(agencies[0].id) : '',
+                  period_start: today,
+                  period_end: today,
+                  status: 'counted',
+                  delivery_fees: '',
+                  closing_fees: '',
+                  other_fees: '',
+                  announced_total: '',
+                  note: '',
+                  lines: [{ ...emptyLine }],
+              },
+    );
 
     const fieldError = (key: string) => (errors as Record<string, string | undefined>)[key];
 
@@ -89,13 +127,19 @@ export default function ReportsCreate({ agencies, products, today }: Props) {
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
+        if (report) {
+            put(route('reports.update', report.id), { preserveScroll: true });
+
+            return;
+        }
+
         post(route('reports.store'), { preserveScroll: true });
     };
 
     if (agencies.length === 0 || products.length === 0) {
         return (
             <AppLayout breadcrumbs={breadcrumbs}>
-                <Head title="Saisir un rapport" />
+                <Head title={title} />
                 <div className="glass mx-auto mt-10 max-w-md space-y-4 rounded-2xl p-8 text-center">
                     <h1 className="text-xl font-semibold">Il manque des agences ou des produits</h1>
                     <p className="text-muted-foreground text-sm">
@@ -111,11 +155,11 @@ export default function ReportsCreate({ agencies, products, today }: Props) {
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Saisir un rapport" />
+            <Head title={title} />
 
             <form onSubmit={submit} className="glass mx-auto my-4 flex w-full max-w-3xl flex-col gap-8 rounded-2xl p-5 md:my-6 md:p-8">
                 <div className="space-y-1">
-                    <h1 className="text-2xl font-semibold tracking-tight">Saisir un rapport d'agence</h1>
+                    <h1 className="text-2xl font-semibold tracking-tight">{editing ? 'Modifier le rapport' : "Saisir un rapport d'agence"}</h1>
                     <p className="text-muted-foreground text-sm">
                         Un rapport d'un jour : même date au début et à la fin. Un récap de semaine : toute la période.
                     </p>
@@ -124,7 +168,7 @@ export default function ReportsCreate({ agencies, products, today }: Props) {
                 <section className="grid gap-4 sm:grid-cols-3">
                     <div className="grid gap-2 sm:col-span-3">
                         <Label htmlFor="agency_id">Agence</Label>
-                        <NativeSelect id="agency_id" value={data.agency_id} onChange={(e) => setData('agency_id', e.target.value)}>
+                        <NativeSelect id="agency_id" value={data.agency_id} disabled={editing} onChange={(e) => setData('agency_id', e.target.value)}>
                             <option value="">Choisir une agence</option>
                             {agencies.map((agency) => (
                                 <option key={agency.id} value={agency.id}>
@@ -322,7 +366,7 @@ export default function ReportsCreate({ agencies, products, today }: Props) {
 
                 <div className="flex flex-wrap gap-3">
                     <Button type="submit" disabled={processing}>
-                        Enregistrer le rapport
+                        {editing ? 'Enregistrer les modifications' : 'Enregistrer le rapport'}
                     </Button>
                     <Button asChild variant="ghost">
                         <Link href={route('reports.index')}>Annuler</Link>

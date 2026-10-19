@@ -1,12 +1,13 @@
 import FlashMessage from '@/components/flash-message';
 import { NativeSelect } from '@/components/native-select';
+import { DeleteButton } from '@/components/row-actions';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
 import { formatFcfa, formatNumber, formatPercent, formatPeriod } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
-import { ChevronLeft, ChevronRight, ClipboardPlus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ClipboardPlus, FileSpreadsheet, Pencil } from 'lucide-react';
 
 type PeriodType = 'day' | 'week' | 'month';
 
@@ -55,12 +56,15 @@ interface Entry {
     source: 'manual' | 'message' | 'sheet';
 }
 
+const sourceLabels: Record<Entry['source'], string> = { manual: 'Saisi', message: 'Message', sheet: 'Sheet' };
+
 interface Props {
     countries: Country[];
     countryId: number | null;
     period: Period;
     report: { agencies: Row[]; total: Row } | null;
     entries: Entry[];
+    sheetImportsToCheck: { id: number; rows: number }[];
 }
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Rapports', href: '/rapports' }];
@@ -92,7 +96,7 @@ const columns: { key: keyof Row; label: string; format?: (row: Row) => string }[
     { key: 'margin', label: 'Marge', format: (row) => formatPercent(row.margin) },
 ];
 
-export default function ReportsIndex({ countries, countryId, period, report, entries }: Props) {
+export default function ReportsIndex({ countries, countryId, period, report, entries, sheetImportsToCheck }: Props) {
     const show = (changes: { country?: number; period?: PeriodType; date?: string }) => {
         router.get(
             route('reports.index'),
@@ -107,6 +111,20 @@ export default function ReportsIndex({ countries, countryId, period, report, ent
 
             <div className="flex flex-col gap-6 p-4 md:p-6">
                 <FlashMessage />
+
+                {sheetImportsToCheck.map((sheetImport) => (
+                    <Link
+                        key={sheetImport.id}
+                        href={route('sheets.imports.show', sheetImport.id)}
+                        className="border-secondary/50 bg-secondary/15 flex items-center justify-between gap-3 rounded-lg border px-4 py-3 text-sm font-medium text-amber-900 backdrop-blur-md dark:text-amber-100"
+                    >
+                        <span>
+                            {sheetImport.rows} nouvelle{sheetImport.rows > 1 ? 's' : ''} ligne{sheetImport.rows > 1 ? 's' : ''} de votre Google Sheet
+                            à vérifier
+                        </span>
+                        <span className="font-semibold underline-offset-4 hover:underline">Vérifier</span>
+                    </Link>
+                ))}
 
                 {countries.length === 0 ? (
                     <EmptyAccount />
@@ -324,7 +342,7 @@ function EntryList({ entries }: { entries: Entry[] }) {
                 </p>
             ) : (
                 <div className="glass overflow-x-auto rounded-2xl">
-                    <table className="w-full min-w-[640px] text-sm">
+                    <table className="w-full min-w-[720px] text-sm">
                         <thead className="bg-primary/8 text-left">
                             <tr>
                                 <th scope="col" className="px-4 py-3 font-semibold">
@@ -347,6 +365,9 @@ function EntryList({ entries }: { entries: Entry[] }) {
                                 </th>
                                 <th scope="col" className="px-4 py-3 font-semibold">
                                     Statut
+                                </th>
+                                <th scope="col" className="w-20 px-2 py-3">
+                                    <span className="sr-only">Actions</span>
                                 </th>
                             </tr>
                         </thead>
@@ -379,6 +400,40 @@ function EntryList({ entries }: { entries: Entry[] }) {
                                         >
                                             {statusLabels[entry.status]}
                                         </span>
+                                        <span className="text-muted-foreground ml-2 text-xs">{sourceLabels[entry.source]}</span>
+                                    </td>
+                                    <td className="px-2 py-1.5">
+                                        <div className="flex justify-end">
+                                            {entry.source === 'sheet' ? (
+                                                <span
+                                                    className="text-muted-foreground/50 flex size-8 items-center justify-center"
+                                                    title="Importé du Google Sheet : corrigez la ligne dans le Sheet puis synchronisez"
+                                                >
+                                                    <FileSpreadsheet className="size-4" aria-label="Importé du Google Sheet" />
+                                                </span>
+                                            ) : (
+                                                <Button
+                                                    asChild
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="text-muted-foreground hover:text-primary size-8"
+                                                    title="Modifier ce rapport"
+                                                >
+                                                    <Link
+                                                        href={route('reports.edit', entry.id)}
+                                                        aria-label={`Modifier le rapport ${entry.agency} ${formatPeriod(entry.period_start, entry.period_end)}`}
+                                                    >
+                                                        <Pencil className="size-4" />
+                                                    </Link>
+                                                </Button>
+                                            )}
+                                            <DeleteButton
+                                                label={`Supprimer le rapport ${entry.agency} ${formatPeriod(entry.period_start, entry.period_end)}`}
+                                                title="Supprimer ce rapport ?"
+                                                description={`${entry.agency}, ${formatPeriod(entry.period_start, entry.period_end)} : ${formatNumber(entry.revenue)} F de ventes. Le bénéfice de la période sera recalculé. Cette action est définitive.`}
+                                                url={route('reports.destroy', entry.id)}
+                                            />
+                                        </div>
                                     </td>
                                 </tr>
                             ))}

@@ -7,6 +7,7 @@ use App\Models\Agency;
 use App\Models\Product;
 use App\Models\RawMessage;
 use App\Models\Report;
+use App\Models\SheetImport;
 use App\Services\Parsing\ProductMatcher;
 use App\Services\PeriodReport;
 use App\Services\ReportPeriod;
@@ -72,6 +73,13 @@ class ReportController extends Controller
             'period' => $period->toArray(),
             'report' => $country === null ? null : $periodReport->forCountry($country, $from, $to),
             'entries' => $entries,
+            'sheetImportsToCheck' => SheetImport::query()
+                ->whereIn('sheet_source_id', $merchant->sheetSources()->select('id'))
+                ->where('status', SheetImport::STATUS_READY)
+                ->latest('id')
+                ->get(['id', 'sheet_source_id', 'proposals'])
+                ->map(fn (SheetImport $import) => ['id' => $import->id, 'rows' => count($import->proposals ?? [])])
+                ->values(),
         ]);
     }
 
@@ -80,10 +88,81 @@ class ReportController extends Controller
      */
     public function create(Request $request): Response
     {
+        return Inertia::render('reports/create', $this->formProps($request));
+    }
+
+    public function edit(Request $request, Report $report): Response|RedirectResponse
+    {
+        $report->load('agency.country', 'lines');
+        $this->ensureOwned($request, $report->agency->country->merchant_id);
+
+        if ($report->source === Report::SOURCE_SHEET) {
+            return back()->with('warning', 'Ce rapport vient de votre Google Sheet : corrigez la ligne dans le Sheet puis synchronisez-le.');
+        }
+
+        return Inertia::render('reports/create', [
+            ...$this->formProps($request),
+            'report' => [
+                'id' => $report->id,
+                'agency_id' => $report->agency_id,
+                'period_start' => $report->period_start->toDateString(),
+                'period_end' => $report->period_end->toDateString(),
+                'status' => $report->status,
+                'delivery_fees' => $report->delivery_fees,
+                'closing_fees' => $report->closing_fees,
+                'other_fees' => $report->other_fees,
+                'announced_total' => $report->announced_total,
+                'note' => $report->note,
+                'lines' => $report->lines->map(fn ($line) => [
+                    'product_id' => $line->product_id,
+                    'quantity' => $line->quantity,
+                    'amount' => $line->amount,
+                ])->values(),
+            ],
+        ]);
+    }
+
+    public function update(StoreReportRequest $request, Report $report, ReportRecorder $recorder): RedirectResponse
+    {
+        $report->load('agency.country');
+        $this->ensureOwned($request, $report->agency->country->merchant_id);
+
+        $agency = Agency::findOrFail($request->integer('agency_id'));
+        abort_unless($agency->id === $report->agency_id, 422, 'Un rapport ne peut pas changer d\'agence.');
+
+        $report = $recorder->update($report, $request->validated(), $request->user());
+
+        return to_route('reports.index', [
+            'country' => $agency->country_id,
+            'period' => ReportPeriod::WEEK,
+            'date' => $report->period_end->toDateString(),
+        ])->with(
+            $report->status === Report::STATUS_TO_VERIFY ? 'warning' : 'success',
+            $report->status === Report::STATUS_TO_VERIFY
+                ? 'Rapport modifié, marqué « à vérifier » : le total des lignes ne correspond pas au total annoncé.'
+                : 'Rapport modifié.',
+        );
+    }
+
+    public function destroy(Request $request, Report $report, ReportRecorder $recorder): RedirectResponse
+    {
+        $report->load('agency.country');
+        $this->ensureOwned($request, $report->agency->country->merchant_id);
+
+        $recorder->delete($report);
+
+        return back()->with('success', 'Rapport supprimé.');
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function formProps(Request $request): array
+    {
         $merchant = $this->merchantOf($request);
         $today = now($merchant->timezone)->toDateString();
 
-        return Inertia::render('reports/create', [
+        return [
             'agencies' => Agency::query()
                 ->whereIn('country_id', $merchant->countries()->select('id'))
                 ->with('country:id,name')
@@ -104,7 +183,7 @@ class ReportController extends Controller
                     'reference_price' => $product->reference_price,
                 ]),
             'today' => $today,
-        ]);
+        ];
     }
 
     public function store(StoreReportRequest $request, ReportRecorder $recorder): RedirectResponse

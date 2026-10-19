@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Merchant extends Model
 {
@@ -29,6 +30,16 @@ class Merchant extends Model
     public function countries(): HasMany
     {
         return $this->hasMany(Country::class);
+    }
+
+    public function googleConnection(): HasOne
+    {
+        return $this->hasOne(GoogleConnection::class);
+    }
+
+    public function sheetSources(): HasMany
+    {
+        return $this->hasMany(SheetSource::class);
     }
 
     public function products(): HasMany
