@@ -24,6 +24,12 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    'anthropic' => [
+        'key' => env('ANTHROPIC_API_KEY'),
+        'model' => env('ANTHROPIC_MODEL', 'claude-sonnet-5-5'),
+        'timeout' => (int) env('ANTHROPIC_TIMEOUT', 90),
+    ],
+
     'resend' => [
         'key' => env('RESEND_KEY'),
     ],

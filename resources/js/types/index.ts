@@ -21,8 +21,14 @@ export interface NavItem {
     isActive?: boolean;
 }
 
+export interface Flash {
+    success?: string | null;
+    warning?: string | null;
+}
+
 export interface SharedData {
     name: string;
+    flash?: Flash;
     quote: { message: string; author: string };
     auth: Auth;
     [key: string]: unknown;

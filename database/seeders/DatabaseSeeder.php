@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Merchant;
 use App\Models\User;
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -15,7 +16,10 @@ class DatabaseSeeder extends Seeder
     {
         // User::factory(10)->create();
 
+        $this->call(DemoWeekSeeder::class);
+
         User::factory()->create([
+            'merchant_id' => Merchant::where('name', 'Boutique Démo')->value('id'),
             'name' => 'Test User',
             'email' => 'test@example.com',
         ]);
