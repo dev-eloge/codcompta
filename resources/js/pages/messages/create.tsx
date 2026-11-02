@@ -84,7 +84,7 @@ export default function MessagesCreate({ agencies, recent, parserReady }: Props)
                 </div>
                 <form onSubmit={submit} className="glass flex flex-col gap-6 rounded-2xl p-5 md:p-8">
                     <div className="space-y-1">
-                        <h1 className="text-2xl font-semibold tracking-tight">Coller le message d'une agence</h1>
+                        <h1 className="text-2xl font-semibold tracking-tight">Coller le message d'une agencee</h1>
                         <p className="text-muted-foreground text-sm">
                             Copiez le rapport depuis WhatsApp, tel quel. Un message peut contenir plusieurs jours : chaque rapport sera proposé
                             séparément, et vous le vérifiez avant qu'il compte.
