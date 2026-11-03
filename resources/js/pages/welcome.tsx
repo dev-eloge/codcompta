@@ -414,9 +414,15 @@ function toEmbed(url: string): { kind: 'iframe' | 'video'; src: string } | null 
         }
 
         if (host.endsWith('vimeo.com')) {
-            const id = link.pathname.split('/').filter(Boolean).pop();
+            // vimeo.com/123, vimeo.com/123/abc (unlisted), player.vimeo.com/video/123?h=abc
+            const parts = link.pathname.split('/').filter(Boolean);
+            const index = parts.findIndex((part) => /^\d+$/.test(part));
+            if (index === -1) {
+                return null;
+            }
+            const hash = link.searchParams.get('h') ?? (/^[a-f0-9]{6,}$/i.test(parts[index + 1] ?? '') ? parts[index + 1] : null);
 
-            return id ? { kind: 'iframe', src: `https://player.vimeo.com/video/${id}` } : null;
+            return { kind: 'iframe', src: `https://player.vimeo.com/video/${parts[index]}?dnt=1${hash ? `&h=${hash}` : ''}` };
         }
 
         return { kind: 'video', src: url };

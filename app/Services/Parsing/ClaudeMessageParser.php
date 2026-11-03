@@ -42,7 +42,8 @@ class ClaudeMessageParser implements MessageParser
                     'max_tokens' => 8000,
                     'system' => $this->systemPrompt(),
                     'tools' => [$this->tool()],
-                    'tool_choice' => ['type' => 'tool', 'name' => self::TOOL],
+                    // Recent models refuse a forced tool; "auto" plus the prompt's instruction gives the same result.
+                    'tool_choice' => ['type' => 'auto'],
                     'messages' => [
                         ['role' => 'user', 'content' => $this->userPrompt($agency, $body, $receivedOn)],
                     ],
@@ -58,7 +59,7 @@ class ClaudeMessageParser implements MessageParser
 
             throw new MessageParsingException(match (true) {
                 str_contains(strtolower($apiMessage), 'credit balance') => 'Votre compte Anthropic n\'a plus de crédit. Ajoutez du crédit sur console.anthropic.com (Plans & Billing), puis relisez le message.',
-                str_contains(strtolower($apiMessage), 'model') => 'Le modèle indiqué dans ANTHROPIC_MODEL n\'est pas reconnu. Vérifiez-le dans le fichier .env.',
+                $response->status() === 404 || str_contains(strtolower($apiMessage), 'model:') => 'Le modèle indiqué dans ANTHROPIC_MODEL n\'est pas reconnu. Vérifiez-le dans le fichier .env.',
                 in_array($response->status(), [401, 403], true) => 'La clé ANTHROPIC_API_KEY est refusée. Vérifiez-la dans le fichier .env.',
                 in_array($response->status(), [429, 529], true) => 'Le service de lecture est saturé. Réessayez dans quelques minutes.',
                 default => 'Le message n\'a pas pu être lu (erreur '.$response->status().'). Réessayez.',
@@ -88,6 +89,7 @@ class ClaudeMessageParser implements MessageParser
         Tu es l'assistant comptable d'un e-commerçant africain qui vend en paiement à la livraison.
         Ses agences de livraison lui envoient des rapports sur WhatsApp, chacune dans son propre style.
         Ta seule tâche : extraire fidèlement les rapports contenus dans le message collé, sans rien inventer.
+        Réponds toujours et uniquement en appelant l'outil enregistrer_rapports, même si le message ne contient aucun rapport.
 
         Règles :
         - Un rapport = une période. Un rapport quotidien a la même date de début et de fin.

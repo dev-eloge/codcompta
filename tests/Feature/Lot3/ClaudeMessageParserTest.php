@@ -27,7 +27,7 @@ it('envoie le message et le catalogue à Claude et lit la réponse structurée',
     expect($result['reports'][0]['lines'][0]['amount'])->toBe(25000);
 
     Http::assertSent(fn (Request $request) => $request->hasHeader('x-api-key', 'test-key')
-        && $request['tool_choice'] === ['type' => 'tool', 'name' => 'enregistrer_rapports']
+        && $request['tool_choice'] === ['type' => 'auto']
         && str_contains($request['messages'][0]['content'], 'Produit 1')
         && str_contains($request['messages'][0]['content'], 'PRODUIT 1 x2 = 25 000')
         && str_contains($request['system'], 'reversements'));

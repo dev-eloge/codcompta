@@ -11,7 +11,7 @@ import { messageStatus } from '@/pages/messages/create';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router, useForm, usePoll } from '@inertiajs/react';
 import { CircleAlert, CircleCheck, LoaderCircle, Plus, RotateCcw, Trash2 } from 'lucide-react';
-import { FormEventHandler, useEffect, useState } from 'react';
+import { FormEventHandler, useEffect, useRef, useState } from 'react';
 
 type Status = 'counted' | 'detail' | 'to_verify';
 
@@ -90,15 +90,33 @@ const asText = (value: number | null) => (value === null || value === 0 ? '' : S
 
 export default function MessagesShow({ message, warnings, proposals, products }: Props) {
     const reading = message.status === 'received';
-    const { stop } = usePoll(2000, { only: ['message', 'warnings', 'proposals'] }, { autoStart: reading });
+    const poll = usePoll(2000, { only: ['message', 'warnings', 'proposals'] }, { autoStart: false });
+    const pollRef = useRef(poll);
+    pollRef.current = poll;
+    const [slow, setSlow] = useState(false);
 
+    // Ask the server every 2 seconds while the message is being read, including after "Réessayer",
+    // so the reports appear without reloading the page.
     useEffect(() => {
         if (!reading) {
-            stop();
+            pollRef.current.stop();
+            setSlow(false);
+
+            return;
         }
-    }, [reading, stop]);
+
+        pollRef.current.start();
+        const timer = window.setTimeout(() => setSlow(true), 90_000);
+
+        return () => {
+            window.clearTimeout(timer);
+            pollRef.current.stop();
+        };
+    }, [reading]);
 
     const [retrying, setRetrying] = useState(false);
+    const retry = () =>
+        router.post(route('messages.retry', message.id), {}, { onStart: () => setRetrying(true), onFinish: () => setRetrying(false) });
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Lire un message WhatsApp', href: '/messages/coller' },
         { title: message.agency.name, href: `/messages/${message.id}` },
@@ -143,14 +161,29 @@ export default function MessagesShow({ message, warnings, proposals, products }:
                     <FlashMessage />
 
                     {reading && (
-                        <div role="status" className="glass flex items-center gap-3 rounded-2xl p-6">
-                            <LoaderCircle className="text-primary size-5 animate-spin" aria-hidden="true" />
-                            <div>
-                                <p className="font-semibold">CODCompta lit le message…</p>
-                                <p className="text-muted-foreground text-sm">
-                                    En général moins d'une minute. Restez sur cette page : les rapports trouvés s'afficheront tout seuls.
-                                </p>
+                        <div role="status" className="glass space-y-4 rounded-2xl p-6">
+                            <div className="flex items-center gap-3">
+                                <LoaderCircle className="text-primary size-5 shrink-0 animate-spin" aria-hidden="true" />
+                                <div>
+                                    <p className="font-semibold">{slow ? 'La lecture prend plus de temps que prévu' : 'CODCompta lit le message…'}</p>
+                                    <p className="text-muted-foreground text-sm">
+                                        {slow
+                                            ? 'Le service est peut-être chargé. Vous pouvez relancer la lecture, ou saisir ce rapport à la main pour ne pas attendre.'
+                                            : "En général moins d'une minute. Restez sur cette page : les rapports trouvés s'afficheront tout seuls."}
+                                    </p>
+                                </div>
                             </div>
+                            {slow && (
+                                <div className="flex flex-wrap gap-3">
+                                    <Button variant="outline" disabled={retrying} onClick={retry}>
+                                        {retrying ? <LoaderCircle className="animate-spin" aria-hidden="true" /> : <RotateCcw aria-hidden="true" />}
+                                        Relancer la lecture
+                                    </Button>
+                                    <Button asChild variant="ghost">
+                                        <Link href={route('reports.create')}>Saisir à la main</Link>
+                                    </Button>
+                                </div>
+                            )}
                         </div>
                     )}
 
@@ -167,16 +200,7 @@ export default function MessagesShow({ message, warnings, proposals, products }:
                                 </div>
                             </div>
                             <div className="flex flex-wrap gap-3">
-                                <Button
-                                    disabled={retrying}
-                                    onClick={() =>
-                                        router.post(
-                                            route('messages.retry', message.id),
-                                            {},
-                                            { onStart: () => setRetrying(true), onFinish: () => setRetrying(false) },
-                                        )
-                                    }
-                                >
+                                <Button disabled={retrying} onClick={retry}>
                                     {retrying ? <LoaderCircle className="animate-spin" aria-hidden="true" /> : <RotateCcw aria-hidden="true" />}
                                     Réessayer la lecture
                                 </Button>
