@@ -1,25 +1,44 @@
 import { SVGAttributes, useId } from 'react';
 
 /**
- * CODCompta mark: three rising bars (the weekly profit) under a gold coin (the cash collected on delivery).
+ * CODCompta mark: a bold "C" (Compta, cash on delivery) holding a gold coin in its opening.
+ *
+ * - variant "tile": the app icon, white mark on the emerald tile (sidebar, auth pages, favicon).
+ * - variant "mark": the symbol alone in emerald, for light backgrounds next to the name.
+ * - variant "white": the symbol in white, for emerald or dark backgrounds.
  */
-export default function AppLogoIcon(props: SVGAttributes<SVGElement>) {
-    const gradientId = useId();
+type Variant = 'tile' | 'mark' | 'white';
+
+const ARC = 'M85.46 34.54 A36 36 0 1 0 85.46 85.46';
+
+export default function AppLogoIcon({ variant = 'tile', ...props }: SVGAttributes<SVGElement> & { variant?: Variant }) {
+    const id = useId();
+    const gradient = `${id}-g`;
+
+    const mark = (stroke: string) => (
+        <>
+            <path d={ARC} stroke={stroke} strokeWidth="24" fill="none" />
+            <circle cx="92" cy="60" r="15" fill="#F4B23E" />
+            <circle cx="92" cy="60" r="8.5" fill="none" stroke="#FFE7B8" strokeWidth="2.4" />
+        </>
+    );
 
     return (
-        <svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="CODCompta" {...props}>
+        <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="CODCompta" {...props}>
             <defs>
-                <linearGradient id={gradientId} x1="0" y1="0" x2="1" y2="1">
+                <linearGradient id={gradient} x1="18" y1="14" x2="100" y2="106" gradientUnits="userSpaceOnUse">
                     <stop offset="0" stopColor="#14B89A" />
                     <stop offset="1" stopColor="#0B6B55" />
                 </linearGradient>
             </defs>
-            <rect width="40" height="40" rx="11" fill={`url(#${gradientId})`} />
-            <rect x="8.5" y="21" width="5.5" height="11" rx="1.6" fill="#FFFFFF" fillOpacity="0.7" />
-            <rect x="17.25" y="16" width="5.5" height="16" rx="1.6" fill="#FFFFFF" fillOpacity="0.85" />
-            <rect x="26" y="13" width="5.5" height="19" rx="1.6" fill="#FFFFFF" />
-            <circle cx="28.75" cy="7.6" r="3.4" fill="#F4B23E" />
-            <circle cx="28.75" cy="7.6" r="1.5" fill="#FFF3D6" />
+            {variant === 'tile' ? (
+                <>
+                    <rect width="120" height="120" rx="28" fill={`url(#${gradient})`} />
+                    <g transform="translate(18 18) scale(0.7)">{mark('#FFFFFF')}</g>
+                </>
+            ) : (
+                mark(variant === 'white' ? '#FFFFFF' : `url(#${gradient})`)
+            )}
         </svg>
     );
 }

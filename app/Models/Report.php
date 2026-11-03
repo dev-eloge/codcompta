@@ -19,6 +19,7 @@ class Report extends Model
 
     public const SOURCE_MESSAGE = 'message';
 
+    /** Imported from a Google Sheet. The import is gone; these reports stay, read-only. */
     public const SOURCE_SHEET = 'sheet';
 
     /**
@@ -29,8 +30,6 @@ class Report extends Model
     protected $fillable = [
         'agency_id',
         'raw_message_id',
-        'sheet_source_id',
-        'sheet_row_key',
         'validated_by',
         'period_start',
         'period_end',
@@ -60,13 +59,8 @@ class Report extends Model
         return $this->belongsTo(User::class, 'validated_by');
     }
 
-    public function sheetSource(): BelongsTo
-    {
-        return $this->belongsTo(SheetSource::class);
-    }
-
     /**
-     * Ad spend written on the same sheet row as this report.
+     * Ad spend recorded with this report (reports imported from a Google Sheet before that feature was removed).
      */
     public function adSpends(): HasMany
     {

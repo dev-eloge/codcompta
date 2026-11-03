@@ -116,7 +116,7 @@ class ReferenceController extends Controller
             'valid_from' => ['required', 'date'],
         ], [
             'name.required' => 'Indiquez le nom du produit.',
-            'unit_cost.required' => 'Indiquez le coût d\'achat d\'une unité.',
+            'unit_cost.required' => 'Indiquez le prix d\'achat d\'une unité.',
             '*.integer' => 'Entrez un nombre entier.',
         ]);
 

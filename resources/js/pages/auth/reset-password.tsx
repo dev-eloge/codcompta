@@ -87,7 +87,7 @@ export default function ResetPassword({ token, email }: ResetPasswordProps) {
                     </div>
 
                     <Button type="submit" className="mt-4 w-full" disabled={processing}>
-                        {processing && <LoaderCircle className="h-4 w-4 animate-spin" />}
+                        {processing && <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />}
                         Changer le mot de passe
                     </Button>
                 </div>

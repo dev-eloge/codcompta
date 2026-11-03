@@ -17,8 +17,6 @@ class AdSpend extends Model
         'country_id',
         'agency_id',
         'report_id',
-        'sheet_source_id',
-        'sheet_row_key',
         'period_start',
         'period_end',
         'amount',

@@ -14,7 +14,12 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
+        // Demo data must never land next to real merchants.
+        if (app()->isProduction()) {
+            $this->command?->warn('Données de démonstration ignorées : application en production.');
+
+            return;
+        }
 
         $this->call(DemoWeekSeeder::class);
 

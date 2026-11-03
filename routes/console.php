@@ -8,5 +8,5 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-// Each morning, linked Google Sheets are read again; new rows wait in "Sheets" for the merchant's check.
-Schedule::command('sheets:sync')->dailyAt('06:00')->timezone('Africa/Lome')->withoutOverlapping();
+// Sika: a goal can end without a new report, so its result is checked every hour.
+Schedule::command('codcompta:verifier-objectifs')->hourly()->withoutOverlapping();

@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Middleware\BlockDuringImpersonation;
+use App\Http\Middleware\EnsureMerchantIsActive;
 use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -15,6 +17,11 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         // In production the app sits behind a reverse proxy that handles HTTPS: trust its X-Forwarded-* headers.
         $middleware->trustProxies(at: '*');
+
+        $middleware->alias([
+            'merchant.active' => EnsureMerchantIsActive::class,
+            'not-impersonating' => BlockDuringImpersonation::class,
+        ]);
 
         $middleware->web(append: [
             HandleInertiaRequests::class,

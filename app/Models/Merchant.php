@@ -2,9 +2,9 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Merchant extends Model
 {
@@ -20,26 +20,40 @@ class Merchant extends Model
         'share_savings',
         'share_pocket',
         'share_reinvestment',
+        'suspended_at',
+        'suspension_reason',
     ];
+
+    public function isSuspended(): bool
+    {
+        return $this->suspended_at !== null;
+    }
+
+    /**
+     * Pasted agency messages of every agency of the merchant.
+     *
+     * @return Builder<RawMessage>
+     */
+    public function rawMessagesQuery(): Builder
+    {
+        return RawMessage::query()->whereIn('agency_id', Agency::query()
+            ->whereIn('country_id', $this->countries()->select('id'))
+            ->select('id'));
+    }
 
     public function users(): HasMany
     {
         return $this->hasMany(User::class);
     }
 
+    public function financialGoals(): HasMany
+    {
+        return $this->hasMany(FinancialGoal::class);
+    }
+
     public function countries(): HasMany
     {
         return $this->hasMany(Country::class);
-    }
-
-    public function googleConnection(): HasOne
-    {
-        return $this->hasOne(GoogleConnection::class);
-    }
-
-    public function sheetSources(): HasMany
-    {
-        return $this->hasMany(SheetSource::class);
     }
 
     public function products(): HasMany
@@ -72,6 +86,7 @@ class Merchant extends Model
             'share_savings' => 'integer',
             'share_pocket' => 'integer',
             'share_reinvestment' => 'integer',
+            'suspended_at' => 'datetime',
         ];
     }
 }

@@ -29,6 +29,8 @@ class RawMessage extends Model
         'status',
         'parsed',
         'parsed_at',
+        'ai_input_tokens',
+        'ai_output_tokens',
         'error',
         'received_at',
     ];

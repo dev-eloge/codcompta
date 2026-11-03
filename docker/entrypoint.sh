@@ -2,7 +2,7 @@
 # Starts a CODCompta container. CONTAINER_ROLE says which one:
 #   app        php-fpm, runs the database migrations first
 #   queue      background jobs (reading agency messages, Google Sheets)
-#   scheduler  scheduled tasks (Google Sheets every morning at 6:00)
+#   scheduler  scheduled tasks (Sika checks finished goals every hour)
 set -e
 
 cd /var/www/html

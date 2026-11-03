@@ -1,10 +1,15 @@
 import { cn } from '@/lib/utils';
+import { CircleAlert } from 'lucide-react';
 import { HTMLAttributes } from 'react';
 
+/**
+ * Field error: text plus icon (never colour alone), announced as soon as it appears.
+ */
 export default function InputError({ message, className = '', ...props }: HTMLAttributes<HTMLParagraphElement> & { message?: string }) {
     return message ? (
-        <p {...props} className={cn('text-sm text-red-600 dark:text-red-400', className)}>
-            {message}
+        <p role="alert" {...props} className={cn('text-destructive flex items-start gap-1.5 text-sm', className)}>
+            <CircleAlert className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+            <span>{message}</span>
         </p>
     ) : null;
 }

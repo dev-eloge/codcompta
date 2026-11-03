@@ -4,6 +4,7 @@ import SettingsLayout from '@/layouts/settings/layout';
 import { type BreadcrumbItem } from '@/types';
 import { Transition } from '@headlessui/react';
 import { Head, useForm } from '@inertiajs/react';
+import { LoaderCircle } from 'lucide-react';
 import { FormEventHandler, useRef } from 'react';
 
 import HeadingSmall from '@/components/heading-small';
@@ -50,11 +51,11 @@ export default function Password() {
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Profil" />
+            <Head title="Mot de passe" />
 
             <SettingsLayout>
                 <div className="space-y-6">
-                    <HeadingSmall title="Changer le mot de passe" description="Choisissez un mot de passe long et unique" />
+                    <HeadingSmall title="Changer le mot de passe" description="8 caractères minimum. Évitez un mot de passe déjà utilisé ailleurs." />
 
                     <form onSubmit={updatePassword} className="space-y-6">
                         <div className="grid gap-2">
@@ -90,7 +91,7 @@ export default function Password() {
                         </div>
 
                         <div className="grid gap-2">
-                            <Label htmlFor="password_confirmation">Confirmer le mot de passe</Label>
+                            <Label htmlFor="password_confirmation">Retapez le nouveau mot de passe</Label>
 
                             <PasswordInput
                                 id="password_confirmation"
@@ -105,7 +106,10 @@ export default function Password() {
                         </div>
 
                         <div className="flex items-center gap-4">
-                            <Button disabled={processing}>Enregistrer le mot de passe</Button>
+                            <Button type="submit" disabled={processing}>
+                                {processing && <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />}
+                                Enregistrer le mot de passe
+                            </Button>
 
                             <Transition
                                 show={recentlySuccessful}
@@ -114,7 +118,9 @@ export default function Password() {
                                 leave="transition ease-in-out"
                                 leaveTo="opacity-0"
                             >
-                                <p className="text-sm text-neutral-600">Enregistré</p>
+                                <p role="status" className="text-primary text-sm font-medium">
+                                    Mot de passe modifié
+                                </p>
                             </Transition>
                         </div>
                     </form>

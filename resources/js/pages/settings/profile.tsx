@@ -1,6 +1,7 @@
 import { type BreadcrumbItem, type SharedData } from '@/types';
 import { Transition } from '@headlessui/react';
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
+import { LoaderCircle } from 'lucide-react';
 import { FormEventHandler } from 'react';
 
 import DeleteUser from '@/components/delete-user';
@@ -43,7 +44,7 @@ export default function Profile({ mustVerifyEmail, status }: { mustVerifyEmail: 
 
                     <form onSubmit={submit} className="space-y-6">
                         <div className="grid gap-2">
-                            <Label htmlFor="name">Nom</Label>
+                            <Label htmlFor="name">Votre nom</Label>
 
                             <Input
                                 id="name"
@@ -69,7 +70,7 @@ export default function Profile({ mustVerifyEmail, status }: { mustVerifyEmail: 
                                 onChange={(e) => setData('email', e.target.value)}
                                 required
                                 autoComplete="username"
-                                placeholder="Adresse email"
+                                placeholder="vous@exemple.com"
                             />
 
                             <InputError className="mt-2" message={errors.email} />
@@ -77,20 +78,20 @@ export default function Profile({ mustVerifyEmail, status }: { mustVerifyEmail: 
 
                         {mustVerifyEmail && auth.user.email_verified_at === null && (
                             <div>
-                                <p className="mt-2 text-sm text-neutral-800">
-                                    Votre adresse email n'est pas encore vérifiée.
+                                <p className="mt-2 text-sm">
+                                    Votre adresse email n'est pas encore vérifiée.{' '}
                                     <Link
                                         href={route('verification.send')}
                                         method="post"
                                         as="button"
-                                        className="rounded-md text-sm text-neutral-600 underline hover:text-neutral-900 focus:ring-2 focus:ring-offset-2 focus:outline-hidden"
+                                        className="text-primary rounded-md text-sm font-semibold underline underline-offset-4"
                                     >
-                                        Click here to re-send the verification email.
+                                        Renvoyer l'email de vérification
                                     </Link>
                                 </p>
 
                                 {status === 'verification-link-sent' && (
-                                    <div className="mt-2 text-sm font-medium text-green-600">
+                                    <div role="status" className="text-primary mt-2 text-sm font-medium">
                                         Un nouveau lien de vérification vient d'être envoyé.
                                     </div>
                                 )}
@@ -98,7 +99,10 @@ export default function Profile({ mustVerifyEmail, status }: { mustVerifyEmail: 
                         )}
 
                         <div className="flex items-center gap-4">
-                            <Button disabled={processing}>Enregistrer</Button>
+                            <Button type="submit" disabled={processing}>
+                                {processing && <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />}
+                                Enregistrer
+                            </Button>
 
                             <Transition
                                 show={recentlySuccessful}
@@ -107,7 +111,9 @@ export default function Profile({ mustVerifyEmail, status }: { mustVerifyEmail: 
                                 leave="transition ease-in-out"
                                 leaveTo="opacity-0"
                             >
-                                <p className="text-sm text-neutral-600">Enregistré</p>
+                                <p role="status" className="text-primary text-sm font-medium">
+                                    Modifications enregistrées
+                                </p>
                             </Transition>
                         </div>
                     </form>

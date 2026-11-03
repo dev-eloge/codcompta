@@ -9,6 +9,7 @@ import AppLayout from '@/layouts/app-layout';
 import { formatFcfa, formatShortDate } from '@/lib/format';
 import { type BreadcrumbItem } from '@/types';
 import { Head, useForm } from '@inertiajs/react';
+import { CircleAlert, CircleCheck, LoaderCircle } from 'lucide-react';
 import { FormEventHandler, useState } from 'react';
 
 interface Agency {
@@ -47,27 +48,71 @@ interface Props {
     today: string;
 }
 
-const breadcrumbs: BreadcrumbItem[] = [{ title: 'Référentiel', href: '/referentiel' }];
+const breadcrumbs: BreadcrumbItem[] = [{ title: 'Pays, agences et produits', href: '/referentiel' }];
 
 export default function ReferenceIndex({ countries, products, today }: Props) {
+    const agencyCount = countries.reduce((sum, country) => sum + country.agencies.length, 0);
+    const steps = [
+        { label: 'Un pays de vente', done: countries.length > 0 },
+        { label: 'Une agence de livraison', done: agencyCount > 0 },
+        { label: "Un produit avec son prix d'achat", done: products.some((product) => product.unit_cost !== null) },
+    ];
+    const ready = steps.every((step) => step.done);
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Référentiel" />
+            <Head title="Pays, agences et produits" />
 
             <div className="mx-auto flex w-full max-w-5xl flex-col gap-10 p-4 md:p-6">
                 <FlashMessage />
 
                 <div className="space-y-1">
-                    <h1 className="text-2xl font-semibold tracking-tight">Référentiel</h1>
+                    <h1 className="text-2xl font-semibold tracking-tight">Pays, agences et produits</h1>
                     <p className="text-muted-foreground text-sm">
-                        Vos pays, agences et produits. On les ajoute une fois, puis tous les rapports s'appuient dessus.
+                        Décrivez votre activité une seule fois : où vous vendez, quelles agences livrent, et combien vous coûte chaque produit. Tous
+                        les rapports s'appuient dessus.
                     </p>
                 </div>
 
-                <section className="grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+                {!ready && (
+                    <section aria-labelledby="setup-title" className="glass space-y-3 rounded-2xl p-5">
+                        <h2 id="setup-title" className="text-base font-semibold">
+                            Pour commencer, il vous faut au minimum :
+                        </h2>
+                        <ol className="grid gap-2 text-sm sm:grid-cols-3">
+                            {steps.map((step, index) => (
+                                <li key={step.label} className="flex items-center gap-2">
+                                    {step.done ? (
+                                        <CircleCheck className="text-primary size-5 shrink-0" aria-hidden="true" />
+                                    ) : (
+                                        <span
+                                            aria-hidden="true"
+                                            className="border-muted-foreground/50 text-muted-foreground flex size-5 shrink-0 items-center justify-center rounded-full border text-xs font-semibold"
+                                        >
+                                            {index + 1}
+                                        </span>
+                                    )}
+                                    <span className={step.done ? 'text-muted-foreground line-through' : 'font-medium'}>{step.label}</span>
+                                    <span className="sr-only">{step.done ? ' : fait' : ' : à faire'}</span>
+                                </li>
+                            ))}
+                        </ol>
+                    </section>
+                )}
+
+                <section aria-labelledby="countries-title" className="grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
                     <div className="space-y-4">
-                        <h2 className="text-lg font-semibold">Pays et agences</h2>
-                        {countries.length === 0 && <p className="text-muted-foreground text-sm">Aucun pays pour l'instant.</p>}
+                        <div className="space-y-1">
+                            <h2 id="countries-title" className="text-lg font-semibold">
+                                Pays et agences de livraison
+                            </h2>
+                            <p className="text-muted-foreground text-sm">Une agence livre vos colis et encaisse l'argent dans une ville.</p>
+                        </div>
+                        {countries.length === 0 && (
+                            <p className="glass text-muted-foreground rounded-2xl p-5 text-sm">
+                                Aucun pays pour l'instant. Ajoutez votre premier pays de vente avec le formulaire.
+                            </p>
+                        )}
                         {countries.map((country) => (
                             <CountryCard key={country.id} country={country} countries={countries} />
                         ))}
@@ -79,11 +124,21 @@ export default function ReferenceIndex({ countries, products, today }: Props) {
                     </div>
                 </section>
 
-                <section className="grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+                <section aria-labelledby="products-title" className="grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
                     <div className="space-y-4">
-                        <h2 className="text-lg font-semibold">Produits et coûts d'achat</h2>
+                        <div className="space-y-1">
+                            <h2 id="products-title" className="text-lg font-semibold">
+                                Produits et prix d'achat
+                            </h2>
+                            <p className="text-muted-foreground text-sm">
+                                Le prix d'achat (fournisseur, transport compris) sert à calculer votre vrai bénéfice. S'il change, ajoutez le nouveau
+                                prix : les anciens rapports gardent l'ancien.
+                            </p>
+                        </div>
                         {products.length === 0 ? (
-                            <p className="text-muted-foreground text-sm">Aucun produit pour l'instant.</p>
+                            <p className="glass text-muted-foreground rounded-2xl p-5 text-sm">
+                                Aucun produit pour l'instant. Ajoutez vos produits avec le formulaire.
+                            </p>
                         ) : (
                             <ul className="glass divide-y rounded-2xl">
                                 {products.map((product) => (
@@ -111,25 +166,32 @@ function CountryForm() {
     return (
         <form onSubmit={submit} className="glass space-y-3 rounded-2xl p-4">
             <h3 className="font-semibold">Ajouter un pays</h3>
-            <div className="grid grid-cols-[1fr_5rem] gap-3">
+            <div className="grid grid-cols-[1fr_6rem] gap-3">
                 <div className="grid gap-1">
-                    <Label htmlFor="country-name">Nom</Label>
-                    <Input id="country-name" value={data.name} onChange={(e) => setData('name', e.target.value)} placeholder="Nom du pays" />
+                    <Label htmlFor="country-name">Nom du pays *</Label>
+                    <Input id="country-name" required value={data.name} onChange={(e) => setData('name', e.target.value)} placeholder="Togo" />
                     <InputError message={errors.name} />
                 </div>
                 <div className="grid gap-1">
-                    <Label htmlFor="country-code">Code</Label>
+                    <Label htmlFor="country-code">Code *</Label>
                     <Input
                         id="country-code"
+                        required
                         maxLength={2}
+                        autoCapitalize="characters"
+                        aria-describedby="country-code-help"
                         value={data.code}
                         onChange={(e) => setData('code', e.target.value.toUpperCase())}
-                        placeholder="Code"
+                        placeholder="TG"
                     />
                     <InputError message={errors.code} />
                 </div>
             </div>
-            <Button type="submit" size="sm" disabled={processing}>
+            <p id="country-code-help" className="text-muted-foreground text-xs">
+                Le code à 2 lettres du pays : TG, SN, CI, BJ…
+            </p>
+            <Button type="submit" disabled={processing}>
+                {processing && <LoaderCircle className="animate-spin" aria-hidden="true" />}
                 Ajouter le pays
             </Button>
         </form>
@@ -153,7 +215,7 @@ function AgencyForm({ countries }: { countries: Country[] }) {
         <form onSubmit={submit} className="glass space-y-3 rounded-2xl p-4">
             <h3 className="font-semibold">Ajouter une agence</h3>
             <div className="grid gap-1">
-                <Label htmlFor="agency-country">Pays</Label>
+                <Label htmlFor="agency-country">Pays *</Label>
                 <NativeSelect id="agency-country" value={data.country_id} onChange={(e) => setData('country_id', e.target.value)}>
                     {countries.map((country) => (
                         <option key={country.id} value={country.id}>
@@ -164,35 +226,43 @@ function AgencyForm({ countries }: { countries: Country[] }) {
                 <InputError message={errors.country_id} />
             </div>
             <div className="grid gap-1">
-                <Label htmlFor="agency-name">Nom</Label>
-                <Input id="agency-name" value={data.name} onChange={(e) => setData('name', e.target.value)} placeholder="Agence 1" />
+                <Label htmlFor="agency-name">Nom de l'agence *</Label>
+                <Input id="agency-name" required value={data.name} onChange={(e) => setData('name', e.target.value)} placeholder="Agence 1" />
                 <InputError message={errors.name} />
             </div>
-            <div className="grid grid-cols-[1fr_7rem] gap-3">
-                <div className="grid gap-1">
-                    <Label htmlFor="agency-contact">Contact</Label>
-                    <Input
-                        id="agency-contact"
-                        value={data.contact}
-                        onChange={(e) => setData('contact', e.target.value)}
-                        placeholder="Téléphone WhatsApp"
-                    />
-                    <InputError message={errors.contact} />
-                </div>
-                <div className="grid gap-1">
-                    <Label htmlFor="agency-alert">Alerte après (jours)</Label>
-                    <Input
-                        id="agency-alert"
-                        type="number"
-                        min={1}
-                        max={30}
-                        value={data.alert_after_days}
-                        onChange={(e) => setData('alert_after_days', e.target.value)}
-                    />
-                    <InputError message={errors.alert_after_days} />
-                </div>
+            <div className="grid gap-1">
+                <Label htmlFor="agency-contact">Numéro WhatsApp (facultatif)</Label>
+                <Input
+                    id="agency-contact"
+                    type="tel"
+                    inputMode="tel"
+                    autoComplete="off"
+                    value={data.contact}
+                    onChange={(e) => setData('contact', e.target.value)}
+                    placeholder="+228 90 00 00 00"
+                />
+                <InputError message={errors.contact} />
             </div>
-            <Button type="submit" size="sm" disabled={processing}>
+            <div className="grid gap-1">
+                <Label htmlFor="agency-alert">Me prévenir après combien de jours sans rapport ?</Label>
+                <Input
+                    id="agency-alert"
+                    type="number"
+                    inputMode="numeric"
+                    min={1}
+                    max={30}
+                    className="w-28"
+                    aria-describedby="agency-alert-help"
+                    value={data.alert_after_days}
+                    onChange={(e) => setData('alert_after_days', e.target.value)}
+                />
+                <p id="agency-alert-help" className="text-muted-foreground text-xs">
+                    L'agence est marquée « en retard » si elle ne vous a rien envoyé depuis ce nombre de jours.
+                </p>
+                <InputError message={errors.alert_after_days} />
+            </div>
+            <Button type="submit" disabled={processing}>
+                {processing && <LoaderCircle className="animate-spin" aria-hidden="true" />}
                 Ajouter l'agence
             </Button>
         </form>
@@ -216,16 +286,18 @@ function ProductForm({ today }: { today: string }) {
         <form onSubmit={submit} className="glass space-y-3 self-start rounded-2xl p-4">
             <h3 className="font-semibold">Ajouter un produit</h3>
             <div className="grid gap-1">
-                <Label htmlFor="product-name">Nom</Label>
-                <Input id="product-name" value={data.name} onChange={(e) => setData('name', e.target.value)} placeholder="Produit 1" />
+                <Label htmlFor="product-name">Nom du produit *</Label>
+                <Input id="product-name" required value={data.name} onChange={(e) => setData('name', e.target.value)} placeholder="Produit 1" />
                 <InputError message={errors.name} />
             </div>
             <div className="grid grid-cols-2 gap-3">
                 <div className="grid gap-1">
-                    <Label htmlFor="product-cost">Coût d'achat (F)</Label>
+                    <Label htmlFor="product-cost">Prix d'achat (F) *</Label>
                     <Input
                         id="product-cost"
                         type="number"
+                        inputMode="numeric"
+                        required
                         min={0}
                         value={data.unit_cost}
                         onChange={(e) => setData('unit_cost', e.target.value)}
@@ -238,20 +310,26 @@ function ProductForm({ today }: { today: string }) {
                     <Input
                         id="product-price"
                         type="number"
+                        inputMode="numeric"
+                        aria-describedby="product-price-help"
                         min={0}
                         value={data.reference_price}
                         onChange={(e) => setData('reference_price', e.target.value)}
                         placeholder="0"
                     />
+                    <p id="product-price-help" className="text-muted-foreground text-xs">
+                        Remplit tout seul l'argent encaissé dans vos rapports.
+                    </p>
                     <InputError message={errors.reference_price} />
                 </div>
             </div>
             <div className="grid gap-1">
-                <Label htmlFor="product-from">Coût valable à partir du</Label>
+                <Label htmlFor="product-from">Prix d'achat valable à partir du</Label>
                 <Input id="product-from" type="date" value={data.valid_from} onChange={(e) => setData('valid_from', e.target.value)} />
                 <InputError message={errors.valid_from} />
             </div>
-            <Button type="submit" size="sm" disabled={processing}>
+            <Button type="submit" disabled={processing}>
+                {processing && <LoaderCircle className="animate-spin" aria-hidden="true" />}
                 Ajouter le produit
             </Button>
         </form>
@@ -278,6 +356,7 @@ function CountryCard({ country, countries }: { country: Country; countries: Coun
             <div className="bg-primary/8 flex items-center justify-between gap-2 rounded-t-2xl py-2 pr-2 pl-4">
                 <h3 className="font-semibold">
                     {country.name} <span className="text-muted-foreground ml-1 text-sm font-normal">{country.code}</span>
+                    <span className="text-muted-foreground ml-2 text-xs font-normal">{plural(country.agencies.length, 'agence')}</span>
                 </h3>
                 <div className="flex items-center">
                     <EditButton
@@ -293,7 +372,7 @@ function CountryCard({ country, countries }: { country: Country; countries: Coun
                         title={`Supprimer ${country.name} ?`}
                         description={
                             consequences.length > 0
-                                ? `Seront aussi supprimés : ${consequences.join(', ')}. Les bénéfices déjà calculés pour ce pays disparaîtront. Cette action est définitive.`
+                                ? `Seront aussi supprimés : ${consequences.join(', ')}. Les résultats de ce pays disparaîtront. Cette action est définitive.`
                                 : 'Ce pays est vide. Cette action est définitive.'
                         }
                         url={route('reference.countries.destroy', country.id)}
@@ -325,7 +404,7 @@ function CountryCard({ country, countries }: { country: Country; countries: Coun
                 </form>
             )}
             {country.agencies.length === 0 ? (
-                <p className="text-muted-foreground px-4 py-3 text-sm">Aucune agence.</p>
+                <p className="text-muted-foreground px-4 py-3 text-sm">Aucune agence dans ce pays : ajoutez-en une avec le formulaire.</p>
             ) : (
                 <ul className="divide-y">
                     {country.agencies.map((agency) => (
@@ -359,7 +438,8 @@ function AgencyRow({ agency, countryId, countries }: { agency: Agency; countryId
                     {agency.contact && <p className="text-muted-foreground">{agency.contact}</p>}
                 </div>
                 <div className="flex items-center gap-2">
-                    <p className={agency.is_late ? 'text-destructive font-semibold' : 'text-muted-foreground'}>
+                    <p className={agency.is_late ? 'text-destructive flex items-center gap-1 font-semibold' : 'text-muted-foreground'}>
+                        {agency.is_late && <CircleAlert className="size-4" aria-hidden="true" />}
                         {agency.last_report_at
                             ? `Dernier rapport le ${formatShortDate(agency.last_report_at)}${agency.is_late ? ' : en retard' : ''}`
                             : 'Aucun rapport reçu'}
@@ -412,18 +492,25 @@ function AgencyRow({ agency, countryId, countries }: { agency: Agency; countryId
                     </div>
                     <div className="grid gap-1">
                         <Label htmlFor={`agency-contact-${agency.id}`} className="text-xs">
-                            Contact
+                            Numéro WhatsApp
                         </Label>
-                        <Input id={`agency-contact-${agency.id}`} value={data.contact} onChange={(e) => setData('contact', e.target.value)} />
+                        <Input
+                            id={`agency-contact-${agency.id}`}
+                            type="tel"
+                            inputMode="tel"
+                            value={data.contact}
+                            onChange={(e) => setData('contact', e.target.value)}
+                        />
                         <InputError message={errors.contact} />
                     </div>
                     <div className="grid gap-1">
                         <Label htmlFor={`agency-alert-${agency.id}`} className="text-xs">
-                            Alerte après (jours)
+                            Prévenir après (jours sans rapport)
                         </Label>
                         <Input
                             id={`agency-alert-${agency.id}`}
                             type="number"
+                            inputMode="numeric"
                             min={1}
                             max={30}
                             value={data.alert_after_days}
@@ -443,10 +530,11 @@ function AgencyRow({ agency, countryId, countries }: { agency: Agency; countryId
 function EditActions({ processing, onCancel }: { processing: boolean; onCancel: () => void }) {
     return (
         <div className="flex gap-2 self-end">
-            <Button type="submit" size="sm" disabled={processing}>
+            <Button type="submit" disabled={processing}>
+                {processing && <LoaderCircle className="animate-spin" aria-hidden="true" />}
                 Enregistrer
             </Button>
-            <Button type="button" size="sm" variant="ghost" onClick={onCancel}>
+            <Button type="button" variant="ghost" onClick={onCancel}>
                 Annuler
             </Button>
         </div>
@@ -480,7 +568,10 @@ function ProductRow({ product, today }: { product: Product; today: string }) {
                 <p className="font-semibold">{product.name}</p>
                 <div className="flex items-center gap-2">
                     <span>
-                        Coût <strong className="tabular-nums">{product.unit_cost === null ? 'non renseigné' : formatFcfa(product.unit_cost)}</strong>
+                        Achat{' '}
+                        <strong className={product.unit_cost === null ? 'text-destructive' : 'tabular-nums'}>
+                            {product.unit_cost === null ? 'à renseigner' : formatFcfa(product.unit_cost)}
+                        </strong>
                         {product.reference_price !== null && (
                             <>
                                 , vente <strong className="tabular-nums">{formatFcfa(product.reference_price)}</strong>
@@ -493,8 +584,9 @@ function ProductRow({ product, today }: { product: Product; today: string }) {
                         size="sm"
                         onClick={() => setMode(mode === 'cost' ? 'view' : 'cost')}
                         aria-expanded={mode === 'cost'}
+                        aria-controls={`costs-${product.id}`}
                     >
-                        Coûts
+                        {mode === 'cost' ? 'Fermer' : "Changer le prix d'achat"}
                     </Button>
                     <EditButton
                         label={`Modifier le produit ${product.name}`}
@@ -521,7 +613,7 @@ function ProductRow({ product, today }: { product: Product; today: string }) {
                 <form onSubmit={saveDetails} className="animate-in fade-in slide-in-from-top-1 grid gap-3 sm:grid-cols-[1fr_9rem_auto]">
                     <div className="grid gap-1">
                         <Label htmlFor={`product-name-${product.id}`} className="text-xs">
-                            Nom
+                            Nom du produit
                         </Label>
                         <Input
                             id={`product-name-${product.id}`}
@@ -537,6 +629,7 @@ function ProductRow({ product, today }: { product: Product; today: string }) {
                         <Input
                             id={`product-price-${product.id}`}
                             type="number"
+                            inputMode="numeric"
                             min={0}
                             value={details.data.reference_price}
                             onChange={(e) => details.setData('reference_price', e.target.value)}
@@ -548,7 +641,8 @@ function ProductRow({ product, today }: { product: Product; today: string }) {
             )}
 
             {mode === 'cost' && (
-                <div className="animate-in fade-in slide-in-from-top-1 space-y-3">
+                <div id={`costs-${product.id}`} className="animate-in fade-in slide-in-from-top-1 space-y-3">
+                    <p className="text-xs font-medium">Historique des prix d'achat</p>
                     <ul className="bg-background/60 divide-y rounded-xl border">
                         {product.costs.map((entry) => (
                             <li key={entry.id} className="flex items-center justify-between gap-2 py-1 pr-1 pl-3">
@@ -558,9 +652,9 @@ function ProductRow({ product, today }: { product: Product; today: string }) {
                                 </span>
                                 {product.costs.length > 1 && (
                                     <DeleteButton
-                                        label={`Supprimer le coût du ${formatShortDate(entry.valid_from)}`}
-                                        title="Supprimer ce coût d'achat ?"
-                                        description="Les rapports déjà enregistrés gardent le coût avec lequel ils ont été saisis. Les prochains rapports utiliseront le coût précédent."
+                                        label={`Supprimer le prix d'achat du ${formatShortDate(entry.valid_from)}`}
+                                        title="Supprimer ce prix d'achat ?"
+                                        description="Les rapports déjà enregistrés gardent le prix avec lequel ils ont été saisis. Les prochains rapports utiliseront le prix précédent."
                                         url={route('reference.products.costs.destroy', [product.id, entry.id])}
                                     />
                                 )}
@@ -570,11 +664,13 @@ function ProductRow({ product, today }: { product: Product; today: string }) {
                     <form onSubmit={saveCost} className="flex flex-wrap items-end gap-3">
                         <div className="grid gap-1">
                             <Label htmlFor={`cost-${product.id}`} className="text-xs">
-                                Nouveau coût (F)
+                                Nouveau prix d'achat (F)
                             </Label>
                             <Input
                                 id={`cost-${product.id}`}
                                 type="number"
+                                inputMode="numeric"
+                                required
                                 min={0}
                                 className="w-32"
                                 value={cost.data.unit_cost}
@@ -592,11 +688,12 @@ function ProductRow({ product, today }: { product: Product; today: string }) {
                                 onChange={(e) => cost.setData('valid_from', e.target.value)}
                             />
                         </div>
-                        <Button type="submit" size="sm" disabled={cost.processing}>
-                            Ajouter ce coût
+                        <Button type="submit" disabled={cost.processing}>
+                            {cost.processing && <LoaderCircle className="animate-spin" aria-hidden="true" />}
+                            Enregistrer ce prix
                         </Button>
                         <InputError message={cost.errors.unit_cost ?? cost.errors.valid_from} className="w-full" />
-                        <p className="text-muted-foreground w-full text-xs">Les rapports déjà saisis gardent l'ancien coût.</p>
+                        <p className="text-muted-foreground w-full text-xs">Les rapports déjà saisis gardent l'ancien prix.</p>
                     </form>
                 </div>
             )}

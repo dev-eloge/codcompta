@@ -2,7 +2,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { router } from '@inertiajs/react';
-import { Pencil, Trash2 } from 'lucide-react';
+import { LoaderCircle, Pencil, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
 /**
@@ -14,13 +14,13 @@ export function EditButton({ label, active = false, onClick }: { label: string; 
             type="button"
             variant="ghost"
             size="icon"
-            className={cn('text-muted-foreground hover:text-primary size-8', active && 'bg-primary/10 text-primary')}
+            className={cn('text-muted-foreground hover:text-primary size-10', active && 'bg-primary/10 text-primary')}
             aria-label={label}
             aria-pressed={active}
             title={label}
             onClick={onClick}
         >
-            <Pencil className="size-4" />
+            <Pencil className="size-4" aria-hidden="true" />
         </Button>
     );
 }
@@ -70,15 +70,15 @@ export function DeleteButton({
                         type="button"
                         variant="ghost"
                         size="icon"
-                        className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive size-8"
+                        className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive size-10"
                         aria-label={label}
                         title={label}
                     >
-                        <Trash2 className="size-4" />
+                        <Trash2 className="size-4" aria-hidden="true" />
                     </Button>
                 )}
             </DialogTrigger>
-            <DialogContent className="border-white/70 bg-white shadow-2xl sm:max-w-md dark:border-white/10 dark:bg-[#0d2f38]">
+            <DialogContent className="sm:max-w-md">
                 <DialogTitle>{title}</DialogTitle>
                 <DialogDescription>{description}</DialogDescription>
                 <DialogFooter className="gap-2">
@@ -86,6 +86,7 @@ export function DeleteButton({
                         <Button variant="outline">Annuler</Button>
                     </DialogClose>
                     <Button variant="destructive" onClick={confirm} disabled={processing}>
+                        {processing && <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />}
                         {confirmLabel}
                     </Button>
                 </DialogFooter>

@@ -9,6 +9,7 @@ import AppLayout from '@/layouts/app-layout';
 import { formatNumber, formatPeriod } from '@/lib/format';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, useForm } from '@inertiajs/react';
+import { LoaderCircle, Megaphone } from 'lucide-react';
 import { FormEventHandler, useRef, useState } from 'react';
 
 interface Country {
@@ -36,7 +37,7 @@ interface Props {
     today: string;
 }
 
-const breadcrumbs: BreadcrumbItem[] = [{ title: 'Pub', href: '/pub' }];
+const breadcrumbs: BreadcrumbItem[] = [{ title: 'Dépenses publicitaires', href: '/pub' }];
 
 const platformLabels: Record<string, string> = { meta: 'Meta (Facebook, Instagram)', tiktok: 'TikTok', autre: 'Autre' };
 
@@ -64,7 +65,9 @@ export default function AdSpendsIndex({ countries, adSpends, platforms, today }:
             amount: String(adSpend.amount),
             platform: adSpend.platform,
         });
-        formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const smooth = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        formRef.current?.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'start' });
+        formRef.current?.querySelector<HTMLElement>('#amount')?.focus({ preventScroll: true });
     };
 
     const stopEditing = () => {
@@ -88,36 +91,39 @@ export default function AdSpendsIndex({ countries, adSpends, platforms, today }:
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Pub" />
+            <Head title="Dépenses publicitaires" />
 
             <div className="mx-auto flex w-full max-w-4xl flex-col gap-8 p-4 md:p-6">
                 <FlashMessage />
 
                 <div className="space-y-1">
-                    <h1 className="text-2xl font-semibold tracking-tight">Dépenses pub</h1>
+                    <h1 className="text-2xl font-semibold tracking-tight">Dépenses publicitaires</h1>
                     <p className="text-muted-foreground text-sm">
-                        Une pub payée pour tout le pays est partagée entre les agences selon leurs ventes. Choisissez une agence seulement si la pub
-                        ne concerne qu'elle.
+                        Notez ce que vous avez payé en publicité (Facebook, TikTok…) : c'est déduit de votre bénéfice. Une publicité pour tout le pays
+                        est répartie entre ses agences selon leurs ventes.
                     </p>
                 </div>
 
                 {countries.length === 0 ? (
-                    <p className="glass text-muted-foreground rounded-2xl p-6 text-sm">
-                        Ajoutez d'abord un pays dans le{' '}
-                        <Link href={route('reference.index')} className="underline">
-                            référentiel
-                        </Link>
-                        .
-                    </p>
+                    <div className="glass space-y-3 rounded-2xl p-6 text-sm">
+                        <p className="font-semibold">Ajoutez d'abord un pays de vente</p>
+                        <p className="text-muted-foreground">Une dépense publicitaire est toujours rattachée au pays où la publicité est diffusée.</p>
+                        <Button asChild size="sm">
+                            <Link href={route('reference.index')}>Ajouter un pays</Link>
+                        </Button>
+                    </div>
                 ) : (
                     <form
                         ref={formRef}
                         onSubmit={submit}
+                        aria-labelledby="ad-form-title"
                         className={`glass grid scroll-mt-4 gap-4 rounded-2xl p-5 transition-shadow sm:grid-cols-2 md:p-6 ${editingId !== null ? 'ring-primary/50 ring-2' : ''}`}
                     >
-                        {editingId !== null && <p className="text-primary text-sm font-semibold sm:col-span-2">Modification d'une dépense</p>}
+                        <h2 id="ad-form-title" className="text-base font-semibold sm:col-span-2">
+                            {editingId !== null ? 'Modifier une dépense' : 'Ajouter une dépense'}
+                        </h2>
                         <div className="grid gap-2">
-                            <Label htmlFor="country_id">Pays</Label>
+                            <Label htmlFor="country_id">Pays où la publicité est diffusée *</Label>
                             <NativeSelect
                                 id="country_id"
                                 value={data.country_id}
@@ -133,23 +139,32 @@ export default function AdSpendsIndex({ countries, adSpends, platforms, today }:
                         </div>
 
                         <div className="grid gap-2">
-                            <Label htmlFor="agency_id">Agence</Label>
-                            <NativeSelect id="agency_id" value={data.agency_id} onChange={(e) => setData('agency_id', e.target.value)}>
-                                <option value="">Toutes les agences du pays</option>
+                            <Label htmlFor="agency_id">Pour quelle agence ?</Label>
+                            <NativeSelect
+                                id="agency_id"
+                                aria-describedby="agency-help"
+                                value={data.agency_id}
+                                onChange={(e) => setData('agency_id', e.target.value)}
+                            >
+                                <option value="">Toutes les agences du pays (répartie)</option>
                                 {agencies.map((agency) => (
                                     <option key={agency.id} value={agency.id}>
                                         {agency.name}
                                     </option>
                                 ))}
                             </NativeSelect>
+                            <p id="agency-help" className="text-muted-foreground text-xs">
+                                Choisissez une agence seulement si la publicité ne concerne que sa ville.
+                            </p>
                             <InputError message={errors.agency_id} />
                         </div>
 
                         <div className="grid gap-2">
-                            <Label htmlFor="period_start">Du</Label>
+                            <Label htmlFor="period_start">Du *</Label>
                             <Input
                                 id="period_start"
                                 type="date"
+                                required
                                 value={data.period_start}
                                 onChange={(e) => setData('period_start', e.target.value)}
                             />
@@ -157,22 +172,34 @@ export default function AdSpendsIndex({ countries, adSpends, platforms, today }:
                         </div>
 
                         <div className="grid gap-2">
-                            <Label htmlFor="period_end">Au</Label>
-                            <Input id="period_end" type="date" value={data.period_end} onChange={(e) => setData('period_end', e.target.value)} />
+                            <Label htmlFor="period_end">Au *</Label>
+                            <Input
+                                id="period_end"
+                                type="date"
+                                required
+                                min={data.period_start}
+                                value={data.period_end}
+                                onChange={(e) => setData('period_end', e.target.value)}
+                            />
                             <InputError message={errors.period_end} />
                         </div>
 
                         <div className="grid gap-2">
-                            <Label htmlFor="amount">Montant dépensé (F)</Label>
+                            <Label htmlFor="amount">Montant dépensé (F CFA) *</Label>
                             <Input
                                 id="amount"
                                 type="number"
+                                required
+                                aria-describedby="amount-help"
                                 inputMode="numeric"
                                 min={1}
                                 value={data.amount}
                                 onChange={(e) => setData('amount', e.target.value)}
                                 placeholder="0"
                             />
+                            <p id="amount-help" className="text-muted-foreground text-xs">
+                                Le montant réellement débité, converti en francs CFA.
+                            </p>
                             <InputError message={errors.amount} />
                         </div>
 
@@ -190,6 +217,7 @@ export default function AdSpendsIndex({ countries, adSpends, platforms, today }:
 
                         <div className="flex gap-2 sm:col-span-2">
                             <Button type="submit" disabled={processing}>
+                                {processing && <LoaderCircle className="animate-spin" aria-hidden="true" />}
                                 {editingId !== null ? 'Enregistrer les modifications' : 'Enregistrer la dépense'}
                             </Button>
                             {editingId !== null && (
@@ -201,17 +229,23 @@ export default function AdSpendsIndex({ countries, adSpends, platforms, today }:
                     </form>
                 )}
 
-                <section className="space-y-3">
-                    <h2 className="text-lg font-semibold">Dernières dépenses</h2>
+                <section aria-labelledby="ad-list-title" className="space-y-3">
+                    <h2 id="ad-list-title" className="text-lg font-semibold">
+                        Dernières dépenses
+                    </h2>
                     {adSpends.length === 0 ? (
-                        <p className="text-muted-foreground text-sm">Aucune dépense pub enregistrée.</p>
+                        <div className="glass text-muted-foreground flex items-center gap-3 rounded-2xl p-6 text-sm">
+                            <Megaphone className="text-primary size-5 shrink-0" aria-hidden="true" />
+                            Aucune dépense pour l'instant. Sans dépense publicitaire, votre bénéfice paraîtra plus élevé qu'il n'est.
+                        </div>
                     ) : (
                         <div className="glass overflow-x-auto rounded-2xl">
                             <table className="w-full min-w-[640px] text-sm">
+                                <caption className="sr-only">Dernières dépenses publicitaires</caption>
                                 <thead className="bg-primary/8 text-left">
                                     <tr>
                                         <th scope="col" className="px-4 py-3 font-semibold">
-                                            Dates
+                                            Période
                                         </th>
                                         <th scope="col" className="px-3 py-3 font-semibold">
                                             Pays
@@ -237,19 +271,19 @@ export default function AdSpendsIndex({ countries, adSpends, platforms, today }:
                                                 {formatPeriod(adSpend.period_start, adSpend.period_end)}
                                             </td>
                                             <td className="px-3 py-2.5">{adSpend.country}</td>
-                                            <td className="px-3 py-2.5">{adSpend.agency ?? 'Toutes'}</td>
+                                            <td className="px-3 py-2.5">{adSpend.agency ?? 'Toutes (répartie)'}</td>
                                             <td className="px-3 py-2.5">{platformLabels[adSpend.platform] ?? adSpend.platform}</td>
                                             <td className="px-4 py-2.5 text-right font-semibold tabular-nums">{formatNumber(adSpend.amount)}</td>
                                             <td className="px-2 py-1.5">
                                                 <div className="flex justify-end">
                                                     <EditButton
-                                                        label="Modifier cette dépense"
+                                                        label={`Modifier la dépense du ${formatPeriod(adSpend.period_start, adSpend.period_end)}`}
                                                         active={editingId === adSpend.id}
                                                         onClick={() => (editingId === adSpend.id ? stopEditing() : startEditing(adSpend))}
                                                     />
                                                     <DeleteButton
-                                                        label="Supprimer cette dépense"
-                                                        title="Supprimer cette dépense pub ?"
+                                                        label={`Supprimer la dépense du ${formatPeriod(adSpend.period_start, adSpend.period_end)}`}
+                                                        title="Supprimer cette dépense publicitaire ?"
                                                         description={`${formatNumber(adSpend.amount)} F, ${formatPeriod(adSpend.period_start, adSpend.period_end)}. Le bénéfice de la période sera recalculé.`}
                                                         url={route('ad-spends.destroy', adSpend.id)}
                                                     />

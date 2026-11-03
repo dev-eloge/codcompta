@@ -1,4 +1,5 @@
 import { useForm } from '@inertiajs/react';
+import { LoaderCircle } from 'lucide-react';
 import { FormEventHandler, useRef } from 'react';
 
 // Components...
@@ -34,10 +35,10 @@ export default function DeleteUser() {
     return (
         <div className="space-y-6">
             <HeadingSmall title="Supprimer le compte" description="Supprimez votre compte et toutes ses données" />
-            <div className="space-y-4 rounded-lg border border-red-100 bg-red-50 p-4 dark:border-red-200/10 dark:bg-red-700/10">
-                <div className="relative space-y-0.5 text-red-600 dark:text-red-100">
-                    <p className="font-medium">Attention</p>
-                    <p className="text-sm">Cette action est définitive.</p>
+            <div className="border-destructive/30 bg-destructive/8 space-y-4 rounded-lg border p-4">
+                <div className="relative space-y-0.5">
+                    <p className="text-destructive font-semibold">Attention, action définitive</p>
+                    <p className="text-sm">Tous vos rapports, agences, produits et messages seront effacés. Ils ne pourront pas être récupérés.</p>
                 </div>
 
                 <Dialog>
@@ -46,15 +47,10 @@ export default function DeleteUser() {
                     </DialogTrigger>
                     <DialogContent>
                         <DialogTitle>Supprimer définitivement votre compte ?</DialogTitle>
-                        <DialogDescription>
-                            Une fois le compte supprimé, tous vos rapports et données le seront aussi. Entrez votre mot de passe to confirm you would
-                            like to permanently delete your account.
-                        </DialogDescription>
+                        <DialogDescription>Tous vos rapports et données seront effacés. Entrez votre mot de passe pour confirmer.</DialogDescription>
                         <form className="space-y-6" onSubmit={deleteUser}>
                             <div className="grid gap-2">
-                                <Label htmlFor="password" className="sr-only">
-                                    Mot de passe
-                                </Label>
+                                <Label htmlFor="password">Votre mot de passe</Label>
 
                                 <PasswordInput
                                     id="password"
@@ -71,13 +67,14 @@ export default function DeleteUser() {
 
                             <DialogFooter>
                                 <DialogClose asChild>
-                                    <Button variant="secondary" onClick={closeModal}>
+                                    <Button type="button" variant="outline" onClick={closeModal}>
                                         Annuler
                                     </Button>
                                 </DialogClose>
 
-                                <Button variant="destructive" disabled={processing} asChild>
-                                    <button type="submit">Supprimer le compte</button>
+                                <Button type="submit" variant="destructive" disabled={processing}>
+                                    {processing && <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />}
+                                    Supprimer définitivement
                                 </Button>
                             </DialogFooter>
                         </form>

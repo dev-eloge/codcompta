@@ -14,8 +14,9 @@ interface MessageParser
      * where each report holds period_start, period_end, lines (label, product_id,
      * quantity, amount), delivery_fees, closing_fees, other_fees, announced_total,
      * note and warnings. Values are raw: ProposalNormalizer cleans them.
+     * An optional "usage" entry gives the AI tokens spent, for the super admin dashboard.
      *
-     * @return array{reports: list<array<string, mixed>>, warnings: list<string>}
+     * @return array{reports: list<array<string, mixed>>, warnings: list<string>, usage?: array{input_tokens: int, output_tokens: int}}
      *
      * @throws MessageParsingException
      */

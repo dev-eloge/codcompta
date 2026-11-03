@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Services\GoalTracker;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -44,7 +45,15 @@ class HandleInertiaRequests extends Middleware
             'quote' => ['message' => trim($message), 'author' => trim($author)],
             'auth' => [
                 'user' => $request->user(),
+                'isSuperAdmin' => (bool) $request->user()?->is_super_admin,
             ],
+            // Progress towards the merchant's goals, shown in the sidebar and on the results page.
+            'goals' => fn () => $request->user()?->merchant ? app(GoalTracker::class)->current($request->user()->merchant) : [],
+            // Public key of Sika's notifications (null until the server owner sets the VAPID keys).
+            'push' => ['publicKey' => config('services.webpush.public_key') ?: null],
+            'impersonation' => fn () => $request->session()->has('impersonator_id')
+                ? ['merchant' => $request->session()->get('impersonated_merchant')]
+                : null,
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
                 'warning' => fn () => $request->session()->get('warning'),

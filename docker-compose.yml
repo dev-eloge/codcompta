@@ -3,8 +3,8 @@
 #   web        Nginx, reachable only from the server itself on 127.0.0.1:${APP_PORT}
 #              (the server's existing reverse proxy adds HTTPS in front of it)
 #   app        Laravel on php-fpm; runs the database migrations at start
-#   queue      background jobs: reading agency messages, reading Google Sheets
-#   scheduler  scheduled tasks: Google Sheets re-read every morning at 6:00
+#   queue      background jobs: reading agency messages
+#   scheduler  Laravel scheduled tasks (Sika checks finished goals every hour)
 #   db         MySQL 8.4, data kept in the "mysql-data" volume
 #
 # Every setting comes from the .env file next to this one (see deploy/production.env.example).

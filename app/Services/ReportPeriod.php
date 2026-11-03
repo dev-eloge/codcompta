@@ -6,7 +6,8 @@ use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 
 /**
- * A reporting period: one day, one week (Monday to Sunday) or one calendar month (RG-06).
+ * A reporting period: one day, one week (Monday to Sunday), one calendar month (RG-06),
+ * or any range of days the merchant picks (from one date to another).
  */
 class ReportPeriod
 {
@@ -16,7 +17,12 @@ class ReportPeriod
 
     public const MONTH = 'month';
 
-    public const TYPES = [self::DAY, self::WEEK, self::MONTH];
+    public const CUSTOM = 'custom';
+
+    public const TYPES = [self::DAY, self::WEEK, self::MONTH, self::CUSTOM];
+
+    /** The longest range the merchant can pick, in days. */
+    public const MAX_CUSTOM_DAYS = 366;
 
     private function __construct(
         public readonly string $type,
@@ -38,13 +44,40 @@ class ReportPeriod
         };
     }
 
+    /**
+     * A range picked by the merchant, from one day to another (both included).
+     */
+    public static function between(CarbonInterface|string $from, CarbonInterface|string $to): self
+    {
+        $start = CarbonImmutable::parse($from)->startOfDay();
+        $end = CarbonImmutable::parse($to)->startOfDay();
+
+        return $end->lessThan($start) ? new self(self::CUSTOM, $end, $start) : new self(self::CUSTOM, $start, $end);
+    }
+
+    /**
+     * Number of days in the period, both ends included.
+     */
+    public function days(): int
+    {
+        return (int) $this->from->diffInDays($this->to) + 1;
+    }
+
     public function previous(): self
     {
+        if ($this->type === self::CUSTOM) {
+            return new self(self::CUSTOM, $this->from->subDays($this->days()), $this->from->subDay());
+        }
+
         return self::containing($this->type, $this->from->subDay());
     }
 
     public function next(): self
     {
+        if ($this->type === self::CUSTOM) {
+            return new self(self::CUSTOM, $this->to->addDay(), $this->to->addDays($this->days()));
+        }
+
         return self::containing($this->type, $this->to->addDay());
     }
 
@@ -56,27 +89,39 @@ class ReportPeriod
         $from = $this->from->locale('fr');
         $to = $this->to->locale('fr');
 
+        if ($this->type === self::CUSTOM && $this->from->equalTo($this->to)) {
+            return 'du '.$from->translatedFormat('l j F Y');
+        }
+
         return match ($this->type) {
             self::DAY => $from->translatedFormat('l j F Y'),
             self::MONTH => $from->translatedFormat('F Y'),
-            default => $from->month === $to->month
+            default => $from->month === $to->month && $from->year === $to->year
                 ? 'du '.$from->translatedFormat('j').' au '.$to->translatedFormat('j F Y')
-                : 'du '.$from->translatedFormat('j F').' au '.$to->translatedFormat('j F Y'),
+                : ($from->year === $to->year
+                    ? 'du '.$from->translatedFormat('j F').' au '.$to->translatedFormat('j F Y')
+                    : 'du '.$from->translatedFormat('j F Y').' au '.$to->translatedFormat('j F Y')),
         };
     }
 
     /**
-     * @return array{type: string, from: string, to: string, label: string, previous: string, next: string}
+     * @return array{type: string, from: string, to: string, days: int, label: string, previous: string, previous_to: string, next: string, next_to: string}
      */
     public function toArray(): array
     {
+        $previous = $this->previous();
+        $next = $this->next();
+
         return [
             'type' => $this->type,
             'from' => $this->from->toDateString(),
             'to' => $this->to->toDateString(),
+            'days' => $this->days(),
             'label' => $this->label(),
-            'previous' => $this->previous()->from->toDateString(),
-            'next' => $this->next()->from->toDateString(),
+            'previous' => $previous->from->toDateString(),
+            'previous_to' => $previous->to->toDateString(),
+            'next' => $next->from->toDateString(),
+            'next_to' => $next->to->toDateString(),
         ];
     }
 }

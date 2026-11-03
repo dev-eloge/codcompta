@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreAdSpendRequest;
+use App\Jobs\CheckGoals;
 use App\Models\AdSpend;
 use App\Models\Agency;
 use Illuminate\Http\RedirectResponse;
@@ -53,6 +54,7 @@ class AdSpendController extends Controller
     public function store(StoreAdSpendRequest $request): RedirectResponse
     {
         AdSpend::create($request->validated());
+        CheckGoals::dispatch($this->merchantOf($request)->id);
 
         return to_route('ad-spends.index')->with('success', 'Dépense pub enregistrée.');
     }
@@ -62,6 +64,7 @@ class AdSpendController extends Controller
         $this->ensureOwned($request, $adSpend->country->merchant_id);
 
         $adSpend->update($request->validated());
+        CheckGoals::dispatch($adSpend->country->merchant_id);
 
         return to_route('ad-spends.index')->with('success', 'Dépense pub modifiée.');
     }
@@ -71,6 +74,7 @@ class AdSpendController extends Controller
         $this->ensureOwned($request, $adSpend->country->merchant_id);
 
         $adSpend->delete();
+        CheckGoals::dispatch($adSpend->country->merchant_id);
 
         return to_route('ad-spends.index')->with('success', 'Dépense pub supprimée.');
     }

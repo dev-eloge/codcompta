@@ -2,6 +2,7 @@ import { LucideIcon } from 'lucide-react';
 
 export interface Auth {
     user: User;
+    isSuperAdmin: boolean;
 }
 
 export interface BreadcrumbItem {
@@ -26,11 +27,39 @@ export interface Flash {
     warning?: string | null;
 }
 
+export type GoalMetric = 'profit' | 'revenue';
+
+export type GoalStatus = 'upcoming' | 'in_progress' | 'reached' | 'missed';
+
+export interface GoalProgress {
+    id: number;
+    title: string;
+    metric: GoalMetric;
+    target: number;
+    from: string;
+    to: string;
+    label: string;
+    days: number;
+    days_elapsed: number;
+    days_left: number;
+    achieved: number;
+    percent: number;
+    remaining: number;
+    expected_percent: number;
+    pace: 'on_track' | 'behind' | null;
+    per_day_target: number;
+    per_day_needed: number;
+    status: GoalStatus;
+}
+
 export interface SharedData {
     name: string;
     flash?: Flash;
     quote: { message: string; author: string };
     auth: Auth;
+    impersonation?: { merchant: string } | null;
+    goals?: GoalProgress[];
+    push?: { publicKey: string | null };
     [key: string]: unknown;
 }
 

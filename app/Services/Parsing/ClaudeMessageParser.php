@@ -75,6 +75,10 @@ class ClaudeMessageParser implements MessageParser
         return [
             'reports' => is_array($input['reports'] ?? null) ? array_values($input['reports']) : [],
             'warnings' => is_array($input['warnings'] ?? null) ? array_values($input['warnings']) : [],
+            'usage' => [
+                'input_tokens' => (int) $response->json('usage.input_tokens', 0),
+                'output_tokens' => (int) $response->json('usage.output_tokens', 0),
+            ],
         ];
     }
 

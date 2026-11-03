@@ -33,7 +33,8 @@ class ParseRawMessage implements ShouldQueue
             ->toDateString();
 
         try {
-            $proposals = $normalizer->normalize($agency, $parser->parse($agency, $message->body, $receivedOn));
+            $answer = $parser->parse($agency, $message->body, $receivedOn);
+            $proposals = $normalizer->normalize($agency, $answer);
         } catch (MessageParsingException $exception) {
             $this->fail($message, $exception->getMessage());
 
@@ -50,6 +51,8 @@ class ParseRawMessage implements ShouldQueue
             'parsed' => $proposals,
             'parsed_at' => now(),
             'error' => null,
+            'ai_input_tokens' => $answer['usage']['input_tokens'] ?? null,
+            'ai_output_tokens' => $answer['usage']['output_tokens'] ?? null,
         ]);
     }
 

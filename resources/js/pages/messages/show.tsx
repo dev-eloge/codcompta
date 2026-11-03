@@ -11,7 +11,7 @@ import { messageStatus } from '@/pages/messages/create';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router, useForm, usePoll } from '@inertiajs/react';
 import { CircleAlert, CircleCheck, LoaderCircle, Plus, RotateCcw, Trash2 } from 'lucide-react';
-import { FormEventHandler, useEffect } from 'react';
+import { FormEventHandler, useEffect, useState } from 'react';
 
 type Status = 'counted' | 'detail' | 'to_verify';
 
@@ -81,7 +81,7 @@ type ProposalForm = {
 
 const statusLabels: Record<Status, string> = {
     counted: 'Compté',
-    detail: 'Détail',
+    detail: 'Détail, non compté',
     to_verify: 'À vérifier',
 };
 
@@ -98,8 +98,9 @@ export default function MessagesShow({ message, warnings, proposals, products }:
         }
     }, [reading, stop]);
 
+    const [retrying, setRetrying] = useState(false);
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Coller un message', href: '/messages/coller' },
+        { title: 'Lire un message WhatsApp', href: '/messages/coller' },
         { title: message.agency.name, href: `/messages/${message.id}` },
     ];
 
@@ -109,10 +110,11 @@ export default function MessagesShow({ message, warnings, proposals, products }:
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title={`Message de ${message.agency.name}`} />
 
+            <h1 className="sr-only">Message WhatsApp de {message.agency.name}</h1>
             <div className="mx-auto grid w-full max-w-6xl gap-6 p-4 md:p-6 lg:grid-cols-[22rem_minmax(0,1fr)]">
-                <aside className="glass h-fit space-y-3 rounded-2xl p-5 lg:sticky lg:top-4">
+                <aside aria-label="Message collé" className="glass h-fit space-y-3 rounded-2xl p-5 lg:sticky lg:top-4">
                     <div className="flex items-center justify-between gap-2">
-                        <h2 className="text-base font-semibold">Message reçu</h2>
+                        <h2 className="text-base font-semibold">Message collé</h2>
                         <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${messageStatus[message.status].className}`}>
                             {messageStatus[message.status].label}
                         </span>
@@ -128,21 +130,25 @@ export default function MessagesShow({ message, warnings, proposals, products }:
                             url={route('messages.destroy', message.id)}
                         />
                     </div>
-                    <pre className="bg-background/70 max-h-[28rem] overflow-auto rounded-xl border p-3 font-mono text-xs leading-relaxed whitespace-pre-wrap">
+                    <pre
+                        tabIndex={0}
+                        aria-label="Texte du message"
+                        className="bg-background/70 focus-visible:ring-ring max-h-[28rem] overflow-auto rounded-xl border p-3 font-mono text-xs leading-relaxed whitespace-pre-wrap focus-visible:ring-2 focus-visible:outline-hidden"
+                    >
                         {message.body}
                     </pre>
                 </aside>
 
-                <main className="min-w-0 space-y-5">
+                <div className="min-w-0 space-y-5">
                     <FlashMessage />
 
                     {reading && (
                         <div role="status" className="glass flex items-center gap-3 rounded-2xl p-6">
-                            <LoaderCircle className="text-primary size-5 animate-spin" />
+                            <LoaderCircle className="text-primary size-5 animate-spin" aria-hidden="true" />
                             <div>
-                                <p className="font-semibold">Lecture du message…</p>
+                                <p className="font-semibold">CODCompta lit le message…</p>
                                 <p className="text-muted-foreground text-sm">
-                                    Cela prend en général moins d'une minute. La page se met à jour seule.
+                                    En général moins d'une minute. Restez sur cette page : les rapports trouvés s'afficheront tout seuls.
                                 </p>
                             </div>
                         </div>
@@ -151,16 +157,28 @@ export default function MessagesShow({ message, warnings, proposals, products }:
                     {message.status === 'failed' && (
                         <div role="alert" className="glass space-y-4 rounded-2xl p-6">
                             <div className="flex gap-3">
-                                <CircleAlert className="text-destructive mt-0.5 size-5 shrink-0" />
+                                <CircleAlert className="text-destructive mt-0.5 size-5 shrink-0" aria-hidden="true" />
                                 <div>
                                     <p className="font-semibold">Le message n'a pas pu être lu</p>
                                     <p className="text-muted-foreground text-sm">{message.error}</p>
+                                    <p className="text-muted-foreground mt-1 text-sm">
+                                        Réessayez dans un instant, ou saisissez ce rapport à la main pour ne pas attendre.
+                                    </p>
                                 </div>
                             </div>
                             <div className="flex flex-wrap gap-3">
-                                <Button onClick={() => router.post(route('messages.retry', message.id))}>
-                                    <RotateCcw />
-                                    Relire le message
+                                <Button
+                                    disabled={retrying}
+                                    onClick={() =>
+                                        router.post(
+                                            route('messages.retry', message.id),
+                                            {},
+                                            { onStart: () => setRetrying(true), onFinish: () => setRetrying(false) },
+                                        )
+                                    }
+                                >
+                                    {retrying ? <LoaderCircle className="animate-spin" aria-hidden="true" /> : <RotateCcw aria-hidden="true" />}
+                                    Réessayer la lecture
                                 </Button>
                                 <Button asChild variant="ghost">
                                     <Link href={route('reports.create')}>Saisir à la main</Link>
@@ -173,17 +191,19 @@ export default function MessagesShow({ message, warnings, proposals, products }:
                         <>
                             <div className="flex flex-wrap items-end justify-between gap-3">
                                 <div>
-                                    <h1 className="text-2xl font-semibold tracking-tight">
+                                    <h2 className="text-2xl font-semibold tracking-tight">
                                         {proposals.length === 0
-                                            ? 'Aucun rapport trouvé'
-                                            : `${proposals.length} rapport${proposals.length > 1 ? 's' : ''} à vérifier`}
-                                    </h1>
+                                            ? 'Aucun rapport trouvé dans ce message'
+                                            : `${proposals.length} rapport${proposals.length > 1 ? 's' : ''} trouvé${proposals.length > 1 ? 's' : ''} : vérifiez avant d'enregistrer`}
+                                    </h2>
                                     <p className="text-muted-foreground text-sm">
-                                        Corrigez si besoin, puis enregistrez chaque rapport. Seuls les rapports « Compté » entrent dans les totaux.
+                                        {proposals.length === 0
+                                            ? 'Le message ne contient peut-être pas de chiffres de livraison. Vérifiez le texte, ou saisissez le rapport à la main.'
+                                            : "Comparez avec le message à gauche, corrigez si besoin, puis cliquez sur « Enregistrer ce rapport ». Rien n'est compté avant."}
                                     </p>
                                 </div>
                                 {proposals.length > 0 && (
-                                    <p className="text-primary text-sm font-semibold">
+                                    <p role="status" className="text-primary text-sm font-semibold tabular-nums">
                                         {recorded} sur {proposals.length} enregistré{recorded > 1 ? 's' : ''}
                                     </p>
                                 )}
@@ -209,17 +229,17 @@ export default function MessagesShow({ message, warnings, proposals, products }:
                                 <div className="flex flex-wrap gap-3">
                                     <Button asChild>
                                         <Link href={route('reports.index', { period: 'week', date: proposals[proposals.length - 1].period_end })}>
-                                            Voir le rapport de la semaine
+                                            Voir mes résultats de la semaine
                                         </Link>
                                     </Button>
                                     <Button asChild variant="outline">
-                                        <Link href={route('messages.create')}>Coller un autre message</Link>
+                                        <Link href={route('messages.create')}>Lire un autre message</Link>
                                     </Button>
                                 </div>
                             )}
                         </>
                     )}
-                </main>
+                </div>
             </div>
         </AppLayout>
     );
@@ -227,10 +247,13 @@ export default function MessagesShow({ message, warnings, proposals, products }:
 
 function WarningList({ warnings }: { warnings: string[] }) {
     return (
-        <ul className="border-secondary/50 bg-secondary/15 space-y-1 rounded-xl border px-4 py-3 text-sm text-amber-900 dark:text-amber-100">
+        <ul
+            aria-label="Points à vérifier"
+            className="border-secondary/70 bg-secondary/20 text-foreground space-y-1 rounded-xl border px-4 py-3 text-sm"
+        >
             {warnings.map((warning) => (
                 <li key={warning} className="flex gap-2">
-                    <CircleAlert className="mt-0.5 size-4 shrink-0" />
+                    <CircleAlert className="text-secondary-foreground dark:text-secondary mt-0.5 size-4 shrink-0" aria-hidden="true" />
                     {warning}
                 </li>
             ))}
@@ -244,10 +267,10 @@ function RecordedCard({ proposal }: { proposal: Proposal }) {
     return (
         <div className="glass flex flex-wrap items-center justify-between gap-3 rounded-2xl px-5 py-4">
             <div className="flex items-center gap-3">
-                <CircleCheck className="text-primary size-5" />
+                <CircleCheck className="text-primary size-5" aria-hidden="true" />
                 <div>
                     <p className="font-semibold">{formatPeriod(proposal.period_start, proposal.period_end)}</p>
-                    <p className="text-muted-foreground text-sm">Enregistré en « {statusLabels[recorded.status]} »</p>
+                    <p className="text-muted-foreground text-sm">Enregistré, statut « {statusLabels[recorded.status]} »</p>
                 </div>
             </div>
             <p className="font-[family-name:var(--font-display)] text-lg font-bold tabular-nums">{formatFcfa(recorded.revenue)}</p>
@@ -300,24 +323,26 @@ function ProposalCard({ proposal, products, agencyId, messageId }: { proposal: P
         <form onSubmit={submit} aria-labelledby={titleId} className="glass space-y-5 rounded-2xl p-5 md:p-6">
             <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                    <h2 id={titleId} className="text-lg font-semibold">
+                    <h3 id={titleId} className="text-lg font-semibold">
                         {formatPeriod(data.period_start, data.period_end)}
-                    </h2>
-                    <p className="text-muted-foreground text-sm">{proposal.kind === 'recap' ? 'Récapitulatif' : "Rapport d'un jour"}</p>
+                    </h3>
+                    <p className="text-muted-foreground text-sm">
+                        {proposal.kind === 'recap' ? 'Récapitulatif de plusieurs jours' : "Rapport d'un jour"}
+                    </p>
                 </div>
                 <div className="grid gap-1">
                     <Label htmlFor={`${titleId}-status`} className="text-muted-foreground text-xs">
-                        Compter dans les totaux
+                        Compter dans le bénéfice ?
                     </Label>
                     <NativeSelect
                         id={`${titleId}-status`}
                         value={data.status}
                         onChange={(e) => setData('status', e.target.value as Status)}
-                        className="h-9 w-44"
+                        className="w-56"
                     >
-                        <option value="counted">Oui (compté)</option>
-                        <option value="detail">Non, détail</option>
-                        <option value="to_verify">Non, à vérifier</option>
+                        <option value="counted">Oui, le compter</option>
+                        <option value="detail">Non, détail d'un récap</option>
+                        <option value="to_verify">Non, à vérifier d'abord</option>
                     </NativeSelect>
                 </div>
             </div>
@@ -350,10 +375,11 @@ function ProposalCard({ proposal, products, agencyId, messageId }: { proposal: P
                     >
                         <div className="col-span-3 grid gap-1 sm:col-span-1">
                             <Label htmlFor={`${titleId}-product-${index}`} className="text-muted-foreground text-xs">
-                                {line.label ? `Écrit « ${line.label} »` : 'Produit'}
+                                {line.label ? `L'agence a écrit « ${line.label} »` : 'Produit'}
                             </Label>
                             <NativeSelect
                                 id={`${titleId}-product-${index}`}
+                                aria-describedby={line.product_id === '' ? `${titleId}-product-${index}-help` : undefined}
                                 value={line.product_id}
                                 onChange={(e) => updateLine(index, { product_id: e.target.value })}
                                 className={line.product_id === '' ? 'border-secondary ring-secondary/40 ring-2' : undefined}
@@ -365,11 +391,17 @@ function ProposalCard({ proposal, products, agencyId, messageId }: { proposal: P
                                     </option>
                                 ))}
                             </NativeSelect>
+                            {line.product_id === '' && (
+                                <p id={`${titleId}-product-${index}-help`} className="flex items-center gap-1 text-xs font-medium">
+                                    <CircleAlert className="text-secondary-foreground dark:text-secondary size-3.5" aria-hidden="true" />
+                                    Produit non reconnu : choisissez-le, CODCompta s'en souviendra.
+                                </p>
+                            )}
                             <InputError message={fieldError(`lines.${index}.product_id`)} />
                         </div>
                         <div className="grid gap-1">
                             <Label htmlFor={`${titleId}-quantity-${index}`} className="text-muted-foreground text-xs">
-                                Livrés
+                                Quantité livrée
                             </Label>
                             <Input
                                 id={`${titleId}-quantity-${index}`}
@@ -383,7 +415,7 @@ function ProposalCard({ proposal, products, agencyId, messageId }: { proposal: P
                         </div>
                         <div className="grid gap-1">
                             <Label htmlFor={`${titleId}-amount-${index}`} className="text-muted-foreground text-xs">
-                                Encaissé (F)
+                                Argent encaissé (F)
                             </Label>
                             <Input
                                 id={`${titleId}-amount-${index}`}
@@ -399,8 +431,9 @@ function ProposalCard({ proposal, products, agencyId, messageId }: { proposal: P
                             type="button"
                             variant="ghost"
                             size="icon"
-                            className="mt-5"
-                            aria-label="Retirer cette ligne"
+                            className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive mt-5"
+                            aria-label={`Retirer la ligne ${index + 1}`}
+                            title="Retirer cette ligne"
                             disabled={data.lines.length === 1}
                             onClick={() =>
                                 setData(
@@ -409,17 +442,16 @@ function ProposalCard({ proposal, products, agencyId, messageId }: { proposal: P
                                 )
                             }
                         >
-                            <Trash2 />
+                            <Trash2 aria-hidden="true" />
                         </Button>
                     </div>
                 ))}
                 <Button
                     type="button"
                     variant="outline"
-                    size="sm"
                     onClick={() => setData('lines', [...data.lines, { label: '', product_id: '', quantity: '1', amount: '' }])}
                 >
-                    <Plus />
+                    <Plus aria-hidden="true" />
                     Ajouter une ligne
                 </Button>
             </div>
@@ -427,7 +459,7 @@ function ProposalCard({ proposal, products, agencyId, messageId }: { proposal: P
             <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
                 <Money
                     id={`${titleId}-delivery`}
-                    label="Livraison (F)"
+                    label="Frais de livraison (F)"
                     value={data.delivery_fees}
                     error={errors.delivery_fees}
                     onChange={(v) => setData('delivery_fees', v)}
@@ -448,7 +480,7 @@ function ProposalCard({ proposal, products, agencyId, messageId }: { proposal: P
                 />
                 <Money
                     id={`${titleId}-announced`}
-                    label="Total annoncé (F)"
+                    label="Total écrit par l'agence (F)"
                     value={data.announced_total}
                     error={errors.announced_total}
                     onChange={(v) => setData('announced_total', v)}
@@ -457,7 +489,7 @@ function ProposalCard({ proposal, products, agencyId, messageId }: { proposal: P
 
             <div className="grid gap-1">
                 <Label htmlFor={`${titleId}-note`} className="text-muted-foreground text-xs">
-                    Note
+                    Note (facultatif)
                 </Label>
                 <Input id={`${titleId}-note`} value={data.note} onChange={(e) => setData('note', e.target.value)} />
                 <InputError message={errors.note} />
@@ -466,23 +498,27 @@ function ProposalCard({ proposal, products, agencyId, messageId }: { proposal: P
             <div className="border-primary/25 bg-primary/8 flex flex-wrap items-center justify-between gap-4 rounded-xl border p-4">
                 <dl className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
                     <div>
-                        <dt className="text-muted-foreground text-xs">Ventes</dt>
+                        <dt className="text-muted-foreground text-xs">Argent encaissé</dt>
                         <dd className="font-[family-name:var(--font-display)] text-lg font-bold tabular-nums">{formatFcfa(sales)}</dd>
                     </div>
                     <div>
-                        <dt className="text-muted-foreground text-xs">Résultat avant pub</dt>
+                        <dt className="text-muted-foreground text-xs">Reste avant publicité</dt>
                         <dd className="font-[family-name:var(--font-display)] text-lg font-bold tabular-nums">
                             {formatFcfa(sales - purchaseCost - fees)}
                         </dd>
                     </div>
                 </dl>
                 <Button type="submit" disabled={processing}>
+                    {processing && <LoaderCircle className="animate-spin" aria-hidden="true" />}
                     Enregistrer ce rapport
                 </Button>
                 {mismatch && (
-                    <p className="w-full text-sm font-medium text-amber-800 dark:text-amber-200">
-                        Les lignes font {formatFcfa(sales)} mais l'agence annonce {formatFcfa(toNumber(data.announced_total))} : le rapport sera
-                        marqué « à vérifier ».
+                    <p role="status" className="flex w-full items-start gap-2 text-sm font-medium">
+                        <CircleAlert className="text-destructive mt-0.5 size-4 shrink-0" aria-hidden="true" />
+                        <span>
+                            Les lignes font {formatFcfa(sales)} mais l'agence a écrit {formatFcfa(toNumber(data.announced_total))} : le rapport sera
+                            marqué « à vérifier ».
+                        </span>
                     </p>
                 )}
             </div>

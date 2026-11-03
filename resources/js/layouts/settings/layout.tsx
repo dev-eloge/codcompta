@@ -24,7 +24,7 @@ const sidebarNavItems: NavItem[] = [
 ];
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {
-    const currentPath = window.location.pathname;
+    const currentPath = typeof window === 'undefined' ? '' : window.location.pathname;
 
     return (
         <div className="px-4 py-6">
@@ -32,18 +32,17 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
 
             <div className="flex flex-col space-y-8 lg:flex-row lg:space-y-0 lg:space-x-12">
                 <aside className="w-full max-w-xl lg:w-48">
-                    <nav className="flex flex-col space-y-1 space-x-0">
+                    <nav aria-label="Réglages" className="flex flex-col space-y-1 space-x-0">
                         {sidebarNavItems.map((item) => (
                             <Button
                                 key={item.url}
-                                size="sm"
                                 variant="ghost"
                                 asChild
                                 className={cn('w-full justify-start', {
-                                    'bg-muted': currentPath === item.url,
+                                    'bg-primary/10 text-primary font-semibold': currentPath === item.url,
                                 })}
                             >
-                                <Link href={item.url} prefetch>
+                                <Link href={item.url} prefetch aria-current={currentPath === item.url ? 'page' : undefined}>
                                     {item.title}
                                 </Link>
                             </Button>

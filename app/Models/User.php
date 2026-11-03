@@ -6,6 +6,7 @@ namespace App\Models;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -23,6 +24,7 @@ class User extends Authenticatable
         'merchant_id',
         'name',
         'email',
+        'google_id',
         'role',
         'password',
     ];
@@ -42,6 +44,11 @@ class User extends Authenticatable
         return $this->belongsTo(Merchant::class);
     }
 
+    public function pushSubscriptions(): HasMany
+    {
+        return $this->hasMany(PushSubscription::class);
+    }
+
     /**
      * Get the attributes that should be cast.
      *
@@ -50,6 +57,7 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
+            'is_super_admin' => 'boolean',
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];

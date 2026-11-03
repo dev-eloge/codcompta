@@ -14,9 +14,9 @@ Internet ──HTTPS──▶ Nginx du VPS (déjà installé, certificat SSL)
    │  web        Nginx : fichiers du site + PHP     │
    │  app        Laravel (php-fpm), fait les        │
    │             migrations au démarrage            │
-   │  queue      lit les messages d'agence et les   │
-   │             Google Sheets en arrière-plan      │
-   │  scheduler  relit les Sheets chaque matin à 6 h│
+   │  queue      lit les messages d'agence          │
+   │             en arrière-plan                    │
+   │  scheduler  tâches planifiées de Laravel       │
    │  db         MySQL 8.4 (volume « mysql-data »)  │
    └────────────────────────────────────────────────┘
 ```
@@ -103,7 +103,7 @@ Ouvre le fichier (`nano .env`) et remplis :
 
 Ne change pas `APP_URL` ni `GOOGLE_REDIRECT_URI` : ils sont déjà réglés sur `https://elogecompta.africodehub.net`.
 
-> **Garde une copie de `APP_KEY`.** Si tu la changes plus tard, tous les utilisateurs sont déconnectés et la connexion Google doit être refaite (les jetons Google sont chiffrés avec cette clé).
+> **Garde une copie de `APP_KEY`.** Si tu la changes plus tard, tous les utilisateurs sont déconnectés.
 
 ---
 
@@ -181,7 +181,21 @@ Ouvre **https://elogecompta.africodehub.net** : la page d'accueil s'affiche avec
 2. **Google Cloud** (API et services → Identifiants → ton ID client OAuth) : ajoute l'URI de redirection autorisée
    `https://elogecompta.africodehub.net/google/callback`
    Garde aussi `http://localhost:8000/google/callback` si tu continues à travailler en local.
+   Cette adresse sert à **« Continuer avec Google »** sur la page de connexion.
+   Tant que l'écran de consentement est « en test », seuls les emails ajoutés comme utilisateurs test peuvent se connecter avec Google. Pour ouvrir à tout le monde, clique sur **« Publier l'application »** dans l'écran de consentement OAuth. La connexion (nom et email seulement) ne demande pas de validation par Google.
 3. **Anthropic** : vérifie qu'il reste du crédit sur console.anthropic.com.
+4. **Emails « Mot de passe oublié »** : sans serveur d'envoi, aucun email ne part. Le plus simple est Brevo (gratuit, 300 emails par jour) :
+   1. Crée un compte sur brevo.com, puis va dans **Paramètres → SMTP & API → SMTP**.
+   2. Copie l'identifiant SMTP dans `MAIL_USERNAME` et génère une clé SMTP pour `MAIL_PASSWORD`.
+   3. Dans **Expéditeurs, domaines**, ajoute le domaine `africodehub.net` et ajoute chez ton fournisseur DNS les enregistrements que Brevo affiche (DKIM et DMARC). Sans cela, les emails arrivent en spam.
+   4. Applique : `docker compose up -d --force-recreate`.
+
+   Pour vérifier, fais une demande « Mot de passe oublié » avec ton adresse. Si rien n'arrive, regarde `docker compose logs app`.
+5. **Notifications de Sika** (une seule fois) :
+   1. `docker compose exec app php artisan codcompta:vapid` affiche deux lignes `VAPID_PUBLIC_KEY=…` et `VAPID_PRIVATE_KEY=…`.
+   2. Colle-les dans le `.env` du VPS (avec `VAPID_SUBJECT=mailto:ton-adresse`), puis `docker compose up -d --force-recreate app queue scheduler`.
+   3. Sur la page « Mes objectifs », clique sur « Activer les notifications », puis « Envoyer un essai ».
+   Ne change plus ces clés ensuite : sinon chaque utilisateur doit réactiver les notifications. Le conteneur `scheduler` vérifie chaque heure les objectifs terminés, le conteneur `queue` envoie les notifications.
 
 ---
 
@@ -234,7 +248,6 @@ gunzip -c backups/codcompta-AAAA-MM-JJ-HHMM.sql.gz | docker compose exec -T db s
 | État des conteneurs | `docker compose ps` |
 | Journaux en direct | `docker compose logs -f app queue scheduler` |
 | Commande Laravel | `docker compose exec app php artisan <commande>` |
-| Relire les Sheets tout de suite | `docker compose exec app php artisan sheets:sync` |
 | Ouvrir MySQL | `docker compose exec db sh -c 'mysql -u root -p"$MYSQL_ROOT_PASSWORD" codcompta'` |
 | Redémarrer | `docker compose restart` |
 | Arrêter | `docker compose down` |
@@ -252,6 +265,8 @@ gunzip -c backups/codcompta-AAAA-MM-JJ-HHMM.sql.gz | docker compose exec -T db s
 | 502 Bad Gateway sur le domaine | conteneurs pas encore prêts, ou mauvais port | `docker compose ps`, puis `curl -I http://127.0.0.1:8081/up` ; vérifie le port dans le fichier Nginx |
 | Erreur 419 (page expirée) au formulaire | site ouvert en `http://` | ouvre toujours `https://` (Certbot ajoute la redirection) |
 | Styles absents, page blanche | build raté | `docker compose build --no-cache app web && docker compose up -d` |
-| Message ou Sheet bloqué sur « Lecture en cours » | conteneur `queue` arrêté | `docker compose logs queue`, puis `docker compose restart queue` |
+| Message bloqué sur « Lecture en cours » | conteneur `queue` arrêté | `docker compose logs queue`, puis `docker compose restart queue` |
 | Google : `redirect_uri_mismatch` | URI absente de Google Cloud | ajoute `https://elogecompta.africodehub.net/google/callback` (étape 5) |
+| « Mot de passe oublié » : aucun email reçu | SMTP non configuré ou refusé | vérifie les `MAIL_…` (étape 5.4), regarde les spams, puis `docker compose logs app` |
+| « Continuer avec Google » refusé (accès bloqué) | application Google « en test » | ajoute l'email comme utilisateur test, ou publie l'application (étape 5.2) |
 | Port 8081 déjà utilisé | une autre application l'occupe | change `APP_PORT` dans `.env` et le port dans le fichier Nginx, puis `docker compose up -d` |

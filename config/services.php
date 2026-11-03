@@ -36,6 +36,13 @@ return [
         'redirect' => env('GOOGLE_REDIRECT_URI'),
     ],
 
+    // Sika's notifications (Web Push). Keys made once with: php artisan codcompta:vapid
+    'webpush' => [
+        'public_key' => env('VAPID_PUBLIC_KEY'),
+        'private_key' => env('VAPID_PRIVATE_KEY'),
+        'subject' => env('VAPID_SUBJECT', 'mailto:'.env('MAIL_FROM_ADDRESS', 'contact@example.com')),
+    ],
+
     'resend' => [
         'key' => env('RESEND_KEY'),
     ],

@@ -2,6 +2,7 @@ import { Head, useForm } from '@inertiajs/react';
 import { LoaderCircle } from 'lucide-react';
 import { FormEventHandler } from 'react';
 
+import { GoogleSignInButton } from '@/components/google-sign-in-button';
 import InputError from '@/components/input-error';
 import { PasswordInput } from '@/components/password-input';
 import TextLink from '@/components/text-link';
@@ -20,9 +21,10 @@ interface LoginForm {
 interface LoginProps {
     status?: string;
     canResetPassword: boolean;
+    googleSignIn: boolean;
 }
 
-export default function Login({ status, canResetPassword }: LoginProps) {
+export default function Login({ status, canResetPassword, googleSignIn }: LoginProps) {
     const { data, setData, post, processing, errors, reset } = useForm<LoginForm>({
         email: '',
         password: '',
@@ -37,8 +39,19 @@ export default function Login({ status, canResetPassword }: LoginProps) {
     };
 
     return (
-        <AuthLayout title="Connexion à CODCompta" description="Entrez votre email et votre mot de passe">
+        <AuthLayout title="Connexion à CODCompta" description="Content de vous revoir. Entrez votre email et votre mot de passe.">
             <Head title="Connexion" />
+
+            {status && (
+                <div
+                    role="status"
+                    className="border-primary/30 bg-primary/10 text-primary rounded-lg border px-4 py-3 text-center text-sm font-medium"
+                >
+                    {status}
+                </div>
+            )}
+
+            {googleSignIn && <GoogleSignInButton />}
 
             <form className="flex flex-col gap-6" onSubmit={submit}>
                 <div className="grid gap-6">
@@ -49,7 +62,6 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                             type="email"
                             required
                             autoFocus
-                            tabIndex={1}
                             autoComplete="email"
                             value={data.email}
                             onChange={(e) => setData('email', e.target.value)}
@@ -62,7 +74,7 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                         <div className="flex items-center">
                             <Label htmlFor="password">Mot de passe</Label>
                             {canResetPassword && (
-                                <TextLink href={route('password.request')} className="ml-auto text-sm" tabIndex={5}>
+                                <TextLink href={route('password.request')} className="ml-auto text-sm">
                                     Mot de passe oublié ?
                                 </TextLink>
                             )}
@@ -70,7 +82,6 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                         <PasswordInput
                             id="password"
                             required
-                            tabIndex={2}
                             autoComplete="current-password"
                             value={data.password}
                             onChange={(e) => setData('password', e.target.value)}
@@ -80,25 +91,25 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                     </div>
 
                     <div className="flex items-center space-x-3">
-                        <Checkbox id="remember" name="remember" tabIndex={3} />
-                        <Label htmlFor="remember">Rester connecté</Label>
+                        <Checkbox
+                            id="remember"
+                            name="remember"
+                            checked={data.remember}
+                            onCheckedChange={(checked) => setData('remember', checked === true)}
+                        />
+                        <Label htmlFor="remember">Rester connecté sur cet appareil</Label>
                     </div>
 
-                    <Button type="submit" className="mt-4 w-full" tabIndex={4} disabled={processing}>
-                        {processing && <LoaderCircle className="h-4 w-4 animate-spin" />}
+                    <Button type="submit" className="mt-4 w-full" disabled={processing}>
+                        {processing && <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />}
                         Se connecter
                     </Button>
                 </div>
 
                 <div className="text-muted-foreground text-center text-sm">
-                    Pas encore de compte ?{' '}
-                    <TextLink href={route('register')} tabIndex={5}>
-                        Créer un compte
-                    </TextLink>
+                    Pas encore de compte ? <TextLink href={route('register')}>Créer un compte</TextLink>
                 </div>
             </form>
-
-            {status && <div className="mb-4 text-center text-sm font-medium text-green-600">{status}</div>}
         </AuthLayout>
     );
 }

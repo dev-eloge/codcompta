@@ -21,14 +21,14 @@ export default function VerifyEmail({ status }: { status?: string }) {
             <Head title="Vérification de l'email" />
 
             {status === 'verification-link-sent' && (
-                <div className="mb-4 text-center text-sm font-medium text-green-600">
+                <div role="status" className="text-primary mb-4 text-center text-sm font-medium">
                     Un nouveau lien de vérification a été envoyé à votre adresse email.
                 </div>
             )}
 
             <form onSubmit={submit} className="space-y-6 text-center">
                 <Button disabled={processing} variant="secondary">
-                    {processing && <LoaderCircle className="h-4 w-4 animate-spin" />}
+                    {processing && <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />}
                     Renvoyer l'email
                 </Button>
 
