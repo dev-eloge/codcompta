@@ -1,4 +1,5 @@
 import AppLogoIcon from '@/components/app-logo-icon';
+import { LegalLinks } from '@/components/legal/legal-links';
 import { Link } from '@inertiajs/react';
 
 interface AuthLayoutProps {
@@ -27,6 +28,7 @@ export default function AuthSimpleLayout({ children, title, description }: AuthL
                     {children}
                 </div>
             </div>
+            <LegalLinks className="text-muted-foreground text-xs" />
         </main>
     );
 }

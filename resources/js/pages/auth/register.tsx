@@ -106,6 +106,10 @@ export default function Register({ googleSignIn }: { googleSignIn: boolean }) {
                         {processing && <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />}
                         Créer mon compte
                     </Button>
+                    <p className="text-muted-foreground text-center text-xs leading-relaxed">
+                        En créant un compte, vous acceptez les <TextLink href={route('legal.terms')}>conditions d'utilisation</TextLink> et la{' '}
+                        <TextLink href={route('legal.privacy')}>politique de confidentialité</TextLink>.
+                    </p>
                 </div>
 
                 <div className="text-muted-foreground text-center text-sm">

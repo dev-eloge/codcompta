@@ -1,13 +1,31 @@
 import AppLogoIcon from '@/components/app-logo-icon';
 import { InstallBanner } from '@/components/install-app';
+import { LegalLinks } from '@/components/legal/legal-links';
 import { Button } from '@/components/ui/button';
 import { useCountUp, useReveal } from '@/hooks/use-reveal';
 import { type SharedData } from '@/types';
 import { Head, Link, usePage } from '@inertiajs/react';
 import { ChartColumn, ChevronDown, Megaphone, MessageSquareText, Play, Receipt, ShieldCheck, Target } from 'lucide-react';
-import { type CSSProperties } from 'react';
+import { type CSSProperties, type MouseEvent } from 'react';
 
 const delay = (ms: number) => ({ '--delay': `${ms}ms` }) as CSSProperties;
+
+/**
+ * Glides down to a section of the page instead of jumping, then moves keyboard focus there.
+ * People who asked their device to reduce motion get the instant jump.
+ */
+function scrollToSection(event: MouseEvent<HTMLAnchorElement>, id: string) {
+    const target = document.getElementById(id);
+    if (!target) {
+        return;
+    }
+
+    event.preventDefault();
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    target.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+    window.history.replaceState(null, '', `#${id}`);
+    target.focus({ preventScroll: true });
+}
 
 const steps = [
     {
@@ -138,6 +156,7 @@ export default function Welcome({ demoVideoUrl }: { demoVideoUrl: string | null 
                                 </Button>
                                 <a
                                     href={demoVideoUrl ? '#demo' : '#comment'}
+                                    onClick={(event) => scrollToSection(event, demoVideoUrl ? 'demo' : 'comment')}
                                     className="glass text-foreground hover:text-primary inline-flex h-12 items-center gap-2 rounded-full px-5 text-sm font-semibold transition-colors"
                                 >
                                     {demoVideoUrl ? (
@@ -166,7 +185,7 @@ export default function Welcome({ demoVideoUrl }: { demoVideoUrl: string | null 
                                 </p>
                             )}
                             <p style={delay(460)} className="rise text-muted-foreground text-sm">
-                                Pour les e-commerçants qui vendent en paiement à la livraison, en Afrique de l'Ouest et centrale. Inscription en une
+                                Pour les e-commerçants qui vendent en paiement à la livraison, en Afrique. Inscription en une
                                 minute, avec votre email ou votre compte Google.
                             </p>
                         </div>
@@ -176,7 +195,12 @@ export default function Welcome({ demoVideoUrl }: { demoVideoUrl: string | null 
 
                     {demoVideoUrl && <DemoVideo url={demoVideoUrl} />}
 
-                    <section id="comment" aria-labelledby="how" className="mx-auto w-full max-w-6xl scroll-mt-6 px-5 pb-20 md:px-8">
+                    <section
+                        id="comment"
+                        tabIndex={-1}
+                        aria-labelledby="how"
+                        className="mx-auto w-full max-w-6xl scroll-mt-6 px-5 pb-20 outline-none md:px-8"
+                    >
                         <h2 id="how" className="reveal mb-8 text-2xl font-semibold tracking-tight md:text-3xl">
                             Comment ça marche, en trois étapes
                         </h2>
@@ -260,12 +284,12 @@ export default function Welcome({ demoVideoUrl }: { demoVideoUrl: string | null 
 
                 <InstallBanner />
 
-                <footer className="text-muted-foreground mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-3 px-5 pb-10 text-sm md:px-8">
+                <footer className="text-muted-foreground mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-4 border-t border-black/5 px-5 pt-6 pb-10 text-sm md:px-8 dark:border-white/10">
                     <span className="flex items-center gap-2">
                         <AppLogoIcon variant="mark" className="size-5" />
-                        CODCompta
+                        CODCompta, la comptabilité du paiement à la livraison.
                     </span>
-                    <span>La comptabilité du paiement à la livraison.</span>
+                    <LegalLinks />
                 </footer>
             </div>
         </>
@@ -353,7 +377,12 @@ function DemoVideo({ url }: { url: string }) {
     const embed = toEmbed(url);
 
     return (
-        <section id="demo" aria-labelledby="demo-title" className="mx-auto w-full max-w-5xl scroll-mt-6 px-5 pb-24 md:px-8">
+        <section
+            id="demo"
+            tabIndex={-1}
+            aria-labelledby="demo-title"
+            className="mx-auto w-full max-w-5xl scroll-mt-6 px-5 pb-24 outline-none md:px-8"
+        >
             <div className="reveal mb-8 space-y-2 text-center">
                 <p className="text-primary text-sm font-semibold tracking-wide uppercase">Démo</p>
                 <h2 id="demo-title" className="text-2xl font-semibold tracking-tight md:text-3xl">

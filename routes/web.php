@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin;
 use App\Http\Controllers\AdSpendController;
 use App\Http\Controllers\Auth\GoogleSignIn;
 use App\Http\Controllers\GoalController;
+use App\Http\Controllers\LegalController;
 use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\RawMessageController;
 use App\Http\Controllers\ReferenceController;
@@ -16,6 +17,10 @@ Route::get('/', function () {
         'demoVideoUrl' => config('codcompta.demo_video_url'),
     ]);
 })->name('home');
+
+Route::get('mentions-legales', [LegalController::class, 'notice'])->name('legal.notice');
+Route::get('confidentialite', [LegalController::class, 'privacy'])->name('legal.privacy');
+Route::get('conditions', [LegalController::class, 'terms'])->name('legal.terms');
 
 // "Continuer avec Google": Google sends the person back here after choosing an account.
 Route::get('google/callback', [GoogleSignIn::class, 'callback'])->middleware('guest')->name('google.callback');
