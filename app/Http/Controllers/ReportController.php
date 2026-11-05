@@ -10,6 +10,7 @@ use App\Models\RawMessage;
 use App\Models\Report;
 use App\Services\Parsing\ProductMatcher;
 use App\Services\PeriodReport;
+use App\Services\ProfitDiagnosis;
 use App\Services\ReportPeriod;
 use App\Services\ReportRecorder;
 use App\Services\ResultsTrend;
@@ -29,7 +30,7 @@ class ReportController extends Controller
     /**
      * Financial report of one country for a day, a week, a month (BF-16, BF-17) or any range of days.
      */
-    public function index(Request $request, PeriodReport $periodReport, ResultsTrend $trend): Response
+    public function index(Request $request, PeriodReport $periodReport, ProfitDiagnosis $profitDiagnosis, ResultsTrend $trend): Response
     {
         $merchant = $this->merchantOf($request);
 
@@ -89,6 +90,9 @@ class ReportController extends Controller
         $from = $period->from->toDateString();
         $to = $period->to->toDateString();
 
+        $report = $country === null ? null : $periodReport->forCountry($country, $from, $to);
+        $diagnosis = $country === null || $report === null ? null : $profitDiagnosis->forCountry($country, $period, $report);
+
         $entries = $country === null ? collect() : Report::query()
             ->whereIn('agency_id', $country->agencies()->select('id'))
             ->endingBetween($from, $to)
@@ -113,7 +117,8 @@ class ReportController extends Controller
             'countries' => $countries->map->only(['id', 'name', 'code'])->values(),
             'countryId' => $country?->id,
             'period' => [...$period->toArray(), 'is_current' => $period->type !== ReportPeriod::CUSTOM && $period->from->lessThanOrEqualTo(now($merchant->timezone)) && $period->to->greaterThanOrEqualTo(now($merchant->timezone)->startOfDay())],
-            'report' => $country === null ? null : $periodReport->forCountry($country, $from, $to),
+            'report' => $report,
+            'diagnosis' => $diagnosis,
             'entries' => $entries,
             // Deferred: the page shows the results first, the small charts arrive right after.
             'trend' => Inertia::defer(fn () => $country === null ? null : $trend->forCountry($country, $period)),

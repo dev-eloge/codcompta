@@ -1,5 +1,6 @@
 import FlashMessage from '@/components/flash-message';
 import { GoalCard, isActive } from '@/components/goals/goal-progress';
+import { ProfitDiagnosis, type ProfitDiagnosisData } from '@/components/reports/profit-diagnosis';
 import InputError from '@/components/input-error';
 import { NativeSelect } from '@/components/native-select';
 import { ReportTabs } from '@/components/reports/report-tabs';
@@ -74,6 +75,7 @@ interface Props {
     period: Period;
     report: { agencies: Row[]; total: Row } | null;
     entries: Entry[];
+    diagnosis: ProfitDiagnosisData | null;
     trend?: Trend | null;
 }
 
@@ -164,7 +166,7 @@ const columns: { key: keyof Row; label: string; help: string; format?: (row: Row
     { key: 'margin', label: 'Marge', help: "Bénéfice net divisé par le chiffre d'affaires", format: (row) => formatPercent(row.margin) },
 ];
 
-export default function ReportsIndex({ countries, countryId, period, report, entries, trend }: Props) {
+export default function ReportsIndex({ countries, countryId, period, report, entries, diagnosis, trend }: Props) {
     const { goals = [] } = usePage<SharedData>().props;
 
     return (
@@ -195,6 +197,8 @@ export default function ReportsIndex({ countries, countryId, period, report, ent
                         {goals.length > 0 && <GoalsOverview goals={goals} />}
 
                         {report && <Summary total={report.total} days={period.days} />}
+
+                        <ProfitDiagnosis diagnosis={diagnosis} />
 
                         {report && <AgencyTable rows={report.agencies} total={report.total} />}
 
