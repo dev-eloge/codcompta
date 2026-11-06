@@ -28,6 +28,11 @@ class WebPush
         return filled($this->publicKey) && filled($this->privateKey);
     }
 
+    public function subject(): string
+    {
+        return $this->subject;
+    }
+
     public function publicKey(): ?string
     {
         return $this->publicKey;
@@ -40,8 +45,19 @@ class WebPush
      */
     public function send(PushSubscription $subscription, array $payload): bool
     {
+        return $this->deliver($subscription, $payload)['ok'];
+    }
+
+    /**
+     * Same as send(), with what the push service answered, for the diagnostic command.
+     *
+     * @param  array<string, mixed>  $payload
+     * @return array{ok: bool, status: int|null, reason: string|null}
+     */
+    public function deliver(PushSubscription $subscription, array $payload): array
+    {
         if (! $this->isConfigured()) {
-            return false;
+            return ['ok' => false, 'status' => null, 'reason' => 'VAPID_PUBLIC_KEY ou VAPID_PRIVATE_KEY manquant'];
         }
 
         try {
@@ -54,7 +70,7 @@ class WebPush
             $response = Http::timeout(15)
                 ->withHeaders([
                     'TTL' => '86400',
-                    'Urgency' => 'normal',
+                    'Urgency' => 'high',
                     'Content-Encoding' => 'aes128gcm',
                     'Authorization' => 'vapid t='.$this->vapidToken($subscription->endpoint).', k='.$this->publicKey,
                 ])
@@ -63,20 +79,24 @@ class WebPush
         } catch (Throwable $exception) {
             Log::warning('Web push failed', ['endpoint' => $subscription->endpoint, 'error' => $exception->getMessage()]);
 
-            return false;
+            return ['ok' => false, 'status' => null, 'reason' => $exception->getMessage()];
         }
 
         if (in_array($response->status(), [404, 410], true)) {
             $subscription->delete();
 
-            return false;
+            return ['ok' => false, 'status' => $response->status(), 'reason' => 'abonnement expiré, supprimé'];
         }
 
         if (! $response->successful()) {
             Log::warning('Web push refused', ['status' => $response->status(), 'body' => $response->body()]);
         }
 
-        return $response->successful();
+        return [
+            'ok' => $response->successful(),
+            'status' => $response->status(),
+            'reason' => $response->successful() ? null : mb_substr(trim($response->body()), 0, 300),
+        ];
     }
 
     /**
@@ -129,8 +149,8 @@ class WebPush
         $parts = parse_url($endpoint);
         $audience = $parts['scheme'].'://'.$parts['host'].(isset($parts['port']) ? ':'.$parts['port'] : '');
 
-        $header = self::encode(json_encode(['typ' => 'JWT', 'alg' => 'ES256']));
-        $claims = self::encode(json_encode(['aud' => $audience, 'exp' => time() + 12 * 3600, 'sub' => $this->subject]));
+        $header = self::encode(json_encode(['typ' => 'JWT', 'alg' => 'ES256'], JSON_UNESCAPED_SLASHES));
+        $claims = self::encode(json_encode(['aud' => $audience, 'exp' => time() + 12 * 3600, 'sub' => $this->subject], JSON_UNESCAPED_SLASHES));
         $unsigned = $header.'.'.$claims;
 
         openssl_sign($unsigned, $derSignature, $this->privateKeyPem(), OPENSSL_ALGO_SHA256);

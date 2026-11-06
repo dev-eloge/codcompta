@@ -15,9 +15,14 @@
     --color-gold-brand: #f4b23e;
     --color-ink-brand: #0b2a33;
     --color-coral-brand: #e4654a;
-    /* Text on the green hero card: soft gold for money set aside, soft coral for a loss. */
+    /* Text on the dark hero surface: soft gold for money set aside, soft coral for a loss. */
     --color-on-hero-gold: #ffd98a;
     --color-on-hero-loss: #ffc9bc;
+    --color-on-hero-up: #7fe3c3;
+    /* Window buttons of the browser frame around the product preview (decorative). */
+    --color-window-close: #ff5f57;
+    --color-window-minimize: #febc2e;
+    --color-window-zoom: #28c840;
 
     --radius-lg: var(--radius);
     --radius-md: calc(var(--radius) - 2px);
@@ -34,6 +39,20 @@
 
     --color-primary: var(--primary);
     --color-primary-foreground: var(--primary-foreground);
+    --color-primary-hover: var(--primary-hover);
+
+    --color-hero: var(--hero);
+    --color-hero-foreground: var(--hero-foreground);
+    --color-hero-muted: var(--hero-muted);
+
+    --color-success-bg: var(--success-bg);
+    --color-success-fg: var(--success-fg);
+    --color-warning-bg: var(--warning-bg);
+    --color-warning-fg: var(--warning-fg);
+    --color-danger-bg: var(--danger-bg);
+    --color-danger-fg: var(--danger-fg);
+    --color-info-bg: var(--info-bg);
+    --color-info-fg: var(--info-fg);
 
     --color-secondary: var(--secondary);
     --color-secondary-foreground: var(--secondary-foreground);
@@ -86,92 +105,119 @@
 }
 
 :root {
-    /* CODCompta palette: emerald (growth), gold (FCFA coins), ink (text), coral (losses). */
-    --background: hsl(160 33% 98% / 0.62);
-    --foreground: hsl(193 64% 12%);
-    --card: hsl(0 0% 100% / 0.6);
-    --card-foreground: hsl(193 64% 12%);
-    --popover: hsl(160 30% 99%);
-    --popover-foreground: hsl(193 64% 12%);
-    --primary: hsl(165 80% 30%);
-    --primary-foreground: hsl(0 0% 100%);
-    --secondary: hsl(41 89% 59%);
-    --secondary-foreground: hsl(193 64% 12%);
-    --muted: hsl(165 25% 92% / 0.7);
-    --muted-foreground: hsl(193 18% 38%);
-    --accent: hsl(165 45% 90% / 0.8);
-    --accent-foreground: hsl(193 64% 12%);
-    --destructive: hsl(11 74% 59%);
-    --destructive-foreground: hsl(0 0% 100%);
-    --border: hsl(165 25% 82% / 0.7);
-    --input: hsl(165 22% 78% / 0.9);
-    --ring: hsl(165 80% 30%);
-    --chart-1: hsl(165 80% 30%);
-    --chart-2: hsl(41 89% 59%);
-    --chart-3: hsl(199 66% 60%);
-    --chart-4: hsl(160 55% 60%);
-    --chart-5: hsl(11 74% 59%);
+    /*
+      CODCompta palette: emerald (growth), gold (FCFA coins, savings), ink (text), coral (losses).
+      Surfaces are solid with thin borders. Only one dark surface per page: the net profit (--hero).
+      Primary is a slightly deeper emerald than the logo so white text on it passes WCAG AA (5.3:1).
+    */
+    --background: #f3f7f5;
+    --foreground: #0b2a33;
+    --card: #ffffff;
+    --card-foreground: #0b2a33;
+    --popover: #ffffff;
+    --popover-foreground: #0b2a33;
+    --primary: #0f7a60;
+    --primary-hover: #0b5e4a;
+    --primary-foreground: #ffffff;
+    --secondary: #f4b23e;
+    --secondary-foreground: #0b2a33;
+    --muted: #eef5f2;
+    --muted-foreground: #4a5e63;
+    --accent: #e8f3ef;
+    --accent-foreground: #0b2a33;
+    --destructive: #c2412a;
+    --destructive-foreground: #ffffff;
+    --border: #e1eae6;
+    --input: #c9d7d1;
+    --ring: #5fd3b0;
+    --chart-1: #0f8a6c;
+    --chart-2: #f4b23e;
+    --chart-3: #4a9fc7;
+    --chart-4: #7fd3b8;
+    --chart-5: #e4654a;
     --radius: 0.75rem;
-    --sidebar-background: hsl(0 0% 100% / 0.45);
-    --sidebar-foreground: hsl(193 40% 22%);
-    --sidebar-primary: hsl(165 80% 30%);
-    --sidebar-primary-foreground: hsl(0 0% 100%);
-    --sidebar-accent: hsl(165 50% 88% / 0.8);
-    --sidebar-accent-foreground: hsl(193 64% 12%);
-    --sidebar-border: hsl(0 0% 100% / 0.6);
-    --sidebar-ring: hsl(165 80% 30%);
 
-    --glass-fill: hsl(0 0% 100% / 0.58);
-    --glass-edge: hsl(0 0% 100% / 0.75);
-    --glass-shadow: 0 10px 40px -12px hsl(193 64% 12% / 0.18);
-    --page-wash:
-        radial-gradient(60rem 40rem at 8% -10%, hsl(160 62% 70% / 0.55), transparent 60%),
-        radial-gradient(48rem 36rem at 100% 10%, hsl(41 92% 70% / 0.45), transparent 60%),
-        radial-gradient(52rem 40rem at 60% 110%, hsl(199 70% 72% / 0.45), transparent 60%),
-        linear-gradient(180deg, hsl(160 40% 95%), hsl(170 30% 93%));
+    /* Semantic states: text always paired with an icon or a word, never colour alone. */
+    --success-bg: #ddf2ea;
+    --success-fg: #0b5e4a;
+    --warning-bg: #ffefd6;
+    --warning-fg: #7a4a06;
+    --danger-bg: #fce3dc;
+    --danger-fg: #a3361f;
+    --info-bg: #e3eff7;
+    --info-fg: #1d4e6b;
+
+    /* The one strong surface: the net profit. */
+    --hero: #0b2a33;
+    --hero-foreground: #ffffff;
+    --hero-muted: #b9d4cc;
+    --hero-tile: rgb(255 255 255 / 0.08);
+
+    --sidebar-background: #ffffff;
+    --sidebar-foreground: #33505a;
+    --sidebar-primary: #0f7a60;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #e8f3ef;
+    --sidebar-accent-foreground: #0b2a33;
+    --sidebar-border: #e1eae6;
+    --sidebar-ring: #5fd3b0;
+
+    --shadow-card: 0 1px 2px rgb(11 42 51 / 0.04);
+    --shadow-raised: 0 12px 32px -12px rgb(11 42 51 / 0.18);
 }
 
 .dark {
-    --background: hsl(193 55% 8% / 0.55);
-    --foreground: hsl(160 30% 94%);
-    --card: hsl(193 50% 12% / 0.5);
-    --card-foreground: hsl(160 30% 94%);
-    --popover: hsl(193 55% 10%);
-    --popover-foreground: hsl(160 30% 94%);
-    --primary: hsl(162 58% 52%);
-    --primary-foreground: hsl(193 64% 8%);
-    --secondary: hsl(41 89% 59%);
-    --secondary-foreground: hsl(193 64% 8%);
-    --muted: hsl(193 40% 16% / 0.7);
-    --muted-foreground: hsl(170 15% 68%);
-    --accent: hsl(170 40% 20% / 0.7);
-    --accent-foreground: hsl(160 30% 94%);
-    --destructive: hsl(11 80% 64%);
-    --destructive-foreground: hsl(0 0% 100%);
-    --border: hsl(170 30% 40% / 0.35);
-    --input: hsl(170 30% 45% / 0.45);
-    --ring: hsl(162 58% 52%);
-    --chart-1: hsl(162 58% 52%);
-    --chart-2: hsl(41 89% 59%);
-    --chart-3: hsl(199 66% 60%);
-    --chart-4: hsl(160 45% 70%);
-    --chart-5: hsl(11 80% 64%);
-    --sidebar-background: hsl(193 50% 10% / 0.45);
-    --sidebar-foreground: hsl(160 20% 85%);
-    --sidebar-primary: hsl(162 58% 52%);
-    --sidebar-primary-foreground: hsl(193 64% 8%);
-    --sidebar-accent: hsl(170 40% 22% / 0.7);
-    --sidebar-accent-foreground: hsl(160 30% 94%);
-    --sidebar-border: hsl(170 30% 40% / 0.3);
-    --sidebar-ring: hsl(162 58% 52%);
+    --background: #071c22;
+    --foreground: #e6f2ee;
+    --card: #0e2930;
+    --card-foreground: #e6f2ee;
+    --popover: #10303a;
+    --popover-foreground: #e6f2ee;
+    --primary: #3fc79e;
+    --primary-hover: #5fd3b0;
+    --primary-foreground: #062019;
+    --secondary: #f4b23e;
+    --secondary-foreground: #0b2a33;
+    --muted: #12333b;
+    --muted-foreground: #a3bcb5;
+    --accent: #15383f;
+    --accent-foreground: #e6f2ee;
+    --destructive: #f07c62;
+    --destructive-foreground: #1c0702;
+    --border: #1f3f46;
+    --input: #2f545c;
+    --ring: #5fd3b0;
+    --chart-1: #3fc79e;
+    --chart-2: #f4b23e;
+    --chart-3: #6cb8dd;
+    --chart-4: #9be3cb;
+    --chart-5: #f07c62;
 
-    --glass-fill: hsl(193 50% 14% / 0.48);
-    --glass-edge: hsl(170 40% 60% / 0.18);
-    --glass-shadow: 0 10px 40px -12px hsl(0 0% 0% / 0.5);
-    --page-wash:
-        radial-gradient(60rem 40rem at 8% -10%, hsl(165 70% 30% / 0.45), transparent 60%),
-        radial-gradient(48rem 36rem at 100% 10%, hsl(38 80% 40% / 0.28), transparent 60%),
-        radial-gradient(52rem 40rem at 60% 110%, hsl(199 70% 35% / 0.35), transparent 60%), linear-gradient(180deg, hsl(193 60% 7%), hsl(193 55% 9%));
+    --success-bg: #0f3a30;
+    --success-fg: #9be8cd;
+    --warning-bg: #3a2a0c;
+    --warning-fg: #ffd98a;
+    --danger-bg: #3d1810;
+    --danger-fg: #ffb4a3;
+    --info-bg: #10304a;
+    --info-fg: #a9d4f0;
+
+    --hero: #0b4a3d;
+    --hero-foreground: #ffffff;
+    --hero-muted: #b9dccf;
+    --hero-tile: rgb(255 255 255 / 0.1);
+
+    --sidebar-background: #0a2329;
+    --sidebar-foreground: #c3d6d0;
+    --sidebar-primary: #3fc79e;
+    --sidebar-primary-foreground: #062019;
+    --sidebar-accent: #15383f;
+    --sidebar-accent-foreground: #e6f2ee;
+    --sidebar-border: #1f3f46;
+    --sidebar-ring: #5fd3b0;
+
+    --shadow-card: none;
+    --shadow-raised: 0 12px 32px -12px rgb(0 0 0 / 0.6);
 }
 
 @layer base {
@@ -180,25 +226,19 @@
     }
 
     html {
-        background-color: hsl(165 35% 94%);
-    }
-
-    .dark {
-        background-color: hsl(193 58% 8%);
+        background-color: var(--background);
     }
 
     body {
-        @apply text-foreground;
-        background: var(--page-wash);
-        background-repeat: no-repeat;
-        min-height: 100svh;
+        @apply bg-background text-foreground;
+        min-height: 100dvh;
     }
 
     h1,
     h2,
     h3 {
         font-family: var(--font-display);
-        letter-spacing: -0.01em;
+        letter-spacing: -0.015em;
         text-wrap: balance;
     }
 
@@ -216,7 +256,7 @@
     a:focus-visible,
     summary:focus-visible,
     [role='tab']:focus-visible {
-        outline: 2px solid var(--ring);
+        outline: 3px solid var(--ring);
         outline-offset: 2px;
         border-radius: 0.375rem;
     }
@@ -235,25 +275,44 @@
 }
 
 @layer components {
-    /* Frosted glass panel used across the app. */
+    /* Standard surface: solid card with a thin border (the class keeps its old name so every page follows). */
     .glass {
-        background: var(--glass-fill);
-        border: 1px solid var(--glass-edge);
-        box-shadow: var(--glass-shadow);
-        backdrop-filter: blur(18px) saturate(150%);
-        -webkit-backdrop-filter: blur(18px) saturate(150%);
+        background: var(--card);
+        border: 1px solid var(--border);
+        box-shadow: var(--shadow-card);
     }
 
     /* The one strong surface of a page: the net profit. */
     .glass-hero {
-        background:
-            radial-gradient(28rem 16rem at 100% 0%, hsl(41 92% 62% / 0.35), transparent 60%),
-            linear-gradient(135deg, hsl(165 80% 28% / 0.92), hsl(178 70% 20% / 0.92));
-        border: 1px solid hsl(0 0% 100% / 0.25);
-        box-shadow: 0 18px 50px -18px hsl(165 80% 20% / 0.6);
-        backdrop-filter: blur(18px);
-        -webkit-backdrop-filter: blur(18px);
-        color: white;
+        background: var(--hero);
+        color: var(--hero-foreground);
+        border: 0;
+    }
+
+    .hero-tile {
+        background: var(--hero-tile);
+    }
+
+    /* Status badges: word + colour, never colour alone. */
+    .badge-success {
+        background: var(--success-bg);
+        color: var(--success-fg);
+    }
+    .badge-warning {
+        background: var(--warning-bg);
+        color: var(--warning-fg);
+    }
+    .badge-danger {
+        background: var(--danger-bg);
+        color: var(--danger-fg);
+    }
+    .badge-info {
+        background: var(--info-bg);
+        color: var(--info-fg);
+    }
+    .badge-neutral {
+        background: var(--muted);
+        color: var(--muted-foreground);
     }
 }
 

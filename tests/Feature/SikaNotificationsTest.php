@@ -121,3 +121,25 @@ it('partage la clé publique des notifications avec les pages', function () {
     $this->actingAs($this->user)->get('/objectifs')
         ->assertInertia(fn ($page) => $page->where('push.publicKey', config('services.webpush.public_key')));
 });
+
+it('teste les notifications d\'un compte depuis le serveur et signale une clé changée', function () {
+    $browser = browserSubscription('https://fcm.googleapis.com/fcm/send/essai');
+    PushSubscription::create([
+        'user_id' => $this->user->id,
+        'endpoint' => 'https://fcm.googleapis.com/fcm/send/essai',
+        'endpoint_hash' => PushSubscription::hashOf('https://fcm.googleapis.com/fcm/send/essai'),
+        'public_key' => $browser['keys']['p256dh'],
+        'auth_token' => $browser['keys']['auth'],
+        'device' => 'Android',
+    ]);
+
+    $this->artisan('codcompta:notifications-essai', ['email' => $this->user->email])
+        ->expectsOutputToContain('Envoyé : Android')
+        ->assertSuccessful();
+
+    $this->pushStatus = 403;
+
+    $this->artisan('codcompta:notifications-essai', ['email' => $this->user->email])
+        ->expectsOutputToContain('désactivez puis réactivez')
+        ->assertFailed();
+});

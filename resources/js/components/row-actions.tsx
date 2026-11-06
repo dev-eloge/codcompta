@@ -70,7 +70,7 @@ export function DeleteButton({
                         type="button"
                         variant="ghost"
                         size="icon"
-                        className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive size-10"
+                        className="text-muted-foreground hover:bg-danger-bg hover:text-danger-fg size-10"
                         aria-label={label}
                         title={label}
                     >

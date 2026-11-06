@@ -76,14 +76,14 @@ export default function MerchantShow({ merchant, recentReports, auditLogs }: Pro
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title={merchant.name} />
 
-            <div className="flex flex-col gap-6 p-4 md:p-6">
+            <div className="mx-auto flex w-full max-w-[1240px] flex-col gap-6 px-4 py-6 md:px-8 md:py-8">
                 <header className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <div className="space-y-1.5">
                         <div className="flex flex-wrap items-center gap-3">
-                            <h1 className="text-2xl font-semibold tracking-tight">{merchant.name}</h1>
+                            <h1 className="text-[28px] font-bold md:text-[32px]">{merchant.name}</h1>
                             <MerchantStatus suspended={suspended} />
                             {merchant.is_admin_account && (
-                                <span className="bg-secondary/25 text-secondary-foreground inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold">
+                                <span className="bg-hero text-on-hero-gold inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold">
                                     <ShieldCheck className="size-3.5" aria-hidden="true" />
                                     Compte super admin
                                 </span>
@@ -124,8 +124,8 @@ export default function MerchantShow({ merchant, recentReports, auditLogs }: Pro
                 <FlashMessage />
 
                 {suspended && (
-                    <div role="status" className="border-destructive/30 bg-destructive/8 rounded-2xl border p-4 text-sm">
-                        <p className="text-destructive font-semibold">Suspendu le {formatDateTime(merchant.suspended_at)}</p>
+                    <div role="status" className="badge-danger rounded-2xl border border-transparent p-4 text-sm">
+                        <p className="text-danger-fg font-semibold">Suspendu le {formatDateTime(merchant.suspended_at)}</p>
                         <p className="mt-1">Raison : {merchant.suspension_reason ?? 'non précisée'}</p>
                         <p className="text-muted-foreground mt-1">
                             Ses utilisateurs ne peuvent plus se connecter. Vous pouvez toujours consulter le compte.

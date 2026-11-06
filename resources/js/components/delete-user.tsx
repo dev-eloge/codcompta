@@ -35,9 +35,9 @@ export default function DeleteUser() {
     return (
         <div className="space-y-6">
             <HeadingSmall title="Supprimer le compte" description="Supprimez votre compte et toutes ses données" />
-            <div className="border-destructive/30 bg-destructive/8 space-y-4 rounded-lg border p-4">
+            <div className="badge-danger space-y-4 rounded-lg border border-transparent p-4">
                 <div className="relative space-y-0.5">
-                    <p className="text-destructive font-semibold">Attention, action définitive</p>
+                    <p className="text-danger-fg font-semibold">Attention, action définitive</p>
                     <p className="text-sm">Tous vos rapports, agences, produits et messages seront effacés. Ils ne pourront pas être récupérés.</p>
                 </div>
 

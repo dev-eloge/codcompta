@@ -7,8 +7,8 @@ import { HTMLAttributes } from 'react';
  */
 export default function InputError({ message, className = '', ...props }: HTMLAttributes<HTMLParagraphElement> & { message?: string }) {
     return message ? (
-        <p role="alert" {...props} className={cn('text-destructive flex items-start gap-1.5 text-sm', className)}>
-            <CircleAlert className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+        <p role="alert" {...props} className={cn('text-danger-fg flex items-start gap-1.5 text-sm font-semibold', className)}>
+            <CircleAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
             <span>{message}</span>
         </p>
     ) : null;

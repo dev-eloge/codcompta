@@ -4,6 +4,7 @@ use App\Models\Agency;
 use App\Models\Country;
 use App\Models\Merchant;
 use App\Models\Product;
+use App\Models\RawMessage;
 use App\Models\Report;
 use App\Models\User;
 use Database\Seeders\DemoWeekSeeder;
@@ -147,5 +148,28 @@ it('affiche le formulaire de saisie avec les agences et les produits', function 
             ->component('reports/create')
             ->has('agencies', 2)
             ->has('products', 5)
+        );
+});
+
+it('liste en tête ce qui reste à régler : message lu non enregistré, message illisible, rapport à vérifier', function () {
+    $message = fn (string $status) => RawMessage::create([
+        'agency_id' => $this->agency1->id,
+        'user_id' => $this->user->id,
+        'body' => 'Rapport '.$status,
+        'body_hash' => RawMessage::hashBody('Rapport '.$status),
+        'status' => $status,
+    ]);
+    $message(RawMessage::STATUS_PARSED);
+    $message(RawMessage::STATUS_FAILED);
+    $message(RawMessage::STATUS_VALIDATED);
+    Report::whereIn('agency_id', [$this->agency1->id])->limit(2)->update(['status' => Report::STATUS_TO_VERIFY]);
+
+    $this->actingAs($this->user)
+        ->get('/rapports?period=week&date=2026-10-14')
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('pending', 3)
+            ->where('pending.2.kind', 'reports_to_verify')
+            ->where('pending.2.count', 2)
+            ->where('pending', fn ($items) => collect($items)->pluck('kind')->sort()->values()->all() === ['message_failed', 'message_parsed', 'reports_to_verify'])
         );
 });

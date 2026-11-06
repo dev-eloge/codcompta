@@ -34,7 +34,7 @@ export default function Register({ googleSignIn }: { googleSignIn: boolean }) {
     };
 
     return (
-        <AuthLayout title="Créer un compte" description="Votre vrai bénéfice, pays par pays et agence par agence. Inscription en une minute.">
+        <AuthLayout title="Créer mon compte">
             <Head title="Inscription" />
             {googleSignIn && <GoogleSignInButton label="S'inscrire avec Google" />}
             <form className="flex flex-col gap-6" onSubmit={submit}>

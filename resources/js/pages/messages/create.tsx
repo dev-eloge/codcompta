@@ -41,9 +41,9 @@ const breadcrumbs: BreadcrumbItem[] = [{ title: 'Lire un message WhatsApp', href
 
 export const messageStatus: Record<RecentMessage['status'], { label: string; className: string }> = {
     received: { label: 'Lecture en cours', className: 'bg-muted text-muted-foreground' },
-    parsed: { label: 'À vérifier', className: 'bg-secondary/30 text-secondary-foreground dark:text-secondary' },
-    failed: { label: 'Lecture impossible', className: 'bg-destructive/12 text-destructive' },
-    validated: { label: 'Enregistré', className: 'bg-primary/12 text-primary' },
+    parsed: { label: 'À vérifier', className: 'badge-warning' },
+    failed: { label: 'Lecture impossible', className: 'badge-danger' },
+    validated: { label: 'Enregistré', className: 'badge-success' },
 };
 
 const dateTime = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
@@ -79,26 +79,23 @@ export default function MessagesCreate({ agencies, recent, parserReady }: Props)
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Lire un message WhatsApp" />
 
-            <div className="mx-auto grid w-full max-w-6xl gap-6 p-4 md:p-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+            <div className="mx-auto grid w-full max-w-[1240px] items-start gap-6 px-4 py-6 md:px-8 md:py-8 lg:grid-cols-[minmax(0,1fr)_20rem]">
                 <div className="empty:hidden lg:col-span-2">
                     <FlashMessage />
                 </div>
                 <form onSubmit={submit} className="glass flex flex-col gap-6 rounded-2xl p-5 md:p-8">
-                    <div className="space-y-1">
-                        <h1 className="text-2xl font-semibold tracking-tight">Lire le rapport WhatsApp d'une agence</h1>
-                        <p className="text-muted-foreground text-sm">Pas besoin de recopier les chiffres : CODCompta lit le message pour vous.</p>
-                    </div>
+                    <h1 className="text-[26px] font-bold md:text-[32px]">Coller le message d'une agence</h1>
 
                     <ol className="grid gap-3 text-sm sm:grid-cols-3">
                         {[
-                            'Dans WhatsApp, appuyez longuement sur le rapport puis « Copier ».',
-                            "Choisissez l'agence et collez le message ci-dessous, tel quel.",
-                            "Vérifiez les chiffres trouvés, puis enregistrez. Rien n'est compté avant votre accord.",
+                            'Dans WhatsApp, appuyez longuement sur le message, puis « Copier ».',
+                            "Choisissez l'agence et collez le message ici.",
+                            'Vérifiez les lignes trouvées, puis enregistrez.',
                         ].map((step, index) => (
-                            <li key={step} className="bg-background/60 flex gap-3 rounded-xl border p-3">
+                            <li key={step} className="bg-muted/60 flex gap-3 rounded-xl p-3">
                                 <span
                                     aria-hidden="true"
-                                    className="bg-primary text-primary-foreground flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-bold"
+                                    className="bg-foreground text-background flex size-6 shrink-0 items-center justify-center rounded-md text-xs font-bold"
                                 >
                                     {index + 1}
                                 </span>
@@ -111,8 +108,8 @@ export default function MessagesCreate({ agencies, recent, parserReady }: Props)
                     </ol>
 
                     {!parserReady && (
-                        <div role="status" className="border-secondary/70 bg-secondary/20 flex gap-3 rounded-xl border p-4 text-sm">
-                            <KeyRound className="text-secondary-foreground dark:text-secondary mt-0.5 size-4 shrink-0" aria-hidden="true" />
+                        <div role="status" className="badge-warning flex gap-3 rounded-xl p-4 text-sm">
+                            <KeyRound className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
                             {auth.isSuperAdmin ? (
                                 <p>
                                     La lecture automatique n'est pas activée sur ce serveur. Ajoutez la clé{' '}
@@ -157,10 +154,10 @@ export default function MessagesCreate({ agencies, recent, parserReady }: Props)
                             placeholder={
                                 'RAPPORT DU 14/10/2026\nCommandes livrées : 6\nProduit 1 : 4 = 48 000\nProduit 2 : 2 = 30 000\nTotal : 78 000 FCFA\nFrais livraison : 12 000 FCFA'
                             }
-                            className="border-input bg-background/80 placeholder:text-muted-foreground/70 focus-visible:ring-ring min-h-64 w-full rounded-xl border px-4 py-3 font-mono text-sm leading-relaxed focus-visible:ring-2 focus-visible:outline-hidden"
+                            className="border-input bg-card placeholder:text-muted-foreground/70 focus-visible:ring-ring min-h-64 w-full rounded-xl border px-4 py-3 font-mono text-[15px] leading-relaxed focus-visible:ring-[3px] focus-visible:outline-hidden"
                         />
                         <p id="body-help" className="text-muted-foreground text-xs">
-                            Un message peut couvrir plusieurs jours : chaque rapport trouvé vous sera proposé séparément.
+                            Un message de plusieurs jours donne un rapport par jour.
                         </p>
                         <InputError message={errors.body} />
                     </div>
@@ -197,7 +194,7 @@ export default function MessagesCreate({ agencies, recent, parserReady }: Props)
                                         <div className="flex items-center justify-between gap-2">
                                             <span className="truncate text-sm font-semibold">{message.agency}</span>
                                             <span
-                                                className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${messageStatus[message.status].className}`}
+                                                className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-bold ${messageStatus[message.status].className}`}
                                             >
                                                 {messageStatus[message.status].label}
                                             </span>

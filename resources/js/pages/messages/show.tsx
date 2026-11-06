@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/app-layout';
 import { formatFcfa, formatPeriod } from '@/lib/format';
+import { cn } from '@/lib/utils';
 import { messageStatus } from '@/pages/messages/create';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router, useForm, usePoll } from '@inertiajs/react';
@@ -129,11 +130,11 @@ export default function MessagesShow({ message, warnings, proposals, products }:
             <Head title={`Message de ${message.agency.name}`} />
 
             <h1 className="sr-only">Message WhatsApp de {message.agency.name}</h1>
-            <div className="mx-auto grid w-full max-w-6xl gap-6 p-4 md:p-6 lg:grid-cols-[22rem_minmax(0,1fr)]">
+            <div className="mx-auto grid w-full max-w-[1240px] items-start gap-6 px-4 py-6 md:px-8 md:py-8 lg:grid-cols-[24rem_minmax(0,1fr)]">
                 <aside aria-label="Message collé" className="glass h-fit space-y-3 rounded-2xl p-5 lg:sticky lg:top-4">
                     <div className="flex items-center justify-between gap-2">
                         <h2 className="text-base font-semibold">Message collé</h2>
-                        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${messageStatus[message.status].className}`}>
+                        <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${messageStatus[message.status].className}`}>
                             {messageStatus[message.status].label}
                         </span>
                     </div>
@@ -148,13 +149,20 @@ export default function MessagesShow({ message, warnings, proposals, products }:
                             url={route('messages.destroy', message.id)}
                         />
                     </div>
-                    <pre
+                    <ol
                         tabIndex={0}
-                        aria-label="Texte du message"
-                        className="bg-background/70 focus-visible:ring-ring max-h-[28rem] overflow-auto rounded-xl border p-3 font-mono text-xs leading-relaxed whitespace-pre-wrap focus-visible:ring-2 focus-visible:outline-hidden"
+                        aria-label="Texte du message, ligne par ligne"
+                        className="bg-muted/50 focus-visible:ring-ring max-h-[32rem] overflow-auto rounded-xl py-2 font-mono text-[13px] leading-relaxed focus-visible:ring-[3px] focus-visible:outline-hidden"
                     >
-                        {message.body}
-                    </pre>
+                        {message.body.split('\n').map((text, index) => (
+                            <li key={index} className="grid grid-cols-[2.25rem_minmax(0,1fr)] gap-2 pr-3">
+                                <span className="text-muted-foreground text-right tabular-nums select-none" aria-hidden="true">
+                                    {index + 1}
+                                </span>
+                                <span className="break-words whitespace-pre-wrap">{text || '\u00a0'}</span>
+                            </li>
+                        ))}
+                    </ol>
                 </aside>
 
                 <div className="min-w-0 space-y-5">
@@ -190,7 +198,7 @@ export default function MessagesShow({ message, warnings, proposals, products }:
                     {message.status === 'failed' && (
                         <div role="alert" className="glass space-y-4 rounded-2xl p-6">
                             <div className="flex gap-3">
-                                <CircleAlert className="text-destructive mt-0.5 size-5 shrink-0" aria-hidden="true" />
+                                <CircleAlert className="text-danger-fg mt-0.5 size-5 shrink-0" aria-hidden="true" />
                                 <div>
                                     <p className="font-semibold">Le message n'a pas pu être lu</p>
                                     <p className="text-muted-foreground text-sm">{message.error}</p>
@@ -215,7 +223,7 @@ export default function MessagesShow({ message, warnings, proposals, products }:
                         <>
                             <div className="flex flex-wrap items-end justify-between gap-3">
                                 <div>
-                                    <h2 className="text-2xl font-semibold tracking-tight">
+                                    <h2 className="text-[26px] font-bold">
                                         {proposals.length === 0
                                             ? 'Aucun rapport trouvé dans ce message'
                                             : `${proposals.length} rapport${proposals.length > 1 ? 's' : ''} trouvé${proposals.length > 1 ? 's' : ''} : vérifiez avant d'enregistrer`}
@@ -223,11 +231,11 @@ export default function MessagesShow({ message, warnings, proposals, products }:
                                     <p className="text-muted-foreground text-sm">
                                         {proposals.length === 0
                                             ? 'Le message ne contient peut-être pas de chiffres de livraison. Vérifiez le texte, ou saisissez le rapport à la main.'
-                                            : "Comparez avec le message à gauche, corrigez si besoin, puis cliquez sur « Enregistrer ce rapport ». Rien n'est compté avant."}
+                                            : 'Comparez chaque ligne avec le message, puis enregistrez.'}
                                     </p>
                                 </div>
                                 {proposals.length > 0 && (
-                                    <p role="status" className="text-primary text-sm font-semibold tabular-nums">
+                                    <p role="status" className="badge-success rounded-full px-3 py-1 text-sm font-bold tabular-nums">
                                         {recorded} sur {proposals.length} enregistré{recorded > 1 ? 's' : ''}
                                     </p>
                                 )}
@@ -271,13 +279,10 @@ export default function MessagesShow({ message, warnings, proposals, products }:
 
 function WarningList({ warnings }: { warnings: string[] }) {
     return (
-        <ul
-            aria-label="Points à vérifier"
-            className="border-secondary/70 bg-secondary/20 text-foreground space-y-1 rounded-xl border px-4 py-3 text-sm"
-        >
+        <ul aria-label="Points à vérifier" className="badge-warning space-y-1 rounded-xl px-4 py-3 text-sm font-semibold">
             {warnings.map((warning) => (
                 <li key={warning} className="flex gap-2">
-                    <CircleAlert className="text-secondary-foreground dark:text-secondary mt-0.5 size-4 shrink-0" aria-hidden="true" />
+                    <CircleAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
                     {warning}
                 </li>
             ))}
@@ -395,11 +400,20 @@ function ProposalCard({ proposal, products, agencyId, messageId }: { proposal: P
                 {data.lines.map((line, index) => (
                     <div
                         key={index}
-                        className="bg-background/70 grid grid-cols-[1fr_1fr_auto] items-start gap-3 rounded-xl border p-3 sm:grid-cols-[minmax(0,2fr)_5.5rem_minmax(0,1fr)_auto]"
+                        className="bg-muted/50 grid grid-cols-[1fr_1fr_auto] items-start gap-3 rounded-xl p-3 sm:grid-cols-[minmax(0,2fr)_6rem_minmax(0,1fr)_auto]"
                     >
                         <div className="col-span-3 grid gap-1 sm:col-span-1">
-                            <Label htmlFor={`${titleId}-product-${index}`} className="text-muted-foreground text-xs">
-                                {line.label ? `L'agence a écrit « ${line.label} »` : 'Produit'}
+                            <Label htmlFor={`${titleId}-product-${index}`} className="flex items-center gap-2 text-xs">
+                                <span
+                                    className={cn(
+                                        'grid size-6 shrink-0 place-items-center rounded-md text-xs font-bold tabular-nums',
+                                        line.product_id === '' ? 'badge-warning' : 'bg-foreground text-background',
+                                    )}
+                                    aria-hidden="true"
+                                >
+                                    {index + 1}
+                                </span>
+                                <span className="text-muted-foreground">{line.label ? `L'agence a écrit « ${line.label} »` : 'Produit'}</span>
                             </Label>
                             <NativeSelect
                                 id={`${titleId}-product-${index}`}
@@ -417,7 +431,7 @@ function ProposalCard({ proposal, products, agencyId, messageId }: { proposal: P
                             </NativeSelect>
                             {line.product_id === '' && (
                                 <p id={`${titleId}-product-${index}-help`} className="flex items-center gap-1 text-xs font-medium">
-                                    <CircleAlert className="text-secondary-foreground dark:text-secondary size-3.5" aria-hidden="true" />
+                                    <CircleAlert className="size-3.5" aria-hidden="true" />
                                     Produit non reconnu : choisissez-le, CODCompta s'en souviendra.
                                 </p>
                             )}
@@ -455,7 +469,7 @@ function ProposalCard({ proposal, products, agencyId, messageId }: { proposal: P
                             type="button"
                             variant="ghost"
                             size="icon"
-                            className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive mt-5"
+                            className="text-muted-foreground hover:bg-danger-bg hover:text-danger-fg mt-5"
                             aria-label={`Retirer la ligne ${index + 1}`}
                             title="Retirer cette ligne"
                             disabled={data.lines.length === 1}
@@ -538,7 +552,7 @@ function ProposalCard({ proposal, products, agencyId, messageId }: { proposal: P
                 </Button>
                 {mismatch && (
                     <p role="status" className="flex w-full items-start gap-2 text-sm font-medium">
-                        <CircleAlert className="text-destructive mt-0.5 size-4 shrink-0" aria-hidden="true" />
+                        <CircleAlert className="text-danger-fg mt-0.5 size-4 shrink-0" aria-hidden="true" />
                         <span>
                             Les lignes font {formatFcfa(sales)} mais l'agence a écrit {formatFcfa(toNumber(data.announced_total))} : le rapport sera
                             marqué « à vérifier ».

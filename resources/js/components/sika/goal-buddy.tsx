@@ -103,7 +103,7 @@ export function GoalBuddy() {
         <aside
             aria-label={moment.kind === 'nudge' ? 'Suggestion de Sika' : 'Félicitations de Sika'}
             onKeyDown={(event) => event.key === 'Escape' && close()}
-            className="sika-pop fixed right-4 bottom-4 left-4 z-40 flex items-end gap-2 sm:left-auto sm:max-w-sm"
+            className="sika-pop fixed right-4 bottom-24 left-4 z-40 flex items-end gap-2 sm:left-auto sm:max-w-sm md:bottom-4"
         >
             <Sika mood={moment.kind === 'party' ? 'party' : 'nudge'} className="sika-bob size-20 shrink-0 drop-shadow-lg sm:size-24" />
 

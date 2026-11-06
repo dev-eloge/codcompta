@@ -15,7 +15,10 @@ export function LegalLinks({ className = '' }: { className?: string }) {
             <ul className="flex flex-wrap items-center gap-x-5 gap-y-2">
                 {links.map((link) => (
                     <li key={link.name}>
-                        <Link href={route(link.name)} className="hover:text-primary inline-block py-2 underline-offset-4 transition-colors hover:underline">
+                        <Link
+                            href={route(link.name)}
+                            className="hover:text-primary inline-block py-2 underline-offset-4 transition-colors hover:underline"
+                        >
                             {link.label}
                         </Link>
                     </li>

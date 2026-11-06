@@ -94,7 +94,7 @@ export function InstallBanner() {
         <aside
             aria-label="Installer l'application"
             onKeyDown={(event) => event.key === 'Escape' && later()}
-            className="sika-pop bg-popover text-popover-foreground fixed right-4 bottom-4 left-4 z-40 rounded-2xl border p-4 shadow-2xl sm:left-auto sm:w-96"
+            className="sika-pop bg-popover text-popover-foreground fixed right-4 bottom-24 left-4 z-40 rounded-2xl border p-4 shadow-2xl sm:left-auto sm:w-96 md:bottom-4"
         >
             <button
                 type="button"

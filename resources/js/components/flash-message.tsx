@@ -13,9 +13,9 @@ export default function FlashMessage() {
             <div
                 role="status"
                 aria-live="polite"
-                className="border-secondary/70 bg-secondary/20 text-foreground flex items-start gap-2 rounded-lg border px-4 py-3 text-sm"
+                className="bg-warning-bg text-warning-fg flex items-start gap-2 rounded-xl px-4 py-3 text-sm font-semibold"
             >
-                <CircleAlert className="text-secondary-foreground dark:text-secondary mt-0.5 size-4 shrink-0" aria-hidden="true" />
+                <CircleAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
                 <span>{flash.warning}</span>
             </div>
         );
@@ -26,9 +26,9 @@ export default function FlashMessage() {
             <div
                 role="status"
                 aria-live="polite"
-                className="border-primary/30 bg-primary/10 text-foreground flex items-start gap-2 rounded-lg border px-4 py-3 text-sm"
+                className="bg-success-bg text-success-fg flex items-start gap-2 rounded-xl px-4 py-3 text-sm font-semibold"
             >
-                <CircleCheck className="text-primary mt-0.5 size-4 shrink-0" aria-hidden="true" />
+                <CircleCheck className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
                 <span>{flash.success}</span>
             </div>
         );

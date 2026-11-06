@@ -45,6 +45,20 @@ async function registration(): Promise<ServiceWorkerRegistration> {
     return navigator.serviceWorker.ready;
 }
 
+/** True when the browser subscription was made with the server's current key (keys can be regenerated). */
+function sameKey(subscription: PushSubscription, publicKey: string): boolean {
+    const used = subscription.options?.applicationServerKey;
+
+    if (!used) {
+        return true;
+    }
+
+    const current = keyBytes(publicKey);
+    const bytes = new Uint8Array(used);
+
+    return bytes.length === current.length && bytes.every((byte, index) => byte === current[index]);
+}
+
 function deviceName(): string {
     const agent = navigator.userAgent;
     const system = /android/i.test(agent)
@@ -81,12 +95,31 @@ export function usePushNotifications(publicKey: string | null) {
             return;
         }
 
+        // Check the subscription against the server on every visit: a key change or a lost record would otherwise
+        // show "activées" while nothing can arrive.
         navigator.serviceWorker
             .getRegistration('/')
-            .then((found) => found?.pushManager.getSubscription() ?? null)
-            .then((subscription) => setState(subscription && Notification.permission === 'granted' ? 'on' : 'off'))
+            .then(async (found) => {
+                const subscription = (await found?.pushManager.getSubscription()) ?? null;
+
+                if (!subscription || Notification.permission !== 'granted' || !publicKey) {
+                    setState('off');
+
+                    return;
+                }
+
+                if (!sameKey(subscription, publicKey)) {
+                    await subscription.unsubscribe();
+                    setState('off');
+
+                    return;
+                }
+
+                await send(route('push.subscribe'), 'POST', { ...subscription.toJSON(), device: deviceName() });
+                setState('on');
+            })
             .catch(() => setState('off'));
-    }, []);
+    }, [publicKey]);
 
     const turnOn = useCallback(async () => {
         if (!publicKey) {
@@ -106,9 +139,14 @@ export function usePushNotifications(publicKey: string | null) {
             }
 
             const worker = await registration();
-            const subscription =
-                (await worker.pushManager.getSubscription()) ??
-                (await worker.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(publicKey) as BufferSource }));
+            let subscription = await worker.pushManager.getSubscription();
+
+            if (subscription && !sameKey(subscription, publicKey)) {
+                await subscription.unsubscribe();
+                subscription = null;
+            }
+
+            subscription ??= await worker.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(publicKey) as BufferSource });
 
             await send(route('push.subscribe'), 'POST', { ...subscription.toJSON(), device: deviceName() });
             setState('on');

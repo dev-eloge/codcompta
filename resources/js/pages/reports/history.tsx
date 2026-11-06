@@ -82,25 +82,19 @@ export default function ReportsHistory({ reports, filters, countries, total }: P
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Historique des rapports" />
 
-            <div className="flex flex-col gap-5 p-4 md:p-6">
-                <ReportTabs />
-                <FlashMessage />
-
+            <div className="mx-auto flex w-full max-w-[1240px] flex-col gap-6 px-4 py-6 md:px-8 md:py-8">
                 <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                    <div className="space-y-1">
-                        <h1 className="text-2xl font-semibold tracking-tight">Historique des rapports</h1>
-                        <p className="text-muted-foreground max-w-2xl text-sm">
-                            Tous les rapports reçus de vos agences, du plus récent au plus ancien. Filtrez par pays, agence, statut ou dates pour
-                            retrouver un rapport, le corriger ou le supprimer.
-                        </p>
-                    </div>
-                    <Button asChild variant="outline" className="self-start sm:self-auto">
+                    <h1 className="text-[28px] font-bold md:text-[32px]">Mes rapports</h1>
+                    <Button asChild variant="outline" className="hidden self-start sm:self-auto md:inline-flex">
                         <Link href={route('reports.create')}>
                             <ClipboardPlus aria-hidden="true" />
                             Saisir un rapport
                         </Link>
                     </Button>
                 </header>
+
+                <ReportTabs />
+                <FlashMessage />
 
                 <section aria-label="Filtres" className="glass grid gap-3 rounded-2xl p-4 sm:grid-cols-2 lg:flex lg:flex-wrap lg:items-end">
                     <div className="grid gap-1.5">
@@ -207,7 +201,7 @@ export default function ReportsHistory({ reports, filters, countries, total }: P
 
                 {reports.data.length === 0 ? (
                     <div className="glass flex flex-col items-center gap-3 rounded-2xl px-6 py-12 text-center">
-                        <span aria-hidden="true" className="bg-primary/12 text-primary flex size-12 items-center justify-center rounded-full">
+                        <span aria-hidden="true" className="badge-success flex size-12 items-center justify-center rounded-full">
                             <History className="size-6" />
                         </span>
                         <p className="font-semibold">{total === 0 ? 'Aucun rapport pour l’instant' : 'Aucun rapport ne correspond à ces filtres'}</p>
@@ -265,10 +259,9 @@ export default function ReportsHistory({ reports, filters, countries, total }: P
                                                 <span
                                                     className={cn(
                                                         'rounded-full px-2 py-0.5 text-xs font-semibold whitespace-nowrap',
-                                                        report.status === 'counted' && 'bg-primary/12 text-primary',
+                                                        report.status === 'counted' && 'badge-success',
                                                         report.status === 'detail' && 'bg-muted text-muted-foreground',
-                                                        report.status === 'to_verify' &&
-                                                            'bg-secondary/30 text-secondary-foreground dark:text-secondary',
+                                                        report.status === 'to_verify' && 'badge-warning',
                                                     )}
                                                 >
                                                     {statusLabels[report.status]}

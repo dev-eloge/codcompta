@@ -1,6 +1,5 @@
 import FlashMessage from '@/components/flash-message';
 import { GoalCard, isActive } from '@/components/goals/goal-progress';
-import { ProfitDiagnosis, type ProfitDiagnosisData } from '@/components/reports/profit-diagnosis';
 import InputError from '@/components/input-error';
 import { NativeSelect } from '@/components/native-select';
 import { ReportTabs } from '@/components/reports/report-tabs';
@@ -13,7 +12,19 @@ import { formatFcfa, formatNumber, formatPercent, formatPeriod } from '@/lib/for
 import { cn } from '@/lib/utils';
 import { type BreadcrumbItem, type GoalProgress, type SharedData } from '@/types';
 import { Deferred, Head, Link, router, usePage } from '@inertiajs/react';
-import { CalendarRange, ChevronLeft, ChevronRight, CircleAlert, ClipboardPlus, FileSpreadsheet, Pencil, Target, Trophy } from 'lucide-react';
+import {
+    ArrowDownRight,
+    ArrowUpRight,
+    CalendarRange,
+    ChevronLeft,
+    ChevronRight,
+    CircleAlert,
+    ClipboardPlus,
+    FileSpreadsheet,
+    MessageSquareText,
+    Pencil,
+    Trophy,
+} from 'lucide-react';
 import { FormEvent, useEffect, useState } from 'react';
 
 type PeriodType = 'day' | 'week' | 'month' | 'custom';
@@ -69,13 +80,21 @@ interface Entry {
 
 const sourceLabels: Record<Entry['source'], string> = { manual: 'Saisi à la main', message: 'Message WhatsApp', sheet: 'Google Sheet' };
 
+interface Pending {
+    kind: 'message_parsed' | 'message_failed' | 'reports_to_verify';
+    id: number | null;
+    agency: string | null;
+    count: number;
+    date: string | null;
+}
+
 interface Props {
     countries: Country[];
     countryId: number | null;
     period: Period;
     report: { agencies: Row[]; total: Row } | null;
     entries: Entry[];
-    diagnosis: ProfitDiagnosisData | null;
+    pending?: Pending[];
     trend?: Trend | null;
 }
 
@@ -166,14 +185,34 @@ const columns: { key: keyof Row; label: string; help: string; format?: (row: Row
     { key: 'margin', label: 'Marge', help: "Bénéfice net divisé par le chiffre d'affaires", format: (row) => formatPercent(row.margin) },
 ];
 
-export default function ReportsIndex({ countries, countryId, period, report, entries, diagnosis, trend }: Props) {
+export default function ReportsIndex({ countries, countryId, period, report, entries, pending = [], trend }: Props) {
     const { goals = [] } = usePage<SharedData>().props;
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Rapports" />
 
-            <div className="flex flex-col gap-6 p-4 md:p-6">
+            <div className="mx-auto flex w-full max-w-[1240px] flex-col gap-6 px-4 py-6 md:px-8 md:py-8">
+                <header className="flex flex-wrap items-end justify-between gap-4">
+                    <h1 className="text-[28px] font-bold md:text-[32px]">Mes rapports</h1>
+                    {countries.length > 0 && (
+                        <div className="hidden flex-wrap gap-2.5 md:flex">
+                            <Button asChild variant="outline">
+                                <Link href={route('messages.create')} prefetch>
+                                    <MessageSquareText aria-hidden="true" />
+                                    Coller un message WhatsApp
+                                </Link>
+                            </Button>
+                            <Button asChild>
+                                <Link href={route('reports.create')} prefetch>
+                                    <ClipboardPlus aria-hidden="true" />
+                                    Saisir un rapport
+                                </Link>
+                            </Button>
+                        </div>
+                    )}
+                </header>
+
                 <ReportTabs />
 
                 <FlashMessage />
@@ -182,31 +221,23 @@ export default function ReportsIndex({ countries, countryId, period, report, ent
                     <EmptyAccount />
                 ) : (
                     <>
-                        <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-                            <div className="space-y-1">
-                                <h1 className="text-2xl font-semibold tracking-tight first-letter:uppercase">{periodTitle(period)}</h1>
-                                <p className="text-muted-foreground max-w-2xl text-sm">
-                                    Votre bénéfice après le coût d'achat, la publicité, le closing et la livraison. Seuls les rapports « Compté »
-                                    entrent dans le calcul, à la date de fin de chaque rapport.
-                                </p>
-                            </div>
+                        <PeriodPicker countries={countries} countryId={countryId} period={period} />
 
-                            <PeriodPicker countries={countries} countryId={countryId} period={period} />
-                        </header>
+                        <h2 className="sr-only first-letter:uppercase">{periodTitle(period)}</h2>
+
+                        {pending.length > 0 && <PendingList items={pending} />}
+
+                        {report && <Summary total={report.total} period={period} trend={trend} />}
 
                         {goals.length > 0 && <GoalsOverview goals={goals} />}
 
-                        {report && <Summary total={report.total} days={period.days} />}
-
-                        <ProfitDiagnosis diagnosis={diagnosis} />
-
                         {report && <AgencyTable rows={report.agencies} total={report.total} />}
-
-                        <EntryList entries={entries} />
 
                         <Deferred data="trend" fallback={<TrendSkeleton />}>
                             {trend ? <TrendCharts trend={trend} /> : <></>}
                         </Deferred>
+
+                        <EntryList entries={entries} countryId={countryId} period={period} />
                     </>
                 )}
             </div>
@@ -214,158 +245,346 @@ export default function ReportsIndex({ countries, countryId, period, report, ent
     );
 }
 
-function Summary({ total, days }: { total: Row; days: number }) {
-    const figures = [
-        { label: "Chiffre d'affaires", value: formatFcfa(total.revenue) },
-        { label: 'Publicité', value: formatFcfa(total.ad_spend) },
-        { label: 'Produits livrés', value: formatNumber(total.delivered) },
-        { label: 'Marge', value: formatPercent(total.margin) },
-        { label: 'Publicité par produit livré', value: formatFcfa(total.ad_spend_per_delivered) },
-    ];
+const dayMonth = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long', timeZone: 'UTC' });
+
+/**
+ * What may make the figures wrong, with the action that fixes it. Shown before the results.
+ */
+function PendingList({ items }: { items: Pending[] }) {
+    const total = items.reduce((sum, item) => sum + item.count, 0);
 
     return (
-        <section aria-label="Résumé" className="grid gap-4 md:grid-cols-[minmax(0,1.2fr)_minmax(0,2fr)]">
-            <div className="glass-hero rounded-2xl p-6">
-                <p className="text-sm font-medium text-white/85">Bénéfice net{days > 1 ? ` sur ${days} jours` : ''}</p>
-                <p className="sr-only">{total.profit < 0 ? 'Perte sur la période' : 'Gain sur la période'}</p>
-                <p
-                    className={cn(
-                        'mt-1 font-[family-name:var(--font-display)] text-4xl font-bold tabular-nums md:text-5xl',
-                        total.profit < 0 && 'text-on-hero-loss',
-                    )}
-                >
-                    {formatFcfa(total.profit)}
-                </p>
-                {total.profit < 0 && <p className="text-on-hero-loss mt-1 text-sm font-semibold">Perte : les dépenses dépassent les ventes.</p>}
-                <dl className="mt-5 grid grid-cols-1 gap-3 border-t border-white/20 pt-4 text-sm sm:grid-cols-3 sm:gap-2">
-                    <div>
-                        <dt className="text-white/80">Épargne</dt>
-                        <dd className="text-on-hero-gold font-bold tabular-nums">{formatFcfa(total.savings)}</dd>
-                    </div>
-                    <div>
-                        <dt className="text-white/80">Votre poche</dt>
-                        <dd className="text-on-hero-gold font-bold tabular-nums">{formatFcfa(total.pocket)}</dd>
-                    </div>
-                    <div>
-                        <dt className="text-white/80">Réinvestissement</dt>
-                        <dd className="text-on-hero-gold font-bold tabular-nums">{formatFcfa(total.reinvestment)}</dd>
-                    </div>
-                </dl>
+        <section aria-labelledby="todo-title" className="bg-warning-bg/60 border-warning-fg/20 flex flex-col gap-3 rounded-2xl border p-4 md:p-5">
+            <h2 id="todo-title" className="flex items-center gap-2 font-[family-name:var(--font-sans)] text-base font-bold">
+                <CircleAlert className="text-warning-fg size-5 shrink-0" aria-hidden="true" />
+                {total > 1 ? `${total} choses à régler pour des chiffres justes` : 'Une chose à régler pour des chiffres justes'}
+            </h2>
+            <ul className="grid gap-2.5 md:grid-cols-[repeat(auto-fit,minmax(300px,1fr))]">
+                {items.map((item) => (
+                    <li key={`${item.kind}-${item.id ?? 'all'}`} className="bg-card flex items-center justify-between gap-3 rounded-xl px-4 py-3">
+                        <span className="text-[15px]">
+                            {item.kind === 'message_parsed' && (
+                                <>
+                                    Message de <strong>{item.agency}</strong> lu, pas encore enregistré.
+                                </>
+                            )}
+                            {item.kind === 'message_failed' && (
+                                <>
+                                    Le message de <strong>{item.agency}</strong> du {dayMonth.format(new Date(`${item.date}T00:00:00Z`))} n'a pas pu
+                                    être lu.
+                                </>
+                            )}
+                            {item.kind === 'reports_to_verify' && (
+                                <>
+                                    {item.count > 1 ? `${item.count} rapports` : '1 rapport'} <strong>à vérifier</strong>, pas encore compté
+                                    {item.count > 1 ? 's' : ''}.
+                                </>
+                            )}
+                        </span>
+                        <Link
+                            href={
+                                item.kind === 'reports_to_verify'
+                                    ? route('reports.history', { statut: 'to_verify' })
+                                    : route('messages.show', item.id!)
+                            }
+                            className="text-primary inline-flex min-h-11 shrink-0 items-center font-bold whitespace-nowrap underline-offset-4 hover:underline"
+                        >
+                            {item.kind === 'message_parsed' ? 'Enregistrer' : item.kind === 'message_failed' ? 'Relire' : 'Vérifier'}
+                        </Link>
+                    </li>
+                ))}
+            </ul>
+        </section>
+    );
+}
+
+/** Change against the previous period of the same length, in words and with an arrow, never by colour alone. */
+function Change({ now, before, compact = false }: { now: number; before: number; compact?: boolean }) {
+    if (before === 0) {
+        return null;
+    }
+
+    const ratio = (now - before) / Math.abs(before);
+    const up = ratio >= 0;
+    const label = `${up ? '+' : '−'}${Math.abs(Math.round(ratio * 100))} %`;
+
+    if (compact) {
+        return (
+            <p className={cn('mt-1 text-[13px] font-semibold', up ? 'text-primary' : 'text-danger-fg')}>
+                {label} <span className="text-muted-foreground font-medium">vs période d'avant</span>
+            </p>
+        );
+    }
+
+    return (
+        <p className="mt-3 flex flex-wrap items-center gap-2 text-[15px]">
+            <span
+                className={cn(
+                    'inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-bold tabular-nums',
+                    up ? 'bg-on-hero-up/15 text-on-hero-up' : 'bg-on-hero-loss/15 text-on-hero-loss',
+                )}
+            >
+                {up ? <ArrowUpRight className="size-4" aria-hidden="true" /> : <ArrowDownRight className="size-4" aria-hidden="true" />}
+                {label}
+            </span>
+            <span className="text-hero-muted">
+                par rapport à la période d'avant (<span className="tabular-nums">{formatFcfa(before)}</span>)
+            </span>
+        </p>
+    );
+}
+
+function Summary({ total, period, trend }: { total: Row; period: Period; trend?: Trend | null }) {
+    // The comparison only makes sense when the charts cover exactly this period.
+    const previous = trend && !trend.extended ? trend.previous : null;
+    const shares = [
+        { label: 'Épargne, 40 %', value: total.savings },
+        { label: 'Votre poche, 20 %', value: total.pocket },
+        { label: 'À réinvestir, 40 %', value: total.reinvestment },
+    ];
+    const adShare = total.revenue > 0 ? total.ad_spend / total.revenue : 0;
+
+    return (
+        <section aria-label="Résumé de la période" className="grid gap-5 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
+            <div className="glass-hero flex flex-col gap-5 rounded-2xl p-5 md:p-7">
+                <div>
+                    <p className="text-hero-muted text-[15px] first-letter:uppercase">
+                        Bénéfice net, {period.label}
+                        {period.days > 1 ? ` (${period.days} jours)` : ''}
+                    </p>
+                    <p className="sr-only">{total.profit < 0 ? 'Perte sur la période' : 'Gain sur la période'}</p>
+                    <p
+                        className={cn(
+                            'mt-2 font-[family-name:var(--font-display)] text-[40px] leading-[1.05] font-bold tracking-[-0.03em] tabular-nums md:text-[56px]',
+                            total.profit < 0 && 'text-on-hero-loss',
+                        )}
+                    >
+                        {formatFcfa(total.profit)}
+                    </p>
+                    {total.profit < 0 && <p className="text-on-hero-loss mt-1 text-sm font-semibold">Perte : les dépenses dépassent les ventes.</p>}
+                    {previous && <Change now={total.profit} before={previous.profit} />}
+                </div>
+                <div>
+                    <p className="text-hero-muted mb-2.5 text-sm">Comment le partager, selon la règle 40/20/40</p>
+                    <dl className="grid grid-cols-3 gap-2 sm:gap-2.5">
+                        {shares.map((share) => (
+                            <div key={share.label} className="hero-tile rounded-xl p-2.5 sm:p-3">
+                                <dt className="text-hero-muted text-[13px]">{share.label}</dt>
+                                <dd className="text-on-hero-gold mt-1 font-[family-name:var(--font-display)] text-[15px] font-semibold tabular-nums sm:text-lg">
+                                    {formatFcfa(share.value)}
+                                </dd>
+                            </div>
+                        ))}
+                    </dl>
+                </div>
             </div>
 
-            <dl className="glass grid grid-cols-2 gap-x-6 gap-y-5 rounded-2xl p-6 sm:grid-cols-3">
-                {figures.map((figure) => (
-                    <div key={figure.label}>
-                        <dt className="text-muted-foreground text-sm">{figure.label}</dt>
-                        <dd className="mt-1 text-xl font-bold tabular-nums">{figure.value}</dd>
-                    </div>
-                ))}
+            <dl className="grid grid-cols-2 gap-3">
+                <Figure label="Chiffre d'affaires" value={formatFcfa(total.revenue)}>
+                    {previous && <Change compact now={total.revenue} before={previous.revenue} />}
+                </Figure>
+                <Figure label="Dépenses publicitaires" value={formatFcfa(total.ad_spend)}>
+                    {total.revenue > 0 && <p className="text-muted-foreground mt-1 text-[13px]">{formatPercent(adShare)} du chiffre d'affaires</p>}
+                </Figure>
+                <Figure label="Produits livrés" value={formatNumber(total.delivered)}>
+                    {period.days > 1 && (
+                        <p className="text-muted-foreground mt-1 text-[13px]">{formatNumber(total.delivered / period.days)} par jour en moyenne</p>
+                    )}
+                </Figure>
+                <Figure label="Marge" value={formatPercent(total.margin)} />
+                <Figure label="La pub vous coûte, par produit livré" value={formatFcfa(total.ad_spend_per_delivered)} wide />
             </dl>
         </section>
     );
 }
 
+function Figure({ label, value, wide = false, children }: { label: string; value: string; wide?: boolean; children?: React.ReactNode }) {
+    return (
+        <div className={cn('glass rounded-2xl p-4 md:p-[18px]', wide && 'col-span-2')}>
+            <dt className="text-muted-foreground text-sm">{label}</dt>
+            <dd className="mt-1.5 font-[family-name:var(--font-display)] text-[22px] font-semibold tabular-nums md:text-[26px]">{value}</dd>
+            {children}
+        </div>
+    );
+}
+
 function AgencyTable({ rows, total }: { rows: Row[]; total: Row }) {
     const cell = (row: Row, column: (typeof columns)[number]) => (column.format ? column.format(row) : formatNumber(row[column.key] as number));
+    const ranked = [...rows].sort((a, b) => b.profit - a.profit);
+    const positiveTotal = ranked.reduce((sum, row) => sum + Math.max(0, row.profit), 0);
 
     return (
-        <section aria-labelledby="by-agency" className="space-y-3">
-            <div className="space-y-1">
-                <h2 id="by-agency" className="text-lg font-semibold">
-                    Détail par agence
-                </h2>
-                <p className="text-muted-foreground text-sm">
-                    Bénéfice net = chiffre d'affaires − coût d'achat − publicité − closing − livraison − autres frais. Sur téléphone, faites glisser
-                    le tableau pour voir toutes les colonnes.
-                </p>
-            </div>
-            <div className="glass overflow-x-auto rounded-2xl">
-                <table className="w-full min-w-[960px] text-sm">
-                    <caption className="sr-only">Résultats par agence, en francs CFA</caption>
-                    <thead className="bg-primary/8 text-left">
+        <section aria-labelledby="by-agency" className="glass rounded-2xl px-4 pt-5 pb-2 md:px-5">
+            <h2 id="by-agency" className="text-lg font-semibold">
+                {ranked.length > 1 ? 'Vos agences, de la plus rentable à la moins rentable' : 'Votre agence'}
+            </h2>
+
+            <div className="mt-3 overflow-x-auto">
+                <table className="w-full min-w-[680px] text-[15px]">
+                    <caption className="sr-only">Résultats par agence, en francs CFA, classés par bénéfice net</caption>
+                    <thead className="text-muted-foreground text-left text-[13px]">
                         <tr>
-                            <th scope="col" className="px-4 py-3 font-semibold">
+                            <th scope="col" className="px-2 py-2.5 font-bold">
                                 Agence
                             </th>
-                            {columns.map((column) => (
-                                <th key={column.key} scope="col" title={column.help} className="px-3 py-3 text-right font-semibold whitespace-nowrap">
-                                    {column.label}
-                                </th>
-                            ))}
+                            <th scope="col" className="px-2 py-2.5 text-right font-bold">
+                                Ventes
+                            </th>
+                            <th scope="col" className="px-2 py-2.5 text-right font-bold">
+                                Livrés
+                            </th>
+                            <th
+                                scope="col"
+                                className="px-2 py-2.5 text-right font-bold"
+                                title="Coût d'achat, publicité, closing, livraison et autres frais"
+                            >
+                                Coûts et pub
+                            </th>
+                            <th scope="col" className="px-2 py-2.5 text-right font-bold">
+                                Bénéfice net
+                            </th>
+                            <th scope="col" className="w-[200px] px-2 py-2.5 font-bold">
+                                Part du bénéfice
+                            </th>
                         </tr>
                     </thead>
                     <tbody>
-                        {rows.map((row) => (
-                            <tr key={row.name} className="border-t">
-                                <th scope="row" className="px-4 py-3 text-left font-semibold whitespace-nowrap">
-                                    {row.name}
+                        {ranked.map((row) => {
+                            const costs = row.revenue - row.profit;
+                            const share = positiveTotal > 0 && row.profit > 0 ? row.profit / positiveTotal : 0;
+
+                            return (
+                                <tr key={row.name} className="border-t">
+                                    <th scope="row" className="px-2 py-3.5 text-left font-bold whitespace-nowrap">
+                                        {row.name}
+                                    </th>
+                                    <td className="px-2 py-3.5 text-right tabular-nums">{formatFcfa(row.revenue)}</td>
+                                    <td className="px-2 py-3.5 text-right tabular-nums">{formatNumber(row.delivered)}</td>
+                                    <td className="px-2 py-3.5 text-right tabular-nums">{formatFcfa(costs)}</td>
+                                    <td className={cn('px-2 py-3.5 text-right font-bold tabular-nums', row.profit < 0 && 'text-danger-fg')}>
+                                        {row.profit < 0 && <span className="sr-only">Perte de </span>}
+                                        {formatFcfa(row.profit)}
+                                    </td>
+                                    <td className="px-2 py-3.5">
+                                        {row.profit < 0 ? (
+                                            <span className="badge-danger inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold">
+                                                <ArrowDownRight className="size-3.5" aria-hidden="true" />
+                                                En perte
+                                            </span>
+                                        ) : (
+                                            <span className="flex items-center gap-2.5">
+                                                <span className="bg-muted h-2 flex-1 overflow-hidden rounded-full" aria-hidden="true">
+                                                    <span
+                                                        className="bg-chart-1 block h-full rounded-full"
+                                                        style={{ width: `${Math.round(share * 100)}%` }}
+                                                    />
+                                                </span>
+                                                <span className="w-11 text-right text-sm font-bold tabular-nums">{Math.round(share * 100)} %</span>
+                                            </span>
+                                        )}
+                                    </td>
+                                </tr>
+                            );
+                        })}
+                    </tbody>
+                </table>
+            </div>
+
+            <details className="group border-t py-1">
+                <summary className="text-primary flex min-h-11 items-center gap-1.5 text-sm font-bold">
+                    <ChevronRight className="size-4 transition-transform group-open:rotate-90" aria-hidden="true" />
+                    Voir toutes les colonnes
+                </summary>
+                <div className="overflow-x-auto pb-3">
+                    <table className="w-full min-w-[960px] text-sm">
+                        <caption className="sr-only">Détail complet par agence, en francs CFA</caption>
+                        <thead className="text-muted-foreground text-left text-[13px]">
+                            <tr>
+                                <th scope="col" className="px-2 py-2.5 font-bold">
+                                    Agence
+                                </th>
+                                {columns.map((column) => (
+                                    <th
+                                        key={column.key}
+                                        scope="col"
+                                        title={column.help}
+                                        className="px-2 py-2.5 text-right font-bold whitespace-nowrap"
+                                    >
+                                        {column.label}
+                                    </th>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {ranked.map((row) => (
+                                <tr key={row.name} className="border-t">
+                                    <th scope="row" className="px-2 py-2.5 text-left font-semibold whitespace-nowrap">
+                                        {row.name}
+                                    </th>
+                                    {columns.map((column) => (
+                                        <td
+                                            key={column.key}
+                                            className={cn(
+                                                'px-2 py-2.5 text-right tabular-nums',
+                                                column.key === 'profit' && row.profit < 0 && 'text-danger-fg font-bold',
+                                            )}
+                                        >
+                                            {cell(row, column)}
+                                        </td>
+                                    ))}
+                                </tr>
+                            ))}
+                        </tbody>
+                        <tfoot>
+                            <tr className="border-foreground/20 border-t-2">
+                                <th scope="row" className="px-2 py-2.5 text-left font-bold">
+                                    Total
                                 </th>
                                 {columns.map((column) => (
                                     <td
                                         key={column.key}
                                         className={cn(
-                                            'px-3 py-3 text-right font-semibold tabular-nums',
-                                            column.key === 'profit' && row.profit < 0 && 'text-destructive',
+                                            'px-2 py-2.5 text-right font-bold tabular-nums',
+                                            column.key === 'profit' && total.profit < 0 && 'text-danger-fg',
                                         )}
                                     >
-                                        {cell(row, column)}
+                                        {cell(total, column)}
                                     </td>
                                 ))}
                             </tr>
-                        ))}
-                    </tbody>
-                    <tfoot>
-                        <tr className="bg-primary/10 border-primary/30 border-t-2">
-                            <th scope="row" className="px-4 py-3 text-left font-bold">
-                                Total
-                            </th>
-                            {columns.map((column) => (
-                                <td
-                                    key={column.key}
-                                    className={cn(
-                                        'px-3 py-3 text-right font-bold tabular-nums',
-                                        column.key === 'profit' && total.profit < 0 && 'text-destructive',
-                                    )}
-                                >
-                                    {cell(total, column)}
-                                </td>
-                            ))}
-                        </tr>
-                    </tfoot>
-                </table>
-            </div>
+                        </tfoot>
+                    </table>
+                </div>
+            </details>
         </section>
     );
 }
 
-function EntryList({ entries }: { entries: Entry[] }) {
+const ENTRIES_SHOWN = 8;
+
+function EntryList({ entries, countryId, period }: { entries: Entry[]; countryId: number | null; period: Period }) {
+    const [all, setAll] = useState(false);
+    // Newest first: the report just added is the one the merchant looks for.
+    const shown = (all ? [...entries] : entries.slice(-ENTRIES_SHOWN)).reverse();
+
     return (
         <section aria-labelledby="entries" className="space-y-3">
             <div className="flex items-center justify-between gap-4">
                 <h2 id="entries" className="text-lg font-semibold">
                     Rapports reçus sur la période
                 </h2>
-                <Button asChild variant="outline">
-                    <Link href={route('reports.create')}>
-                        <ClipboardPlus aria-hidden="true" />
-                        Saisir un rapport
-                    </Link>
-                </Button>
             </div>
 
             {entries.length === 0 ? (
                 <div className="glass space-y-3 rounded-2xl p-6 text-sm">
-                    <p className="font-semibold">Aucun rapport sur cette période</p>
-                    <p className="text-muted-foreground">
-                        Ajoutez les chiffres de vos agences pour voir votre bénéfice : saisissez le rapport à la main, ou collez le message WhatsApp
-                        de l'agence.
-                    </p>
+                    <p className="text-base font-bold">Aucun rapport sur cette période</p>
+                    <p className="text-muted-foreground">Collez le message WhatsApp de l'agence, ou saisissez ses chiffres à la main.</p>
                     <div className="flex flex-wrap gap-2">
-                        <Button asChild size="sm">
-                            <Link href={route('reports.create')}>Saisir un rapport</Link>
+                        <Button asChild>
+                            <Link href={route('messages.create')}>Coller un message WhatsApp</Link>
                         </Button>
-                        <Button asChild size="sm" variant="outline">
-                            <Link href="/messages/coller">Lire un message WhatsApp</Link>
+                        <Button asChild variant="outline">
+                            <Link href={route('reports.create')}>Saisir un rapport</Link>
                         </Button>
                     </div>
                 </div>
@@ -373,7 +592,7 @@ function EntryList({ entries }: { entries: Entry[] }) {
                 <div className="glass overflow-x-auto rounded-2xl">
                     <table className="w-full min-w-[760px] text-sm">
                         <caption className="sr-only">Rapports reçus sur la période, en francs CFA</caption>
-                        <thead className="bg-primary/8 text-left">
+                        <thead className="text-muted-foreground text-left text-[13px]">
                             <tr>
                                 <th scope="col" className="px-4 py-3 font-semibold">
                                     Période
@@ -402,7 +621,7 @@ function EntryList({ entries }: { entries: Entry[] }) {
                             </tr>
                         </thead>
                         <tbody>
-                            {entries.map((entry) => (
+                            {shown.map((entry) => (
                                 <tr key={entry.id} className="border-t">
                                     <td className="px-4 py-2.5 whitespace-nowrap">{formatPeriod(entry.period_start, entry.period_end)}</td>
                                     <td className="px-3 py-2.5">{entry.agency}</td>
@@ -413,7 +632,7 @@ function EntryList({ entries }: { entries: Entry[] }) {
                                             '–'
                                         ) : entry.announced_total !== entry.revenue ? (
                                             <span
-                                                className="text-destructive inline-flex items-center gap-1 font-semibold"
+                                                className="text-danger-fg inline-flex items-center gap-1 font-semibold"
                                                 title="Le total écrit par l'agence ne correspond pas aux ventes calculées : vérifiez le rapport"
                                             >
                                                 <CircleAlert className="size-3.5" aria-hidden="true" />
@@ -429,10 +648,10 @@ function EntryList({ entries }: { entries: Entry[] }) {
                                         <span
                                             title={statusHelp[entry.status]}
                                             className={cn(
-                                                'rounded-full px-2 py-0.5 text-xs font-semibold whitespace-nowrap',
-                                                entry.status === 'counted' && 'bg-primary/12 text-primary',
-                                                entry.status === 'detail' && 'bg-muted text-muted-foreground',
-                                                entry.status === 'to_verify' && 'bg-secondary/30 text-secondary-foreground dark:text-secondary',
+                                                'rounded-full px-2.5 py-0.5 text-xs font-bold whitespace-nowrap',
+                                                entry.status === 'counted' && 'badge-success',
+                                                entry.status === 'detail' && 'badge-neutral',
+                                                entry.status === 'to_verify' && 'badge-warning',
                                             )}
                                         >
                                             {statusLabels[entry.status]}
@@ -478,6 +697,28 @@ function EntryList({ entries }: { entries: Entry[] }) {
                             ))}
                         </tbody>
                     </table>
+                    {entries.length > ENTRIES_SHOWN && (
+                        <div className="flex flex-wrap items-center justify-between gap-2 border-t px-4 py-2 text-sm">
+                            <span className="text-muted-foreground">
+                                {all ? `${entries.length} rapports` : `Les ${ENTRIES_SHOWN} plus récents sur ${entries.length}`}
+                            </span>
+                            <span className="flex flex-wrap gap-4">
+                                <button
+                                    type="button"
+                                    onClick={() => setAll(!all)}
+                                    className="text-primary min-h-11 font-bold underline-offset-4 hover:underline"
+                                >
+                                    {all ? 'Voir moins' : 'Tout afficher'}
+                                </button>
+                                <Link
+                                    href={route('reports.history', { pays: countryId ?? undefined, du: period.from, au: period.to })}
+                                    className="text-primary inline-flex min-h-11 items-center font-bold underline-offset-4 hover:underline"
+                                >
+                                    Ouvrir dans l'historique
+                                </Link>
+                            </span>
+                        </div>
+                    )}
                 </div>
             )}
         </section>
@@ -552,36 +793,55 @@ function PeriodPicker({ countries, countryId, period }: { countries: Country[]; 
     const fixed = period.type !== 'custom';
     const activeType: PeriodType = custom ? 'custom' : period.type;
 
-    return (
-        <div className="flex flex-col gap-3 lg:items-end">
-            <div className="flex flex-wrap items-end gap-3">
-                <div className="grid gap-1.5">
-                    <Label htmlFor="report-country">Pays</Label>
-                    <NativeSelect
-                        id="report-country"
-                        className="w-auto"
-                        value={countryId ?? ''}
-                        onChange={(e) =>
-                            show(
-                                period.type === 'custom'
-                                    ? { country: Number(e.target.value), period: 'custom', du: period.from, au: period.to }
-                                    : { country: Number(e.target.value), period: period.type, date: period.from },
-                            )
-                        }
-                    >
-                        {countries.map((country) => (
-                            <option key={country.id} value={country.id}>
-                                {country.name}
-                            </option>
-                        ))}
-                    </NativeSelect>
-                </div>
+    const dateInput =
+        'border-input bg-card focus-visible:ring-ring h-11 rounded-xl border px-3 text-[15px] font-medium tabular-nums focus-visible:ring-[3px] focus-visible:outline-hidden';
+    const changeCountry = (id: number) =>
+        show(
+            period.type === 'custom'
+                ? { country: id, period: 'custom', du: period.from, au: period.to }
+                : { country: id, period: period.type, date: period.from },
+        );
 
-                <div className="grid gap-1.5">
-                    <span id="report-period" className="text-sm font-medium">
-                        Afficher
-                    </span>
-                    <div role="group" aria-labelledby="report-period" className="glass flex h-10 items-center rounded-full p-1">
+    return (
+        <section aria-label="Filtres" className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+                {countries.length <= 4 ? (
+                    <div role="group" aria-label="Pays" className="-mx-4 flex gap-2 overflow-x-auto px-4 md:mx-0 md:flex-wrap md:px-0">
+                        {countries.map((country) => (
+                            <button
+                                key={country.id}
+                                type="button"
+                                aria-pressed={country.id === countryId}
+                                onClick={() => country.id !== countryId && changeCountry(country.id)}
+                                className={cn(
+                                    'h-10 shrink-0 rounded-full border px-4 text-sm font-semibold transition-colors duration-150',
+                                    country.id === countryId ? 'bg-foreground text-background border-foreground' : 'bg-card hover:bg-accent',
+                                )}
+                            >
+                                {country.name}
+                            </button>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="flex items-center gap-2">
+                        <Label htmlFor="report-country">Pays</Label>
+                        <NativeSelect
+                            id="report-country"
+                            className="h-11 w-auto"
+                            value={countryId ?? ''}
+                            onChange={(e) => changeCountry(Number(e.target.value))}
+                        >
+                            {countries.map((country) => (
+                                <option key={country.id} value={country.id}>
+                                    {country.name}
+                                </option>
+                            ))}
+                        </NativeSelect>
+                    </div>
+                )}
+
+                <div className="flex flex-wrap items-center gap-3">
+                    <div role="group" aria-label="Période" className="bg-muted flex max-w-full gap-0.5 overflow-x-auto rounded-[14px] p-1">
                         {periodChoices.map((choice) => (
                             <button
                                 key={choice.value}
@@ -589,9 +849,9 @@ function PeriodPicker({ countries, countryId, period }: { countries: Country[]; 
                                 aria-pressed={activeType === choice.value}
                                 onClick={() => showType(choice.value)}
                                 className={cn(
-                                    'rounded-full px-3 py-1.5 text-sm font-semibold whitespace-nowrap transition-colors',
+                                    'min-h-10 rounded-[10px] px-3.5 text-sm font-semibold whitespace-nowrap transition-colors duration-150',
                                     activeType === choice.value
-                                        ? 'bg-primary text-primary-foreground'
+                                        ? 'bg-card text-foreground font-bold shadow-sm'
                                         : 'text-muted-foreground hover:text-foreground',
                                 )}
                             >
@@ -599,12 +859,9 @@ function PeriodPicker({ countries, countryId, period }: { countries: Country[]; 
                             </button>
                         ))}
                     </div>
-                </div>
 
-                {!custom && fixed && (
-                    <div className="grid gap-1.5">
-                        <Label htmlFor="report-date">Date</Label>
-                        <div className="flex items-center gap-1">
+                    {!custom && fixed && (
+                        <div className="flex flex-wrap items-center gap-1">
                             <Button
                                 variant="outline"
                                 size="icon"
@@ -613,12 +870,15 @@ function PeriodPicker({ countries, countryId, period }: { countries: Country[]; 
                             >
                                 <ChevronLeft aria-hidden="true" />
                             </Button>
+                            <label htmlFor="report-date" className="sr-only">
+                                Date
+                            </label>
                             <input
                                 id="report-date"
                                 type="date"
                                 value={period.from}
                                 onChange={(e) => e.target.value && show({ period: period.type, date: e.target.value })}
-                                className="border-input bg-background focus-visible:ring-ring h-10 rounded-md border px-3 text-sm focus-visible:ring-2 focus-visible:outline-hidden"
+                                className={dateInput}
                             />
                             <Button
                                 variant="outline"
@@ -634,12 +894,12 @@ function PeriodPicker({ countries, countryId, period }: { countries: Country[]; 
                                 </Button>
                             )}
                         </div>
-                    </div>
-                )}
+                    )}
+                </div>
             </div>
 
             {custom && (
-                <form onSubmit={submitRange} aria-label="Choisir les dates" className="glass w-full space-y-3 rounded-2xl p-4 lg:w-auto">
+                <form onSubmit={submitRange} aria-label="Choisir les dates" className="glass w-full space-y-3 rounded-2xl p-4">
                     <div className="flex flex-wrap items-end gap-3">
                         <div className="grid gap-1.5">
                             <Label htmlFor="range-from">Du</Label>
@@ -651,7 +911,7 @@ function PeriodPicker({ countries, countryId, period }: { countries: Country[]; 
                                 max={to || undefined}
                                 aria-invalid={errors.du ? true : undefined}
                                 onChange={(e) => setFrom(e.target.value)}
-                                className="border-input bg-background focus-visible:ring-ring h-10 rounded-md border px-3 text-sm focus-visible:ring-2 focus-visible:outline-hidden"
+                                className={dateInput}
                             />
                         </div>
                         <div className="grid gap-1.5">
@@ -664,7 +924,7 @@ function PeriodPicker({ countries, countryId, period }: { countries: Country[]; 
                                 min={from || undefined}
                                 aria-invalid={errors.au ? true : undefined}
                                 onChange={(e) => setTo(e.target.value)}
-                                className="border-input bg-background focus-visible:ring-ring h-10 rounded-md border px-3 text-sm focus-visible:ring-2 focus-visible:outline-hidden"
+                                className={dateInput}
                             />
                         </div>
                         <Button type="submit">
@@ -703,7 +963,7 @@ function PeriodPicker({ countries, countryId, period }: { countries: Country[]; 
                                 key={preset.label}
                                 type="button"
                                 onClick={() => showRange(...preset.range())}
-                                className="bg-background/70 hover:border-primary/60 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors"
+                                className="bg-card hover:bg-accent min-h-10 rounded-full border px-3.5 text-sm font-semibold transition-colors duration-150"
                             >
                                 {preset.label}
                             </button>
@@ -711,7 +971,7 @@ function PeriodPicker({ countries, countryId, period }: { countries: Country[]; 
                     </div>
                 </form>
             )}
-        </div>
+        </section>
     );
 }
 
@@ -730,32 +990,28 @@ function GoalsOverview({ goals }: { goals: GoalProgress[] }) {
     return (
         <section aria-labelledby="goals-title" className="space-y-3">
             <div className="flex flex-wrap items-end justify-between gap-3">
-                <div className="space-y-1">
-                    <h2 id="goals-title" className="flex items-center gap-2 text-lg font-semibold">
-                        <Target className="text-primary size-5" aria-hidden="true" />
-                        Mes objectifs
-                    </h2>
-                    <p className="text-muted-foreground text-sm">Tous les pays ensemble, chacun sur ses propres dates.</p>
-                </div>
-                <Link href={route('goals.index')} className="text-primary text-sm font-semibold underline-offset-4 hover:underline">
-                    Gérer mes objectifs
+                <h2 id="goals-title" className="text-lg font-semibold">
+                    Mes objectifs
+                </h2>
+                <Link
+                    href={route('goals.index')}
+                    className="text-primary inline-flex min-h-11 items-center text-sm font-bold underline-offset-4 hover:underline"
+                >
+                    Voir mes objectifs
                 </Link>
             </div>
 
             {reached.length > 0 && (
-                <p
-                    role="status"
-                    className="border-secondary/70 bg-secondary/20 flex items-start gap-2 rounded-xl border px-4 py-3 text-sm font-medium"
-                >
-                    <Trophy className="text-secondary-foreground dark:text-secondary mt-0.5 size-4 shrink-0" aria-hidden="true" />
+                <p role="status" className="badge-success flex items-start gap-2 rounded-xl px-4 py-3 text-sm font-semibold">
+                    <Trophy className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
                     Bravo, objectif{reached.length > 1 ? 's' : ''} atteint{reached.length > 1 ? 's' : ''} :{' '}
                     {reached.map((goal) => goal.title).join(', ')} !
                 </p>
             )}
 
             {missed.length > 0 && (
-                <p className="border-destructive/30 bg-destructive/8 flex items-start gap-2 rounded-xl border px-4 py-3 text-sm">
-                    <CircleAlert className="text-destructive mt-0.5 size-4 shrink-0" aria-hidden="true" />
+                <p className="badge-danger flex items-start gap-2 rounded-xl px-4 py-3 text-sm font-semibold">
+                    <CircleAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
                     <span>Non atteint : {missed.map((goal) => goal.title).join(', ')}. Le détail est sur la carte.</span>
                 </p>
             )}

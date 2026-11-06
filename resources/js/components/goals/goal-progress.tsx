@@ -27,15 +27,15 @@ export const isActive = (goal: GoalProgress) => goal.status === 'in_progress' ||
 function badge(goal: GoalProgress): { text: string; icon: typeof Trophy; className: string } {
     switch (goal.status) {
         case 'reached':
-            return { text: 'Objectif atteint', icon: Trophy, className: 'bg-secondary/30 text-secondary-foreground dark:text-secondary' };
+            return { text: 'Objectif atteint', icon: Trophy, className: 'badge-warning' };
         case 'missed':
-            return { text: 'Non atteint', icon: CircleAlert, className: 'bg-destructive/12 text-destructive' };
+            return { text: 'Non atteint', icon: CircleAlert, className: 'badge-danger' };
         case 'upcoming':
             return { text: 'À venir', icon: CalendarClock, className: 'bg-muted text-muted-foreground' };
         default:
             return goal.pace === 'behind'
-                ? { text: 'En retard sur le rythme', icon: TrendingDown, className: 'bg-destructive/12 text-destructive' }
-                : { text: 'En bonne voie', icon: TrendingUp, className: 'bg-primary/12 text-primary' };
+                ? { text: 'En retard sur le rythme', icon: TrendingDown, className: 'badge-danger' }
+                : { text: 'En bonne voie', icon: TrendingUp, className: 'badge-success' };
     }
 }
 
@@ -58,11 +58,7 @@ export function GoalBar({ goal, className }: { goal: GoalProgress; className?: s
             <span
                 className={cn(
                     'absolute inset-y-0 left-0 rounded-full transition-[width] duration-500 motion-reduce:transition-none',
-                    goal.status === 'reached'
-                        ? 'bg-secondary'
-                        : goal.status === 'missed' || goal.pace === 'behind'
-                          ? 'bg-destructive/80'
-                          : 'bg-primary',
+                    goal.status === 'reached' ? 'bg-secondary' : goal.status === 'missed' || goal.pace === 'behind' ? 'bg-chart-5' : 'bg-primary',
                 )}
                 style={{ width: `${width}%` }}
             />
@@ -70,7 +66,7 @@ export function GoalBar({ goal, className }: { goal: GoalProgress; className?: s
                 <span
                     aria-hidden="true"
                     title="Où vous devriez en être aujourd'hui"
-                    className="bg-foreground/60 absolute inset-y-0 w-0.5"
+                    className="bg-foreground absolute inset-y-0 w-1 -translate-x-1/2 rounded-full"
                     style={{ left: `${goal.expected_percent}%` }}
                 />
             )}
@@ -109,12 +105,16 @@ function GoalDetail({ goal }: { goal: GoalProgress }) {
             return (
                 <div className="space-y-1 text-sm">
                     <p>
-                        {strong(percentText(goal.percent))} atteint, il manque {strong(formatFcfa(goal.remaining))}.
+                        {strong(percentText(goal.percent))} atteint
+                        {goal.expected_percent > 0 && goal.expected_percent < 100 ? (
+                            <span className="text-muted-foreground">, {goal.expected_percent} % attendu aujourd'hui (le trait)</span>
+                        ) : null}
+                        .
                     </p>
                     <p>
-                        Il reste {strong(daysText(goal.days_left))} : environ {strong(formatFcfa(goal.per_day_needed))} par jour.
+                        Il manque {strong(formatFcfa(goal.remaining))} : environ {strong(formatFcfa(goal.per_day_needed))} par jour pendant{' '}
+                        {daysText(goal.days_left)}.
                     </p>
-                    {goal.pace === 'behind' && <p className="text-muted-foreground">À ce stade, vous devriez être à {goal.expected_percent} %.</p>}
                 </div>
             );
     }
@@ -187,13 +187,13 @@ export function GoalSidebarBadge({ goals }: { goals: GoalProgress[] }) {
             href={route('goals.index')}
             className={cn(
                 'block rounded-lg border p-2.5 text-xs transition-colors group-data-[collapsible=icon]:hidden',
-                reached ? 'border-secondary/70 bg-secondary/20 hover:bg-secondary/30' : 'border-sidebar-border hover:bg-sidebar-accent',
+                reached ? 'badge-warning hover:bg-secondary/30 border-transparent' : 'border-sidebar-border hover:bg-sidebar-accent',
             )}
         >
             <span className="mb-1.5 flex items-center justify-between gap-2 font-semibold">
                 <span className="flex min-w-0 items-center gap-1.5">
                     {reached ? (
-                        <Trophy className="text-secondary-foreground dark:text-secondary size-3.5 shrink-0" aria-hidden="true" />
+                        <Trophy className="size-3.5 shrink-0" aria-hidden="true" />
                     ) : (
                         <Target className="text-primary size-3.5 shrink-0" aria-hidden="true" />
                     )}

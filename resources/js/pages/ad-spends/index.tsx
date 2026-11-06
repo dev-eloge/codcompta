@@ -93,15 +93,12 @@ export default function AdSpendsIndex({ countries, adSpends, platforms, today }:
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Dépenses publicitaires" />
 
-            <div className="mx-auto flex w-full max-w-4xl flex-col gap-8 p-4 md:p-6">
+            <div className="mx-auto flex w-full max-w-[1000px] flex-col gap-6 px-4 py-6 md:px-8 md:py-8">
                 <FlashMessage />
 
                 <div className="space-y-1">
-                    <h1 className="text-2xl font-semibold tracking-tight">Dépenses publicitaires</h1>
-                    <p className="text-muted-foreground text-sm">
-                        Notez ce que vous avez payé en publicité (Facebook, TikTok…) : c'est déduit de votre bénéfice. Une publicité pour tout le pays
-                        est répartie entre ses agences selon leurs ventes.
-                    </p>
+                    <h1 className="text-[28px] font-bold md:text-[32px]">Dépenses publicitaires</h1>
+                    <p className="text-muted-foreground text-[15px]">Ce que vous payez sur Facebook ou TikTok, déduit de votre bénéfice.</p>
                 </div>
 
                 {countries.length === 0 ? (

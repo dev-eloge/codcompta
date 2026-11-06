@@ -1,4 +1,4 @@
-import { type AdminMerchant, MerchantStatus, formatDate, timeAgo } from '@/components/admin/merchant-status';
+import { AdminBadge, type AdminMerchant, MerchantStatus, formatDate, timeAgo } from '@/components/admin/merchant-status';
 import { Pagination, type PaginationLink } from '@/components/admin/pagination';
 import FlashMessage from '@/components/flash-message';
 import { Button } from '@/components/ui/button';
@@ -50,12 +50,10 @@ export default function MerchantsIndex({ merchants, filters, counts }: Props) {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Commerçants" />
 
-            <div className="flex flex-col gap-5 p-4 md:p-6">
-                <header className="space-y-1">
-                    <h1 className="text-2xl font-semibold tracking-tight">Commerçants</h1>
-                    <p className="text-muted-foreground text-sm">
-                        Ouvrez un commerçant pour voir son activité, consulter son compte ou le suspendre.
-                    </p>
+            <div className="mx-auto flex w-full max-w-[1240px] flex-col gap-6 px-4 py-6 md:px-8 md:py-8">
+                <header className="flex flex-col items-start gap-2.5">
+                    <AdminBadge />
+                    <h1 className="text-[28px] font-bold md:text-[32px]">Commerçants</h1>
                 </header>
 
                 <FlashMessage />
@@ -116,7 +114,7 @@ export default function MerchantsIndex({ merchants, filters, counts }: Props) {
 
                 {merchants.data.length === 0 ? (
                     <div className="glass flex flex-col items-center gap-3 rounded-2xl px-6 py-12 text-center">
-                        <span aria-hidden="true" className="bg-primary/12 text-primary flex size-12 items-center justify-center rounded-full">
+                        <span aria-hidden="true" className="badge-success flex size-12 items-center justify-center rounded-full">
                             <Store className="size-6" />
                         </span>
                         <p className="font-semibold">Aucun commerçant ne correspond</p>

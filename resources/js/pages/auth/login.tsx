@@ -39,7 +39,7 @@ export default function Login({ status, canResetPassword, googleSignIn }: LoginP
     };
 
     return (
-        <AuthLayout title="Connexion à CODCompta" description="Content de vous revoir. Entrez votre email et votre mot de passe.">
+        <AuthLayout title="Se connecter" description="Content de vous revoir.">
             <Head title="Connexion" />
 
             {status && (

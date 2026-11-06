@@ -1,10 +1,10 @@
 import FlashMessage from '@/components/flash-message';
-import { SikaNotifications } from '@/components/sika/sika-notifications';
 import { GoalCard, daysText, formatLongDate, isActive, metricNames } from '@/components/goals/goal-progress';
 import InputError from '@/components/input-error';
 import { NativeSelect } from '@/components/native-select';
 import { DeleteButton, EditButton } from '@/components/row-actions';
 import { Sika } from '@/components/sika/sika';
+import { SikaNotifications } from '@/components/sika/sika-notifications';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -102,7 +102,7 @@ export default function GoalsIndex({ allGoals, today }: Props) {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Mes objectifs" />
 
-            <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 p-4 md:p-6">
+            <div className="mx-auto flex w-full max-w-[1100px] flex-col gap-6 px-4 py-6 md:px-8 md:py-8">
                 <FlashMessage />
 
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -111,13 +111,7 @@ export default function GoalsIndex({ allGoals, today }: Props) {
                             mood={running.some((goal) => goal.status === 'reached') ? 'party' : 'calm'}
                             className="sika-bob size-12 shrink-0 sm:size-20"
                         />
-                        <div className="space-y-1">
-                            <h1 className="text-2xl font-semibold tracking-tight">Mes objectifs</h1>
-                            <p className="text-muted-foreground max-w-2xl text-sm">
-                                Fixez combien vous voulez gagner, entre la date de début et la date de fin de votre choix. CODCompta compare chaque
-                                jour vos résultats (tous les pays ensemble) et vous dit si vous êtes dans les temps.
-                            </p>
-                        </div>
+                        <h1 className="text-[28px] font-bold md:text-[32px]">Mes objectifs</h1>
                     </div>
                     {!formOpen && (
                         <Button onClick={() => openForm(null)} className="self-start sm:self-auto">
@@ -237,7 +231,7 @@ function GoalFormCard({ goal, today, onDone, canCancel }: { goal: GoalProgress |
                                 'rounded-full border px-3 py-2 text-sm font-medium transition-colors',
                                 activePreset === choice.key
                                     ? 'bg-primary border-primary text-primary-foreground'
-                                    : 'bg-background/70 hover:border-primary/60',
+                                    : 'bg-muted/50 hover:border-primary/60',
                             )}
                         >
                             {choice.label}

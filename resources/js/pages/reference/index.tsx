@@ -63,16 +63,10 @@ export default function ReferenceIndex({ countries, products, today }: Props) {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Pays, agences et produits" />
 
-            <div className="mx-auto flex w-full max-w-5xl flex-col gap-10 p-4 md:p-6">
+            <div className="mx-auto flex w-full max-w-[1100px] flex-col gap-8 px-4 py-6 md:px-8 md:py-8">
                 <FlashMessage />
 
-                <div className="space-y-1">
-                    <h1 className="text-2xl font-semibold tracking-tight">Pays, agences et produits</h1>
-                    <p className="text-muted-foreground text-sm">
-                        Décrivez votre activité une seule fois : où vous vendez, quelles agences livrent, et combien vous coûte chaque produit. Tous
-                        les rapports s'appuient dessus.
-                    </p>
-                </div>
+                <h1 className="text-[28px] font-bold md:text-[32px]">Pays, agences et produits</h1>
 
                 {!ready && (
                     <section aria-labelledby="setup-title" className="glass space-y-3 rounded-2xl p-5">
@@ -106,7 +100,6 @@ export default function ReferenceIndex({ countries, products, today }: Props) {
                             <h2 id="countries-title" className="text-lg font-semibold">
                                 Pays et agences de livraison
                             </h2>
-                            <p className="text-muted-foreground text-sm">Une agence livre vos colis et encaisse l'argent dans une ville.</p>
                         </div>
                         {countries.length === 0 && (
                             <p className="glass text-muted-foreground rounded-2xl p-5 text-sm">
@@ -438,7 +431,7 @@ function AgencyRow({ agency, countryId, countries }: { agency: Agency; countryId
                     {agency.contact && <p className="text-muted-foreground">{agency.contact}</p>}
                 </div>
                 <div className="flex items-center gap-2">
-                    <p className={agency.is_late ? 'text-destructive flex items-center gap-1 font-semibold' : 'text-muted-foreground'}>
+                    <p className={agency.is_late ? 'text-danger-fg flex items-center gap-1 font-semibold' : 'text-muted-foreground'}>
                         {agency.is_late && <CircleAlert className="size-4" aria-hidden="true" />}
                         {agency.last_report_at
                             ? `Dernier rapport le ${formatShortDate(agency.last_report_at)}${agency.is_late ? ' : en retard' : ''}`
@@ -569,7 +562,7 @@ function ProductRow({ product, today }: { product: Product; today: string }) {
                 <div className="flex items-center gap-2">
                     <span>
                         Achat{' '}
-                        <strong className={product.unit_cost === null ? 'text-destructive' : 'tabular-nums'}>
+                        <strong className={product.unit_cost === null ? 'text-danger-fg' : 'tabular-nums'}>
                             {product.unit_cost === null ? 'à renseigner' : formatFcfa(product.unit_cost)}
                         </strong>
                         {product.reference_price !== null && (
@@ -643,7 +636,7 @@ function ProductRow({ product, today }: { product: Product; today: string }) {
             {mode === 'cost' && (
                 <div id={`costs-${product.id}`} className="animate-in fade-in slide-in-from-top-1 space-y-3">
                     <p className="text-xs font-medium">Historique des prix d'achat</p>
-                    <ul className="bg-background/60 divide-y rounded-xl border">
+                    <ul className="bg-muted/50 divide-y rounded-xl border">
                         {product.costs.map((entry) => (
                             <li key={entry.id} className="flex items-center justify-between gap-2 py-1 pr-1 pl-3">
                                 <span>

@@ -1,4 +1,4 @@
-import { type AdminMerchant, MerchantStatus, formatDate, timeAgo } from '@/components/admin/merchant-status';
+import { AdminBadge, type AdminMerchant, MerchantStatus, formatDate, timeAgo } from '@/components/admin/merchant-status';
 import AppLayout from '@/layouts/app-layout';
 import { formatNumber } from '@/lib/format';
 import { type BreadcrumbItem } from '@/types';
@@ -34,10 +34,10 @@ export default function AdminDashboard({ metrics, signupsByWeek, recentMerchants
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Administration" />
 
-            <div className="flex flex-col gap-6 p-4 md:p-6">
-                <header className="space-y-1">
-                    <h1 className="text-2xl font-semibold tracking-tight">Vue d'ensemble de la plateforme</h1>
-                    <p className="text-muted-foreground text-sm">Tous les commerçants inscrits sur CODCompta. Chiffres des 7 et 30 derniers jours.</p>
+            <div className="mx-auto flex w-full max-w-[1240px] flex-col gap-6 px-4 py-6 md:px-8 md:py-8">
+                <header className="flex flex-col items-start gap-2.5">
+                    <AdminBadge />
+                    <h1 className="text-[28px] font-bold md:text-[32px]">Vue d'ensemble</h1>
                 </header>
 
                 <section aria-label="Chiffres clés" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -79,7 +79,7 @@ export default function AdminDashboard({ metrics, signupsByWeek, recentMerchants
                             icon={<Bot className="size-4" />}
                             label="API Claude, 30 derniers jours"
                             value={`${formatNumber(metrics.ai_input_tokens_30d + metrics.ai_output_tokens_30d)} jetons`}
-                            detail={`${formatNumber(metrics.ai_input_tokens_30d)} lus, ${formatNumber(metrics.ai_output_tokens_30d)} écrits. Le coût exact est sur console.anthropic.com.`}
+                            detail={`${formatNumber(metrics.ai_input_tokens_30d)} lus, ${formatNumber(metrics.ai_output_tokens_30d)} écrits.`}
                         />
                         <UsageRow
                             icon={<LogIn className="size-4" />}
@@ -162,8 +162,8 @@ function Metric({
 
 function UsageRow({ icon, label, value, detail }: { icon: ReactNode; label: string; value: string; detail: string }) {
     return (
-        <div className="bg-background/60 flex gap-3 rounded-xl border p-4">
-            <span aria-hidden="true" className="bg-primary/12 text-primary flex size-9 shrink-0 items-center justify-center rounded-lg">
+        <div className="bg-muted/50 flex gap-3 rounded-xl border p-4">
+            <span aria-hidden="true" className="badge-success flex size-9 shrink-0 items-center justify-center rounded-lg">
                 {icon}
             </span>
             <div className="min-w-0">

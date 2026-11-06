@@ -100,7 +100,7 @@ function TrendCard({ trend, measure, days }: { trend: Trend; measure: (typeof me
                     <h3 id={titleId} className="text-muted-foreground text-sm font-medium">
                         {measure.title}
                     </h3>
-                    <p className={cn('font-[family-name:var(--font-display)] text-2xl font-bold tabular-nums', total < 0 && 'text-destructive')}>
+                    <p className={cn('font-[family-name:var(--font-display)] text-2xl font-bold tabular-nums', total < 0 && 'text-danger-fg')}>
                         {measure.format(total)}
                     </p>
                 </div>
@@ -165,7 +165,7 @@ function TrendCard({ trend, measure, days }: { trend: Trend; measure: (typeof me
                     >
                         <span className="text-muted-foreground">{bucketLabel(active, trend.bucket)} : </span>
                         <strong className="tabular-nums">{measure.format(active[measure.key])}</strong>
-                        {active[measure.key] < 0 && <span className="text-destructive"> (perte)</span>}
+                        {active[measure.key] < 0 && <span className="text-danger-fg"> (perte)</span>}
                     </div>
                 )}
             </div>
@@ -212,7 +212,7 @@ function TrendCard({ trend, measure, days }: { trend: Trend; measure: (typeof me
                             {trend.points.map((point) => (
                                 <tr key={point.from} className="border-t">
                                     <td className="px-3 py-1.5">{bucketLabel(point, trend.bucket)}</td>
-                                    <td className={cn('px-3 py-1.5 text-right', point[measure.key] < 0 && 'text-destructive font-semibold')}>
+                                    <td className={cn('px-3 py-1.5 text-right', point[measure.key] < 0 && 'text-danger-fg font-semibold')}>
                                         {measure.format(point[measure.key])}
                                         {point[measure.key] < 0 && ' (perte)'}
                                     </td>
@@ -242,7 +242,7 @@ function Change({ now, before, days }: { now: number; before: number; days: numb
             className={cn(
                 'flex max-w-36 shrink-0 items-start gap-1 text-right text-xs font-semibold',
                 change > 0 && 'text-primary',
-                change < 0 && 'text-destructive',
+                change < 0 && 'text-danger-fg',
                 change === 0 && 'text-muted-foreground',
             )}
         >

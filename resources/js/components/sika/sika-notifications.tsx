@@ -10,18 +10,34 @@ import { useState } from 'react';
  * Lets the person receive Sika's news on this phone or computer: new goal, goal reached, goal missed.
  */
 export function SikaNotifications() {
-    const publicKey = usePage<SharedData>().props.push?.publicKey ?? null;
+    const { push, auth } = usePage<SharedData>().props;
+    const publicKey = push?.publicKey ?? null;
     const { state, busy, error, turnOn, turnOff, sendTest } = usePushNotifications(publicKey);
     const [testSent, setTestSent] = useState(false);
 
-    if (!publicKey || state === 'loading') {
-        return null;
+    if (!publicKey) {
+        // Only the platform owner can fix this, so only they see why the card is missing.
+        return auth.isSuperAdmin ? (
+            <p id="notifications" role="status" className="badge-warning scroll-mt-20 rounded-xl px-4 py-3 text-sm font-semibold">
+                Notifications désactivées sur ce serveur : lancez <code>php artisan codcompta:vapid</code>, copiez les clés dans le fichier .env, puis
+                redémarrez l'application.
+            </p>
+        ) : null;
+    }
+
+    if (state === 'loading') {
+        // Keeps the place (and the #notifications anchor of the bell) while the browser answers.
+        return <div id="notifications" aria-busy="true" className="glass min-h-[88px] animate-pulse scroll-mt-20 rounded-2xl" />;
     }
 
     const on = state === 'on';
 
     return (
-        <section aria-labelledby="sika-notifications-title" className="glass flex flex-col gap-4 rounded-2xl p-4 sm:flex-row sm:items-center sm:p-5">
+        <section
+            id="notifications"
+            aria-labelledby="sika-notifications-title"
+            className="glass flex scroll-mt-20 flex-col gap-4 rounded-2xl p-4 sm:flex-row sm:items-center sm:p-5"
+        >
             <div className="flex flex-1 items-start gap-3">
                 <Sika mood={on ? 'party' : 'nudge'} className="size-11 shrink-0" />
                 <div className="space-y-1">
@@ -35,13 +51,11 @@ export function SikaNotifications() {
                             'Ce navigateur ne reçoit pas les notifications. Essayez avec Chrome, Edge, Firefox ou Safari à jour.'}
                         {state === 'denied' &&
                             "Les notifications sont bloquées pour ce site. Autorisez-les dans les réglages du navigateur (le cadenas à gauche de l'adresse), puis rechargez la page."}
-                        {state === 'off' &&
-                            "Sika vous prévient quand vous fixez un objectif, quand vous l'atteignez, ou s'il se termine sans être atteint."}
-                        {on &&
-                            'Vous serez prévenu quand un objectif est noté, atteint ou terminé sans être atteint. Activez-les aussi sur vos autres appareils.'}
+                        {state === 'off' && 'Objectif noté, atteint ou manqué : vous êtes prévenu.'}
+                        {on && 'Objectif noté, atteint ou manqué : vous êtes prévenu. Activez-les aussi sur vos autres appareils.'}
                     </p>
                     <p role="status" aria-live="polite" className="text-sm">
-                        {error && <span className="text-destructive">{error}</span>}
+                        {error && <span className="text-danger-fg">{error}</span>}
                         {!error && testSent && <span className="text-primary">Message d'essai envoyé. Il arrive dans quelques secondes.</span>}
                     </p>
                 </div>

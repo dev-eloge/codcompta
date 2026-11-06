@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreReportRequest;
 use App\Jobs\CheckGoals;
 use App\Models\Agency;
+use App\Models\Country;
 use App\Models\Product;
 use App\Models\RawMessage;
 use App\Models\Report;
@@ -120,9 +121,52 @@ class ReportController extends Controller
             'report' => $report,
             'diagnosis' => $diagnosis,
             'entries' => $entries,
+            'pending' => $country === null ? [] : $this->pendingFor($country),
             // Deferred: the page shows the results first, the small charts arrive right after.
             'trend' => Inertia::defer(fn () => $country === null ? null : $trend->forCountry($country, $period)),
         ]);
+    }
+
+    /**
+     * What may make the results wrong, shown first on the page: messages read but not saved yet,
+     * messages that could not be read, and reports still waiting to be checked.
+     *
+     * @return list<array{kind: string, id: int|null, agency: string|null, count: int, date: string|null}>
+     */
+    private function pendingFor(Country $country): array
+    {
+        $agencyIds = $country->agencies()->select('id');
+
+        $messages = RawMessage::query()
+            ->whereIn('agency_id', $agencyIds)
+            ->whereIn('status', [RawMessage::STATUS_PARSED, RawMessage::STATUS_FAILED])
+            ->with('agency:id,name')
+            ->latest()
+            ->limit(5)
+            ->get()
+            ->map(fn (RawMessage $message) => [
+                'kind' => $message->status === RawMessage::STATUS_FAILED ? 'message_failed' : 'message_parsed',
+                'id' => $message->id,
+                'agency' => $message->agency->name,
+                'count' => 1,
+                'date' => $message->created_at->toDateString(),
+            ]);
+
+        $toVerify = Report::query()
+            ->whereIn('agency_id', $agencyIds)
+            ->where('status', Report::STATUS_TO_VERIFY)
+            ->count();
+
+        return $messages
+            ->when($toVerify > 0, fn ($items) => $items->push([
+                'kind' => 'reports_to_verify',
+                'id' => null,
+                'agency' => null,
+                'count' => $toVerify,
+                'date' => null,
+            ]))
+            ->values()
+            ->all();
     }
 
     /**

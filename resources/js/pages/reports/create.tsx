@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/app-layout';
 import { formatFcfa } from '@/lib/format';
+import { cn } from '@/lib/utils';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { CircleAlert, LoaderCircle, Plus, Trash2 } from 'lucide-react';
@@ -203,304 +204,326 @@ export default function ReportsCreate({ agencies, products, today, report }: Pro
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title={title} />
 
-            <form onSubmit={submit} className="glass mx-auto my-4 flex w-full max-w-3xl flex-col gap-8 rounded-2xl p-5 md:my-6 md:p-8">
-                <div className="space-y-1">
-                    <h1 className="text-2xl font-semibold tracking-tight">{editing ? 'Modifier le rapport' : "Saisir le rapport d'une agence"}</h1>
-                    <p className="text-muted-foreground text-sm">
-                        Recopiez ce que l'agence vous a envoyé : les produits livrés, l'argent encaissé et ses frais. Les champs marqués * sont
-                        obligatoires.
-                    </p>
-                </div>
+            <form
+                onSubmit={submit}
+                className="mx-auto grid w-full max-w-[1240px] items-start gap-6 px-4 py-6 md:px-8 md:py-8 lg:grid-cols-[minmax(0,1fr)_340px]"
+            >
+                <div className="flex min-w-0 flex-col gap-5">
+                    <header className="flex flex-wrap items-end justify-between gap-3">
+                        <h1 className="text-[28px] font-bold md:text-[32px]">{editing ? 'Modifier le rapport' : "Saisir le rapport d'une agence"}</h1>
+                        <p className="text-muted-foreground text-sm">* obligatoire</p>
+                    </header>
 
-                {errorCount > 0 && (
-                    <div
-                        ref={errorSummary}
-                        tabIndex={-1}
-                        role="alert"
-                        className="border-destructive/40 bg-destructive/8 flex items-start gap-2 rounded-xl border p-4 text-sm outline-none"
-                    >
-                        <CircleAlert className="text-destructive mt-0.5 size-4 shrink-0" aria-hidden="true" />
-                        <p>
-                            <span className="font-semibold">Le rapport n'est pas enregistré.</span>{' '}
-                            {errorCount > 1 ? `${errorCount} champs sont à corriger` : 'Un champ est à corriger'} : le message est écrit sous chaque
-                            champ concerné.
-                        </p>
-                    </div>
-                )}
-
-                <section className="grid gap-4 sm:grid-cols-3">
-                    <div className="grid gap-2 sm:col-span-3">
-                        <Label htmlFor="agency_id">Agence *</Label>
-                        <NativeSelect
-                            id="agency_id"
-                            required
-                            value={data.agency_id}
-                            disabled={editing}
-                            aria-describedby={editing ? 'agency-help' : undefined}
-                            onChange={(e) => setData('agency_id', e.target.value)}
+                    {errorCount > 0 && (
+                        <div
+                            ref={errorSummary}
+                            tabIndex={-1}
+                            role="alert"
+                            className="badge-danger flex items-start gap-2 rounded-xl p-4 text-sm outline-none"
                         >
-                            <option value="">Choisir une agence</option>
-                            {agencies.map((agency) => (
-                                <option key={agency.id} value={agency.id}>
-                                    {agency.name} ({agency.country})
-                                </option>
-                            ))}
-                        </NativeSelect>
-                        {editing && (
-                            <p id="agency-help" className="text-muted-foreground text-xs">
-                                L'agence d'un rapport ne change pas. Supprimez-le et saisissez-en un nouveau si l'agence est fausse.
-                            </p>
-                        )}
-                        <InputError message={errors.agency_id} />
-                    </div>
-
-                    <div className="grid gap-2">
-                        <Label htmlFor="period_start">Du *</Label>
-                        <Input
-                            id="period_start"
-                            type="date"
-                            required
-                            aria-describedby="period-help"
-                            value={data.period_start}
-                            onChange={(e) => {
-                                const start = e.target.value;
-                                setData((current) => ({
-                                    ...current,
-                                    period_start: start,
-                                    period_end: current.period_end < start ? start : current.period_end,
-                                }));
-                            }}
-                        />
-                        <InputError message={errors.period_start} />
-                    </div>
-
-                    <div className="grid gap-2">
-                        <Label htmlFor="period_end">Au *</Label>
-                        <Input
-                            id="period_end"
-                            type="date"
-                            required
-                            min={data.period_start}
-                            aria-describedby="period-help"
-                            value={data.period_end}
-                            onChange={(e) => setData('period_end', e.target.value)}
-                        />
-                        <InputError message={errors.period_end} />
-                    </div>
-
-                    <div className="grid gap-2">
-                        <Label htmlFor="status">Compter dans le bénéfice ?</Label>
-                        <NativeSelect
-                            id="status"
-                            aria-describedby="status-help"
-                            value={data.status}
-                            onChange={(e) => setData('status', e.target.value as ReportForm['status'])}
-                        >
-                            <option value="counted">Oui, le compter</option>
-                            <option value="detail">Non, détail d'un récap déjà saisi</option>
-                            <option value="to_verify">Non, à vérifier d'abord</option>
-                        </NativeSelect>
-                        <InputError message={errors.status} />
-                    </div>
-
-                    <p id="period-help" className="text-muted-foreground text-xs sm:col-span-2">
-                        Rapport d'un seul jour : mettez la même date dans « Du » et « Au ». Récap de la semaine : du premier au dernier jour.
-                    </p>
-                    <p id="status-help" className="text-muted-foreground text-xs">
-                        Choisissez « détail » pour un rapport journalier déjà inclus dans un récap : ses ventes ne seront pas comptées deux fois.
-                    </p>
-                </section>
-
-                <section className="space-y-3">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div>
-                            <h2 className="text-lg font-semibold">Produits livrés</h2>
-                            <p className="text-muted-foreground text-sm">
-                                Une ligne par produit. L'argent encaissé se calcule avec le prix de vente : changez-le s'il y a eu des réductions.
+                            <CircleAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+                            <p>
+                                <span className="font-semibold">Le rapport n'est pas enregistré.</span>{' '}
+                                {errorCount > 1 ? `${errorCount} champs sont à corriger` : 'Un champ est à corriger'} : le message est écrit sous
+                                chaque champ concerné.
                             </p>
                         </div>
-                        <Button type="button" variant="outline" onClick={() => setData('lines', [...data.lines, { ...emptyLine }])}>
-                            <Plus aria-hidden="true" />
-                            Ajouter un produit
-                        </Button>
-                    </div>
-                    <InputError message={errors.lines} />
+                    )}
 
-                    <div className="space-y-3">
-                        {data.lines.map((line, index) => {
-                            const product = productById(line.product_id);
+                    <section aria-labelledby="who-title" className="glass grid gap-4 rounded-2xl p-5 sm:grid-cols-3 md:p-6">
+                        <h2 id="who-title" className="text-lg font-semibold sm:col-span-3">
+                            Agence et dates
+                        </h2>
+                        <div className="grid gap-2 sm:col-span-3">
+                            <Label htmlFor="agency_id">Agence *</Label>
+                            <NativeSelect
+                                id="agency_id"
+                                required
+                                value={data.agency_id}
+                                disabled={editing}
+                                aria-describedby={editing ? 'agency-help' : undefined}
+                                onChange={(e) => setData('agency_id', e.target.value)}
+                            >
+                                <option value="">Choisir une agence</option>
+                                {agencies.map((agency) => (
+                                    <option key={agency.id} value={agency.id}>
+                                        {agency.name} ({agency.country})
+                                    </option>
+                                ))}
+                            </NativeSelect>
+                            {editing && (
+                                <p id="agency-help" className="text-muted-foreground text-xs">
+                                    L'agence d'un rapport ne change pas. Supprimez-le et saisissez-en un nouveau si l'agence est fausse.
+                                </p>
+                            )}
+                            <InputError message={errors.agency_id} />
+                        </div>
 
-                            return (
-                                <div
-                                    key={index}
-                                    className="bg-background/70 grid grid-cols-[6.5rem_minmax(0,1fr)_auto] items-start gap-3 rounded-xl border p-3 sm:grid-cols-[minmax(0,2fr)_6rem_minmax(0,1fr)_auto]"
-                                >
-                                    <div className="col-span-3 grid gap-1 sm:col-span-1">
-                                        <Label htmlFor={`product-${index}`} className="text-muted-foreground text-xs">
-                                            Produit {data.lines.length > 1 ? index + 1 : ''} *
-                                        </Label>
-                                        <NativeSelect
-                                            id={`product-${index}`}
-                                            value={line.product_id}
-                                            onChange={(e) => updateLine(index, { product_id: e.target.value })}
-                                        >
-                                            <option value="">Choisir un produit</option>
-                                            {products.map((option) => (
-                                                <option key={option.id} value={option.id}>
-                                                    {option.name}
-                                                </option>
-                                            ))}
-                                        </NativeSelect>
-                                        {product && (
-                                            <p className="text-muted-foreground text-xs">
-                                                Prix d'achat :{' '}
-                                                {product.unit_cost === null
-                                                    ? 'non renseigné (à ajouter dans Pays, agences et produits)'
-                                                    : `${formatFcfa(product.unit_cost)} l'unité`}
-                                            </p>
-                                        )}
-                                        <InputError message={fieldError(`lines.${index}.product_id`)} />
-                                    </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="period_start">Du *</Label>
+                            <Input
+                                id="period_start"
+                                type="date"
+                                required
+                                aria-describedby="period-help"
+                                value={data.period_start}
+                                onChange={(e) => {
+                                    const start = e.target.value;
+                                    setData((current) => ({
+                                        ...current,
+                                        period_start: start,
+                                        period_end: current.period_end < start ? start : current.period_end,
+                                    }));
+                                }}
+                            />
+                            <InputError message={errors.period_start} />
+                        </div>
 
-                                    <div className="grid gap-1">
-                                        <Label htmlFor={`quantity-${index}`} className="text-muted-foreground text-xs">
-                                            Quantité livrée *
-                                        </Label>
-                                        <Input
-                                            id={`quantity-${index}`}
-                                            type="number"
-                                            inputMode="numeric"
-                                            min={1}
-                                            value={line.quantity}
-                                            onChange={(e) => updateLine(index, { quantity: e.target.value })}
-                                        />
-                                        <InputError message={fieldError(`lines.${index}.quantity`)} />
-                                    </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="period_end">Au *</Label>
+                            <Input
+                                id="period_end"
+                                type="date"
+                                required
+                                min={data.period_start}
+                                aria-describedby="period-help"
+                                value={data.period_end}
+                                onChange={(e) => setData('period_end', e.target.value)}
+                            />
+                            <InputError message={errors.period_end} />
+                        </div>
 
-                                    <div className="grid gap-1">
-                                        <Label htmlFor={`amount-${index}`} className="text-muted-foreground text-xs">
-                                            Argent encaissé (F) *
-                                        </Label>
-                                        <Input
-                                            id={`amount-${index}`}
-                                            type="number"
-                                            inputMode="numeric"
-                                            min={0}
-                                            value={line.amount}
-                                            aria-describedby={`amount-${index}-help`}
-                                            onChange={(e) => updateLine(index, { amount: e.target.value, auto: false })}
-                                        />
-                                        <AmountHint
-                                            id={`amount-${index}-help`}
-                                            line={line}
-                                            price={product?.reference_price ?? null}
-                                            expected={expectedAmount(line)}
-                                            onRecalculate={() => recalculate(index)}
-                                        />
-                                        <InputError message={fieldError(`lines.${index}.amount`)} />
-                                    </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="status">Compter dans le bénéfice ?</Label>
+                            <NativeSelect
+                                id="status"
+                                aria-describedby="status-help"
+                                value={data.status}
+                                onChange={(e) => setData('status', e.target.value as ReportForm['status'])}
+                            >
+                                <option value="counted">Oui, le compter</option>
+                                <option value="detail">Non, détail d'un récap déjà saisi</option>
+                                <option value="to_verify">Non, à vérifier d'abord</option>
+                            </NativeSelect>
+                            <InputError message={errors.status} />
+                        </div>
 
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="icon"
-                                        className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive mt-5"
-                                        aria-label={`Retirer la ligne ${product ? product.name : index + 1}`}
-                                        title="Retirer cette ligne"
-                                        disabled={data.lines.length === 1}
-                                        onClick={() =>
-                                            setData(
-                                                'lines',
-                                                data.lines.filter((_, i) => i !== index),
-                                            )
-                                        }
+                        <p id="period-help" className="text-muted-foreground text-xs sm:col-span-2">
+                            Rapport d'un seul jour : mettez la même date dans « Du » et « Au ». Récap de la semaine : du premier au dernier jour.
+                        </p>
+                        <p id="status-help" className="text-muted-foreground text-xs">
+                            Choisissez « détail » pour un rapport journalier déjà inclus dans un récap : ses ventes ne seront pas comptées deux fois.
+                        </p>
+                    </section>
+
+                    <section aria-labelledby="lines-title" className="glass space-y-4 rounded-2xl p-5 md:p-6">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                            <h2 id="lines-title" className="text-lg font-semibold">
+                                Produits livrés
+                            </h2>
+                            <Button type="button" variant="outline" onClick={() => setData('lines', [...data.lines, { ...emptyLine }])}>
+                                <Plus aria-hidden="true" />
+                                Ajouter un produit
+                            </Button>
+                        </div>
+                        <InputError message={errors.lines} />
+
+                        <div className="space-y-3">
+                            {data.lines.map((line, index) => {
+                                const product = productById(line.product_id);
+
+                                return (
+                                    <div
+                                        key={index}
+                                        className="bg-muted/60 grid grid-cols-[6.5rem_minmax(0,1fr)_auto] items-start gap-3 rounded-xl p-3 sm:grid-cols-[minmax(0,2fr)_6.5rem_minmax(0,1fr)_auto]"
                                     >
-                                        <Trash2 aria-hidden="true" />
-                                    </Button>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </section>
+                                        <div className="col-span-3 grid gap-1 sm:col-span-1">
+                                            <Label htmlFor={`product-${index}`} className="text-muted-foreground text-xs">
+                                                Produit {data.lines.length > 1 ? index + 1 : ''} *
+                                            </Label>
+                                            <NativeSelect
+                                                id={`product-${index}`}
+                                                value={line.product_id}
+                                                onChange={(e) => updateLine(index, { product_id: e.target.value })}
+                                            >
+                                                <option value="">Choisir un produit</option>
+                                                {products.map((option) => (
+                                                    <option key={option.id} value={option.id}>
+                                                        {option.name}
+                                                    </option>
+                                                ))}
+                                            </NativeSelect>
+                                            {product && (
+                                                <p className="text-muted-foreground text-xs">
+                                                    Prix d'achat :{' '}
+                                                    {product.unit_cost === null
+                                                        ? 'non renseigné (à ajouter dans Pays, agences et produits)'
+                                                        : `${formatFcfa(product.unit_cost)} l'unité`}
+                                                </p>
+                                            )}
+                                            <InputError message={fieldError(`lines.${index}.product_id`)} />
+                                        </div>
 
-                <section className="grid gap-4 sm:grid-cols-2">
-                    <div className="sm:col-span-2">
-                        <h2 className="text-lg font-semibold">Frais de l'agence</h2>
-                        <p className="text-muted-foreground text-sm">Laissez vide ce qui ne s'applique pas.</p>
-                    </div>
-                    <MoneyField
-                        id="delivery_fees"
-                        label="Frais de livraison (F)"
-                        value={data.delivery_fees}
-                        error={errors.delivery_fees}
-                        onChange={(v) => setData('delivery_fees', v)}
-                    />
-                    <MoneyField
-                        id="closing_fees"
-                        label="Closing et crédit d'appel (F)"
-                        help="Commissions des personnes qui confirment les commandes, et crédit téléphonique"
-                        value={data.closing_fees}
-                        error={errors.closing_fees}
-                        onChange={(v) => setData('closing_fees', v)}
-                    />
-                    <MoneyField
-                        id="other_fees"
-                        label="Autres frais (F)"
-                        value={data.other_fees}
-                        error={errors.other_fees}
-                        onChange={(v) => setData('other_fees', v)}
-                    />
-                    <MoneyField
-                        id="announced_total"
-                        label="Total écrit par l'agence (F)"
-                        help="Facultatif. Sert de contrôle : s'il ne correspond pas à vos lignes, le rapport sera marqué « à vérifier »"
-                        value={data.announced_total}
-                        error={errors.announced_total}
-                        onChange={(v) => setData('announced_total', v)}
-                    />
-                    <div className="grid gap-2 sm:col-span-2">
-                        <Label htmlFor="note">Note (facultatif)</Label>
-                        <Input
-                            id="note"
-                            value={data.note}
-                            onChange={(e) => setData('note', e.target.value)}
-                            placeholder="Exemple : 2 colis envoyés dans une autre ville"
+                                        <div className="grid gap-1">
+                                            <Label htmlFor={`quantity-${index}`} className="text-muted-foreground text-xs">
+                                                Quantité livrée *
+                                            </Label>
+                                            <Input
+                                                id={`quantity-${index}`}
+                                                type="number"
+                                                inputMode="numeric"
+                                                min={1}
+                                                value={line.quantity}
+                                                onChange={(e) => updateLine(index, { quantity: e.target.value })}
+                                            />
+                                            <InputError message={fieldError(`lines.${index}.quantity`)} />
+                                        </div>
+
+                                        <div className="grid gap-1">
+                                            <Label htmlFor={`amount-${index}`} className="text-muted-foreground text-xs">
+                                                Argent encaissé (F) *
+                                            </Label>
+                                            <Input
+                                                id={`amount-${index}`}
+                                                type="number"
+                                                inputMode="numeric"
+                                                min={0}
+                                                value={line.amount}
+                                                aria-describedby={`amount-${index}-help`}
+                                                onChange={(e) => updateLine(index, { amount: e.target.value, auto: false })}
+                                            />
+                                            <AmountHint
+                                                id={`amount-${index}-help`}
+                                                line={line}
+                                                price={product?.reference_price ?? null}
+                                                expected={expectedAmount(line)}
+                                                onRecalculate={() => recalculate(index)}
+                                            />
+                                            <InputError message={fieldError(`lines.${index}.amount`)} />
+                                        </div>
+
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            className="text-muted-foreground hover:bg-danger-bg hover:text-danger-fg mt-6"
+                                            aria-label={`Retirer la ligne ${product ? product.name : index + 1}`}
+                                            title="Retirer cette ligne"
+                                            disabled={data.lines.length === 1}
+                                            onClick={() =>
+                                                setData(
+                                                    'lines',
+                                                    data.lines.filter((_, i) => i !== index),
+                                                )
+                                            }
+                                        >
+                                            <Trash2 aria-hidden="true" />
+                                        </Button>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </section>
+
+                    <section aria-labelledby="fees-title" className="glass grid gap-4 rounded-2xl p-5 sm:grid-cols-2 md:p-6">
+                        <div className="sm:col-span-2">
+                            <h2 id="fees-title" className="text-lg font-semibold">
+                                Frais de l'agence
+                            </h2>
+                            <p className="text-muted-foreground text-sm">Laissez vide ce qui ne s'applique pas.</p>
+                        </div>
+                        <MoneyField
+                            id="delivery_fees"
+                            label="Frais de livraison (F)"
+                            value={data.delivery_fees}
+                            error={errors.delivery_fees}
+                            onChange={(v) => setData('delivery_fees', v)}
                         />
-                        <InputError message={errors.note} />
-                    </div>
-                </section>
+                        <MoneyField
+                            id="closing_fees"
+                            label="Closing et crédit d'appel (F)"
+                            help="Commissions des personnes qui confirment les commandes, et crédit téléphonique"
+                            value={data.closing_fees}
+                            error={errors.closing_fees}
+                            onChange={(v) => setData('closing_fees', v)}
+                        />
+                        <MoneyField
+                            id="other_fees"
+                            label="Autres frais (F)"
+                            value={data.other_fees}
+                            error={errors.other_fees}
+                            onChange={(v) => setData('other_fees', v)}
+                        />
+                        <MoneyField
+                            id="announced_total"
+                            label="Total écrit par l'agence (F)"
+                            help="Facultatif. Sert de contrôle : s'il ne correspond pas à vos lignes, le rapport sera marqué « à vérifier »"
+                            value={data.announced_total}
+                            error={errors.announced_total}
+                            onChange={(v) => setData('announced_total', v)}
+                        />
+                        <div className="grid gap-2 sm:col-span-2">
+                            <Label htmlFor="note">Note (facultatif)</Label>
+                            <Input
+                                id="note"
+                                value={data.note}
+                                onChange={(e) => setData('note', e.target.value)}
+                                placeholder="Exemple : 2 colis envoyés dans une autre ville"
+                            />
+                            <InputError message={errors.note} />
+                        </div>
+                    </section>
+                </div>
 
-                <section aria-labelledby="recap-title" className="border-primary/25 bg-primary/8 space-y-2 rounded-xl border p-4 text-sm">
-                    <h2 id="recap-title" className="text-base font-semibold">
-                        Aperçu de ce rapport
-                    </h2>
-                    <SummaryLine label="Argent encaissé" value={formatFcfa(salesTotal)} />
-                    <SummaryLine label="Prix d'achat des produits" value={`− ${formatFcfa(purchaseCost)}`} />
-                    <SummaryLine label="Frais de l'agence" value={`− ${formatFcfa(fees)}`} />
-                    <SummaryLine label="Reste avant publicité" value={formatFcfa(salesTotal - purchaseCost - fees)} strong />
-                    <p className="text-muted-foreground text-xs">
-                        La publicité est déduite dans vos résultats de la période, pas rapport par rapport.
-                    </p>
+                <aside
+                    aria-labelledby="recap-title"
+                    className="glass-hero sticky bottom-[92px] z-20 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-2xl p-4 shadow-[var(--shadow-raised)] md:bottom-4 lg:top-6 lg:bottom-auto lg:flex lg:flex-col lg:items-stretch lg:p-6"
+                >
+                    <div className="min-w-0">
+                        <h2 id="recap-title" className="text-hero-muted font-[family-name:var(--font-sans)] text-sm font-semibold">
+                            Ce qu'il vous reste, avant la pub
+                        </h2>
+                        <p
+                            className={cn(
+                                'mt-1 font-[family-name:var(--font-display)] text-[26px] leading-none font-bold tabular-nums lg:mt-3 lg:text-[40px]',
+                                salesTotal - purchaseCost - fees < 0 && 'text-on-hero-loss',
+                            )}
+                            aria-live="polite"
+                        >
+                            {formatFcfa(salesTotal - purchaseCost - fees)}
+                        </p>
+                    </div>
+                    <dl className="col-span-2 hidden flex-col gap-1.5 border-t border-white/15 pt-3 text-sm lg:flex">
+                        <SummaryLine label="Argent encaissé" value={formatFcfa(salesTotal)} />
+                        <SummaryLine label="Prix d'achat" value={`− ${formatFcfa(purchaseCost)}`} />
+                        <SummaryLine label="Frais de l'agence" value={`− ${formatFcfa(fees)}`} />
+                    </dl>
                     {announcedMismatch && (
-                        <p role="status" className="flex items-start gap-2 font-medium">
-                            <CircleAlert className="text-destructive mt-0.5 size-4 shrink-0" aria-hidden="true" />
-                            <span>
-                                Vos lignes font {formatFcfa(salesTotal)} mais l'agence a écrit {formatFcfa(toNumber(data.announced_total))} : le
-                                rapport sera marqué « à vérifier ».
-                            </span>
+                        <p role="status" className="text-on-hero-gold col-span-2 flex items-start gap-2 text-sm font-semibold">
+                            <CircleAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+                            <span>L'agence a écrit {formatFcfa(toNumber(data.announced_total))} : le rapport sera « à vérifier ».</span>
                         </p>
                     )}
-                </section>
-
-                <div className="flex flex-wrap gap-3">
-                    <Button type="submit" disabled={processing}>
-                        {processing && <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />}
-                        {editing ? 'Enregistrer les modifications' : 'Enregistrer le rapport'}
-                    </Button>
-                    <Button asChild variant="ghost">
-                        <Link href={route('reports.index')}>Annuler</Link>
-                    </Button>
-                </div>
+                    <div className="flex gap-2 lg:flex-col">
+                        <Button
+                            type="submit"
+                            size="lg"
+                            disabled={processing}
+                            className="bg-secondary text-secondary-foreground hover:bg-secondary/90 flex-1 lg:w-full lg:flex-none"
+                        >
+                            {processing && <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />}
+                            <span className="lg:hidden">Enregistrer</span>
+                            <span className="hidden lg:inline">{editing ? 'Enregistrer les modifications' : 'Enregistrer le rapport'}</span>
+                        </Button>
+                        <Button
+                            asChild
+                            variant="ghost"
+                            className="text-hero-foreground hover:text-hero-foreground hidden hover:bg-white/10 lg:inline-flex"
+                        >
+                            <Link href={route('reports.index')}>Annuler</Link>
+                        </Button>
+                    </div>
+                </aside>
             </form>
         </AppLayout>
     );
@@ -609,11 +632,11 @@ function AmountHint({
     );
 }
 
-function SummaryLine({ label, value, strong = false }: { label: string; value: string; strong?: boolean }) {
+function SummaryLine({ label, value }: { label: string; value: string }) {
     return (
-        <div className={strong ? 'flex justify-between border-t pt-2 text-base font-bold' : 'flex justify-between'}>
-            <span>{label}</span>
-            <span className="font-semibold tabular-nums">{value}</span>
+        <div className="flex justify-between gap-3">
+            <dt className="text-hero-muted">{label}</dt>
+            <dd className="font-semibold tabular-nums">{value}</dd>
         </div>
     );
 }

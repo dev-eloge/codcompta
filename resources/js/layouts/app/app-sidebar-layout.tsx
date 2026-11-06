@@ -3,6 +3,7 @@ import { AppShell } from '@/components/app-shell';
 import { AppSidebar } from '@/components/app-sidebar';
 import { AppSidebarHeader } from '@/components/app-sidebar-header';
 import { ImpersonationBanner } from '@/components/impersonation-banner';
+import { MobileTabBar } from '@/components/mobile-tab-bar';
 import { GoalBuddy } from '@/components/sika/goal-buddy';
 import { type BreadcrumbItem } from '@/types';
 
@@ -19,11 +20,12 @@ export default function AppSidebarLayout({ children, breadcrumbs = [] }: { child
             <AppContent variant="sidebar">
                 <ImpersonationBanner />
                 <AppSidebarHeader breadcrumbs={breadcrumbs} />
-                <div id="contenu" tabIndex={-1} className="flex flex-1 flex-col outline-none">
+                <div id="contenu" tabIndex={-1} className="flex flex-1 flex-col pb-28 outline-none md:pb-0">
                     {children}
                 </div>
                 <GoalBuddy />
             </AppContent>
+            <MobileTabBar />
         </AppShell>
     );
 }

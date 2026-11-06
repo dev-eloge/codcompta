@@ -9,26 +9,44 @@ interface AuthLayoutProps {
     description?: string;
 }
 
+/**
+ * Two columns on a computer: the promise on the dark surface, the form on the light one.
+ * On a phone, only the logo and the form.
+ */
 export default function AuthSimpleLayout({ children, title, description }: AuthLayoutProps) {
     return (
-        <main className="flex min-h-svh flex-col items-center justify-center gap-6 p-4 sm:p-6 md:p-10">
-            <div className="glass w-full max-w-sm rounded-3xl p-7 md:p-8">
-                <div className="flex flex-col gap-8">
-                    <div className="flex flex-col items-center gap-4">
-                        <Link href={route('home')} className="flex flex-col items-center gap-2 font-medium">
-                            <AppLogoIcon className="size-11" aria-hidden="true" />
-                            <span className="sr-only">Retour à l'accueil de CODCompta</span>
-                        </Link>
+        <div className="flex min-h-dvh flex-col lg:flex-row">
+            <aside className="bg-hero text-hero-foreground hidden flex-col justify-between gap-10 p-12 lg:flex lg:w-[44%] lg:max-w-[620px] xl:p-16">
+                <Link href={route('home')} className="flex items-center gap-2.5" aria-label="CODCompta, accueil">
+                    <AppLogoIcon className="size-10" />
+                    <span className="font-[family-name:var(--font-display)] text-xl font-bold tracking-[-0.03em]">
+                        COD<span className="text-on-hero-up font-semibold">Compta</span>
+                    </span>
+                </Link>
+                <p className="max-w-[28rem] font-[family-name:var(--font-display)] text-[36px] leading-[1.15] font-bold tracking-[-0.02em]">
+                    Votre vrai bénéfice, pays par pays et agence par agence.
+                </p>
+                <p className="text-hero-muted text-sm">Vos chiffres restent privés : chaque boutique ne voit que ses propres données.</p>
+            </aside>
 
-                        <div className="space-y-2 text-center">
-                            <h1 className="text-xl font-semibold">{title}</h1>
-                            <p className="text-muted-foreground text-center text-sm">{description}</p>
-                        </div>
+            <main className="flex flex-1 flex-col items-center justify-center gap-8 px-4 py-8 sm:px-6 md:py-12">
+                <Link href={route('home')} className="flex items-center gap-2.5 self-start sm:self-center lg:hidden" aria-label="CODCompta, accueil">
+                    <AppLogoIcon className="size-10" />
+                    <span className="font-[family-name:var(--font-display)] text-lg font-bold tracking-[-0.03em]">
+                        COD<span className="text-primary font-semibold">Compta</span>
+                    </span>
+                </Link>
+
+                <div className="flex w-full max-w-[420px] flex-col gap-6">
+                    <div className="space-y-1.5">
+                        <h1 className="text-[28px] font-bold md:text-[30px]">{title}</h1>
+                        {description && <p className="text-muted-foreground text-[15px]">{description}</p>}
                     </div>
                     {children}
                 </div>
-            </div>
-            <LegalLinks className="text-muted-foreground text-xs" />
-        </main>
+
+                <LegalLinks className="text-muted-foreground mt-auto text-xs lg:mt-0" />
+            </main>
+        </div>
     );
 }

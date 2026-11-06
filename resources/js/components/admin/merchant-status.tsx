@@ -8,13 +8,22 @@ export function MerchantStatus({ suspended, className }: { suspended: boolean; c
         <span
             className={cn(
                 'inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap',
-                suspended ? 'bg-destructive/12 text-destructive' : 'bg-primary/12 text-primary',
+                suspended ? 'badge-danger' : 'badge-success',
                 className,
             )}
         >
-            <span aria-hidden="true" className={cn('size-1.5 rounded-full', suspended ? 'bg-destructive' : 'bg-primary')} />
+            <span aria-hidden="true" className={cn('size-1.5 rounded-full', suspended ? 'bg-danger-fg' : 'bg-success-fg')} />
             {suspended ? 'Suspendu' : 'Actif'}
         </span>
+    );
+}
+
+/**
+ * Marks every administration page, so the super admin (who is also a merchant) always knows which space they are in.
+ */
+export function AdminBadge() {
+    return (
+        <span className="bg-hero text-on-hero-gold inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold">Espace administrateur</span>
     );
 }
 

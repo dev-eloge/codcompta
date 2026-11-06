@@ -1,10 +1,9 @@
 import { cn } from '@/lib/utils';
 import { Link, usePage } from '@inertiajs/react';
-import { History, TableProperties } from 'lucide-react';
 
 const tabs = [
-    { title: 'Résultats', href: '/rapports', icon: TableProperties },
-    { title: 'Historique des rapports', href: '/rapports/historique', icon: History },
+    { title: 'Résultats', href: '/rapports' },
+    { title: 'Historique des rapports', href: '/rapports/historique' },
 ];
 
 /**
@@ -14,7 +13,7 @@ export function ReportTabs() {
     const path = usePage().url.split('?')[0];
 
     return (
-        <nav aria-label="Mes rapports" className="bg-muted inline-flex w-fit max-w-full gap-1 overflow-x-auto rounded-xl p-1">
+        <nav aria-label="Mes rapports" className="flex max-w-full gap-6 overflow-x-auto border-b">
             {tabs.map((tab) => {
                 const active = path === tab.href;
 
@@ -25,11 +24,12 @@ export function ReportTabs() {
                         prefetch
                         aria-current={active ? 'page' : undefined}
                         className={cn(
-                            'flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium whitespace-nowrap transition-colors',
-                            active ? 'bg-background text-foreground font-semibold shadow-sm' : 'text-muted-foreground hover:text-foreground',
+                            '-mb-px flex min-h-11 items-center border-b-[3px] px-0.5 text-[15px] whitespace-nowrap transition-colors duration-150',
+                            active
+                                ? 'border-primary text-foreground font-bold'
+                                : 'text-muted-foreground hover:text-foreground border-transparent font-semibold',
                         )}
                     >
-                        <tab.icon className="size-4" aria-hidden="true" />
                         {tab.title}
                     </Link>
                 );

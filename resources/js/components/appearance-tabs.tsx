@@ -24,7 +24,7 @@ export default function AppearanceToggleTab({ className = '', ...props }: HTMLAt
                         'flex items-center rounded-md px-3.5 py-2 transition-colors',
                         appearance === value
                             ? 'bg-background text-foreground font-semibold shadow-xs'
-                            : 'text-muted-foreground hover:bg-background/60 hover:text-foreground',
+                            : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground',
                     )}
                 >
                     <Icon className="-ml-1 h-4 w-4" aria-hidden="true" />
