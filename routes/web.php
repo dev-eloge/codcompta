@@ -44,6 +44,7 @@ Route::middleware(['auth', 'merchant.active'])->group(function () {
     Route::delete('messages/{message}', [RawMessageController::class, 'destroy'])->name('messages.destroy');
 
     Route::get('pub', [AdSpendController::class, 'index'])->name('ad-spends.index');
+    Route::get('pub/plateformes', [AdSpendController::class, 'platforms'])->name('ad-spends.platforms');
     Route::post('pub', [AdSpendController::class, 'store'])->name('ad-spends.store');
     Route::put('pub/{adSpend}', [AdSpendController::class, 'update'])->name('ad-spends.update');
     Route::delete('pub/{adSpend}', [AdSpendController::class, 'destroy'])->name('ad-spends.destroy');

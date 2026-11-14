@@ -1,3 +1,4 @@
+import { AdSpendTabs } from '@/components/ad-spends/ad-spend-tabs';
 import FlashMessage from '@/components/flash-message';
 import InputError from '@/components/input-error';
 import { NativeSelect } from '@/components/native-select';
@@ -42,13 +43,14 @@ interface Props {
     products: { id: number; name: string }[];
     platforms: string[];
     today: string;
+    filters: { produit: number | null; sans_plateforme: boolean };
 }
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Dépenses publicitaires', href: '/pub' }];
 
 const numberText = (value: number | null) => (value === null ? '' : String(value));
 
-export default function AdSpendsIndex({ countries, adSpends, products, platforms, today }: Props) {
+export default function AdSpendsIndex({ countries, adSpends, products, platforms, today, filters }: Props) {
     const blank = {
         country_id: countries.length > 0 ? String(countries[0].id) : '',
         agency_id: '',
@@ -120,6 +122,21 @@ export default function AdSpendsIndex({ countries, adSpends, products, platforms
                     <p className="text-muted-foreground text-[15px]">Ce que vous payez sur Facebook ou TikTok, déduit de votre bénéfice.</p>
                 </div>
 
+                <AdSpendTabs />
+
+                {filters.sans_plateforme && (
+                    <div className="badge-warning flex flex-wrap items-center justify-between gap-3 rounded-xl px-4 py-3 text-[15px]">
+                        <p>
+                            Pubs sans plateforme notée
+                            {filters.produit ? ` pour ${products.find((product) => product.id === filters.produit)?.name ?? 'ce produit'}` : ''} :
+                            cliquez sur le crayon de chaque ligne et choisissez où tournait la pub.
+                        </p>
+                        <Link href={route('ad-spends.index')} className="min-h-11 content-center font-bold underline underline-offset-4">
+                            Voir toutes les pubs
+                        </Link>
+                    </div>
+                )}
+
                 {countries.length === 0 ? (
                     <div className="glass space-y-3 rounded-2xl p-6 text-sm">
                         <p className="font-semibold">Ajoutez d'abord un pays de vente</p>
@@ -170,7 +187,8 @@ export default function AdSpendsIndex({ countries, adSpends, products, platforms
                                 ))}
                             </NativeSelect>
                             <p id="agency-help" className="text-muted-foreground text-xs">
-                                Choisissez une agence seulement si elle a payé sa propre pub. Sinon, la pub d'un produit est répartie selon les livraisons de ce produit.
+                                Choisissez une agence seulement si elle a payé sa propre pub. Sinon, la pub d'un produit est répartie selon les
+                                livraisons de ce produit.
                             </p>
                             <InputError message={errors.agency_id} />
                         </div>

@@ -6,8 +6,11 @@ use App\Http\Requests\StoreAdSpendRequest;
 use App\Jobs\CheckGoals;
 use App\Models\AdSpend;
 use App\Models\Agency;
+use App\Services\PlatformComparison;
+use App\Services\ReportPeriod;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -22,7 +25,14 @@ class AdSpendController extends Controller
 
         $countries = $merchant->countries()->with('agencies:id,country_id,name')->orderBy('name')->get();
 
+        $filters = $request->validate([
+            'produit' => ['nullable', 'integer'],
+            'sans_plateforme' => ['nullable', 'boolean'],
+        ]);
+        $missingPlatformOnly = (bool) ($filters['sans_plateforme'] ?? false);
+
         return Inertia::render('ad-spends/index', [
+            'filters' => ['produit' => $filters['produit'] ?? null, 'sans_plateforme' => $missingPlatformOnly],
             'countries' => $countries->map(fn ($country) => [
                 'id' => $country->id,
                 'name' => $country->name,
@@ -31,6 +41,8 @@ class AdSpendController extends Controller
             'adSpends' => AdSpend::query()
                 ->whereIn('country_id', $countries->pluck('id'))
                 ->with(['country:id,name', 'agency:id,name', 'product:id,name'])
+                ->when($missingPlatformOnly, fn ($query) => $query->whereNull('platform'))
+                ->when($filters['produit'] ?? null, fn ($query, $productId) => $query->where('product_id', $productId))
                 ->latest('period_end')
                 ->latest('id')
                 ->limit(50)
@@ -54,6 +66,40 @@ class AdSpendController extends Controller
             'products' => $merchant->products()->orderBy('name')->get(['id', 'name']),
             'platforms' => AdSpend::PLATFORMS,
             'today' => now($merchant->timezone)->toDateString(),
+        ]);
+    }
+
+    /**
+     * For each product, what the ad leaves per day depending on where it ran.
+     */
+    public function platforms(Request $request, PlatformComparison $comparison): Response
+    {
+        $merchant = $this->merchantOf($request);
+        $countries = $merchant->countries()->orderBy('name')->get(['id', 'merchant_id', 'name']);
+
+        $filters = $request->validate([
+            'pays' => ['nullable', 'integer'],
+            'period' => ['nullable', Rule::in([ReportPeriod::WEEK, ReportPeriod::MONTH, ReportPeriod::CUSTOM])],
+            'date' => ['nullable', 'date'],
+            'du' => ['nullable', 'required_if:period,'.ReportPeriod::CUSTOM, 'date'],
+            'au' => ['nullable', 'required_if:period,'.ReportPeriod::CUSTOM, 'date', 'after_or_equal:du'],
+        ], [
+            'du.required_if' => 'Choisissez la date de début.',
+            'au.required_if' => 'Choisissez la date de fin.',
+            'au.after_or_equal' => 'La date de fin doit être après la date de début.',
+        ]);
+
+        $country = isset($filters['pays']) ? $merchant->countries()->findOrFail($filters['pays']) : $countries->first();
+
+        $period = ($filters['period'] ?? null) === ReportPeriod::CUSTOM
+            ? ReportPeriod::between($filters['du'], $filters['au'])
+            : ReportPeriod::containing($filters['period'] ?? ReportPeriod::MONTH, $filters['date'] ?? now($merchant->timezone)->toDateString());
+
+        return Inertia::render('ad-spends/platforms', [
+            'countries' => $countries->map->only(['id', 'name'])->values(),
+            'countryId' => $country?->id,
+            'period' => $period->toArray(),
+            'products' => $country === null ? [] : $comparison->forCountry($country, $period->from->toDateString(), $period->to->toDateString()),
         ]);
     }
 
