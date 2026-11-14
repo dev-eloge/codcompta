@@ -1,6 +1,7 @@
 import InputError from '@/components/input-error';
 import { NativeSelect } from '@/components/native-select';
 import { AdFields, AmountHint, ChoiceCard, MoneyField, QuantityStepper } from '@/components/report-form/fields';
+import { TeamFees } from '@/components/report-form/team-fees';
 import { type Agency, emptyLine, type Product, type ReportFormState, sharedAdText, toNumber } from '@/components/report-form/use-report-form';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogTitle } from '@/components/ui/dialog';
@@ -16,7 +17,7 @@ import { FormEvent, ReactNode, useEffect, useRef, useState } from 'react';
 type Step = 1 | 2 | 3 | 4;
 
 const steps: { label: string; next: string }[] = [
-    { label: 'Agence', next: 'Suivant : les produits' },
+    { label: 'Qui livre', next: 'Suivant : les produits' },
     { label: 'Produits', next: 'Suivant : la pub' },
     { label: 'Pub', next: 'Suivant : les frais' },
     { label: 'Frais', next: 'Enregistrer' },
@@ -90,7 +91,7 @@ export function MobileReportFlow({ form, agencies, products }: { form: ReportFor
 
     const goNext = () => {
         if (step === 1 && (data.agency_id === '' || data.period_start === '' || data.period_end < data.period_start)) {
-            setStepError(data.agency_id === '' ? 'Choisissez une agence.' : 'Choisissez la date du rapport.');
+            setStepError(data.agency_id === '' ? 'Choisissez qui a livré.' : 'Choisissez la date du rapport.');
 
             return;
         }
@@ -212,7 +213,8 @@ export function MobileReportFlow({ form, agencies, products }: { form: ReportFor
                 {step > 1 && agency && (
                     <div className="bg-card flex items-center justify-between gap-3 rounded-2xl border px-4 py-2">
                         <p className="min-w-0 text-[15px]">
-                            <span className="font-bold">{agency.name}</span>, {reportDays(data.period_start, data.period_end)}
+                            <span className="font-bold">{agency.is_own_team ? 'Mon équipe' : agency.name}</span>,{' '}
+                            {reportDays(data.period_start, data.period_end)}
                         </p>
                         <button
                             type="button"
@@ -225,16 +227,16 @@ export function MobileReportFlow({ form, agencies, products }: { form: ReportFor
                 )}
 
                 <h2 ref={stepTitle} tabIndex={-1} className="text-[22px] font-bold outline-none">
-                    {step === 1 && 'Quelle agence, quel jour ?'}
+                    {step === 1 && 'Qui livre, quel jour ?'}
                     {step === 2 && 'Produits livrés'}
                     {step === 3 && 'La pub du jour'}
-                    {step === 4 && "Frais de l'agence"}
+                    {step === 4 && (form.isTeam ? 'Frais du jour' : "Frais de l'agence")}
                 </h2>
 
                 {step === 1 && (
                     <div className="flex flex-col gap-4">
                         <div className="grid gap-2">
-                            <Label htmlFor="m-agency_id">Agence</Label>
+                            <Label htmlFor="m-agency_id">Qui a livré ?</Label>
                             <NativeSelect
                                 id="m-agency_id"
                                 value={data.agency_id}
@@ -244,7 +246,7 @@ export function MobileReportFlow({ form, agencies, products }: { form: ReportFor
                                 <option value="">Choisir une agence</option>
                                 {agencies.map((option) => (
                                     <option key={option.id} value={option.id}>
-                                        {option.name} ({option.country})
+                                        {option.is_own_team ? `Mon équipe (${option.country})` : `${option.name} (${option.country})`}
                                     </option>
                                 ))}
                             </NativeSelect>
@@ -393,52 +395,58 @@ export function MobileReportFlow({ form, agencies, products }: { form: ReportFor
 
                 {step === 4 && (
                     <div className="flex flex-col gap-4">
-                        <p className="text-muted-foreground -mt-2 text-[15px]">Laissez vide ce qui ne s'applique pas.</p>
-                        <MoneyField
-                            id="m-delivery_fees"
-                            label="Livraison (F)"
-                            value={data.delivery_fees}
-                            error={errors.delivery_fees}
-                            onChange={(v) => setData('delivery_fees', v)}
-                        />
-                        <MoneyField
-                            id="m-closing_fees"
-                            label="Closing et appels (F)"
-                            value={data.closing_fees}
-                            error={errors.closing_fees}
-                            onChange={(v) => setData('closing_fees', v)}
-                        />
-                        <MoneyField
-                            id="m-other_fees"
-                            label="Autres frais (F)"
-                            value={data.other_fees}
-                            error={errors.other_fees}
-                            onChange={(v) => setData('other_fees', v)}
-                        />
-                        <MoneyField
-                            id="m-announced_total"
-                            label="Total écrit par l'agence (facultatif)"
-                            value={data.announced_total}
-                            error={errors.announced_total}
-                            onChange={(v) => setData('announced_total', v)}
-                        />
-                        {data.announced_total !== '' && (
-                            <p
-                                role="status"
-                                className={cn(
-                                    'flex items-center gap-2 text-sm font-semibold',
-                                    form.announcedMismatch ? 'text-warning-fg' : 'text-success-fg',
+                        {form.isTeam ? (
+                            <TeamFees form={form} idPrefix="m-" />
+                        ) : (
+                            <>
+                                <p className="text-muted-foreground -mt-2 text-[15px]">Laissez vide ce qui ne s'applique pas.</p>
+                                <MoneyField
+                                    id="m-delivery_fees"
+                                    label="Livraison (F)"
+                                    value={data.delivery_fees}
+                                    error={errors.delivery_fees}
+                                    onChange={(v) => setData('delivery_fees', v)}
+                                />
+                                <MoneyField
+                                    id="m-closing_fees"
+                                    label="Closing et appels (F)"
+                                    value={data.closing_fees}
+                                    error={errors.closing_fees}
+                                    onChange={(v) => setData('closing_fees', v)}
+                                />
+                                <MoneyField
+                                    id="m-other_fees"
+                                    label="Autres frais (F)"
+                                    value={data.other_fees}
+                                    error={errors.other_fees}
+                                    onChange={(v) => setData('other_fees', v)}
+                                />
+                                <MoneyField
+                                    id="m-announced_total"
+                                    label="Total écrit par l'agence (facultatif)"
+                                    value={data.announced_total}
+                                    error={errors.announced_total}
+                                    onChange={(v) => setData('announced_total', v)}
+                                />
+                                {data.announced_total !== '' && (
+                                    <p
+                                        role="status"
+                                        className={cn(
+                                            'flex items-center gap-2 text-sm font-semibold',
+                                            form.announcedMismatch ? 'text-warning-fg' : 'text-success-fg',
+                                        )}
+                                    >
+                                        {form.announcedMismatch ? (
+                                            <CircleAlert className="size-4 shrink-0" aria-hidden="true" />
+                                        ) : (
+                                            <Check className="size-4 shrink-0" aria-hidden="true" />
+                                        )}
+                                        {form.announcedMismatch
+                                            ? `Les produits font ${formatFcfa(form.salesTotal)} : le rapport sera « à vérifier ».`
+                                            : 'Correspond au détail des produits'}
+                                    </p>
                                 )}
-                            >
-                                {form.announcedMismatch ? (
-                                    <CircleAlert className="size-4 shrink-0" aria-hidden="true" />
-                                ) : (
-                                    <Check className="size-4 shrink-0" aria-hidden="true" />
-                                )}
-                                {form.announcedMismatch
-                                    ? `Les produits font ${formatFcfa(form.salesTotal)} : le rapport sera « à vérifier ».`
-                                    : 'Correspond au détail des produits'}
-                            </p>
+                            </>
                         )}
                         <div className="grid gap-2">
                             <Label htmlFor="m-note">Note (facultatif)</Label>

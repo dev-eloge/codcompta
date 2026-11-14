@@ -248,7 +248,7 @@ class ReportController extends Controller
 
     public function edit(Request $request, Report $report): Response|RedirectResponse
     {
-        $report->load('agency.country', 'lines');
+        $report->load('agency.country', 'lines', 'teamEntries');
         $this->ensureOwned($request, $report->agency->country->merchant_id);
 
         if ($report->source === Report::SOURCE_SHEET) {
@@ -266,6 +266,12 @@ class ReportController extends Controller
                 'delivery_fees' => $report->delivery_fees,
                 'closing_fees' => $report->closing_fees,
                 'other_fees' => $report->other_fees,
+                'fuel_fees' => $report->fuel_fees,
+                'team' => $report->teamEntries->map(fn ($entry) => [
+                    'type' => $entry->courier_id !== null ? 'courier' : 'closer',
+                    'id' => $entry->courier_id ?? $entry->closer_id,
+                    'count' => $entry->count,
+                ])->filter(fn (array $entry) => $entry['id'] !== null)->values(),
                 'announced_total' => $report->announced_total,
                 'note' => $report->note,
                 'lines' => $report->lines->map(fn ($line) => [
@@ -329,16 +335,23 @@ class ReportController extends Controller
         $today = now($merchant->timezone)->toDateString();
 
         return [
+            // The own team comes first: with "both", the report starts with the choice between the team and an agency.
             'agencies' => Agency::query()
                 ->whereIn('country_id', $merchant->countries()->select('id'))
-                ->with('country:id,name')
+                ->with(['country.couriers', 'country.closers'])
+                ->orderByDesc('is_own_team')
                 ->orderBy('name')
                 ->get()
+                ->filter(fn (Agency $agency) => ! $agency->is_own_team || $agency->country->hasOwnTeam() || $agency->id === $report?->agency_id)
                 ->map(fn (Agency $agency) => [
                     'id' => $agency->id,
                     'name' => $agency->name,
                     'country' => $agency->country->name,
-                ]),
+                    'is_own_team' => $agency->is_own_team,
+                    'couriers' => $agency->is_own_team ? $agency->country->couriers->map->only(['id', 'name', 'pay_mode', 'pay_amount'])->values() : [],
+                    'closers' => $agency->is_own_team ? $agency->country->closers->map->only(['id', 'name', 'pay_mode', 'pay_amount'])->values() : [],
+                ])
+                ->values(),
             'products' => $merchant->products()
                 ->orderBy('name')
                 ->get()

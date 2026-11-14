@@ -32,6 +32,7 @@ class ReferenceController extends Controller
                     'id' => $country->id,
                     'name' => $country->name,
                     'code' => $country->code,
+                    'delivery_mode' => $country->delivery_mode,
                     'ad_spends_count' => $country->ad_spends_count,
                     'reports_count' => $country->agencies->sum('reports_count'),
                     'agencies' => $country->agencies->map(fn (Agency $agency) => [

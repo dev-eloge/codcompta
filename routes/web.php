@@ -9,6 +9,7 @@ use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\RawMessageController;
 use App\Http\Controllers\ReferenceController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\TeamController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -56,6 +57,8 @@ Route::middleware(['auth', 'merchant.active'])->group(function () {
     Route::post('referentiel/produits/{product}/couts', [ReferenceController::class, 'storeProductCost'])->name('reference.products.costs.store');
     Route::delete('referentiel/produits/{product}/couts/{cost}', [ReferenceController::class, 'destroyProductCost'])->name('reference.products.costs.destroy');
     Route::put('referentiel/pays/{country}', [ReferenceController::class, 'updateCountry'])->name('reference.countries.update');
+    Route::get('referentiel/pays/{country}/equipe', [TeamController::class, 'edit'])->name('reference.team.edit');
+    Route::put('referentiel/pays/{country}/equipe', [TeamController::class, 'update'])->name('reference.team.update');
     Route::delete('referentiel/pays/{country}', [ReferenceController::class, 'destroyCountry'])->name('reference.countries.destroy');
     Route::put('referentiel/agences/{agency}', [ReferenceController::class, 'updateAgency'])->name('reference.agencies.update');
     Route::delete('referentiel/agences/{agency}', [ReferenceController::class, 'destroyAgency'])->name('reference.agencies.destroy');

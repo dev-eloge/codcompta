@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\AdSpend;
+use App\Models\Agency;
 use App\Models\Country;
 use App\Models\Product;
 use App\Models\Report;
@@ -71,6 +72,11 @@ class StoreReportRequest extends FormRequest
             'ads.*.facebook_amount' => ['nullable', 'integer', 'min:0'],
             'ads.*.tiktok_amount' => ['nullable', 'integer', 'min:0'],
             'ads.*.orders_received' => ['nullable', 'integer', 'min:0'],
+            'fuel_fees' => ['nullable', 'integer', 'min:0'],
+            'team' => ['array'],
+            'team.*.type' => ['required', Rule::in(['courier', 'closer'])],
+            'team.*.id' => ['required', 'integer'],
+            'team.*.count' => ['required', 'integer', 'min:0'],
         ];
     }
 
@@ -100,6 +106,7 @@ class StoreReportRequest extends FormRequest
                 }
 
                 $this->checkAds($validator);
+                $this->checkTeam($validator);
             },
         ];
     }
@@ -159,6 +166,37 @@ class StoreReportRequest extends FormRequest
 
             if ((int) ($ad['amount'] ?? 0) < 1) {
                 $validator->errors()->add("ads.$index.amount", 'Indiquez le montant payé pour cette pub.');
+            }
+        }
+    }
+
+    /**
+     * Couriers and closers are those of the country of this own-team report.
+     */
+    private function checkTeam(Validator $validator): void
+    {
+        $team = $this->input('team', []);
+
+        if ($team === []) {
+            return;
+        }
+
+        $agency = Agency::find($this->input('agency_id'));
+
+        if (! $agency?->is_own_team) {
+            $validator->errors()->add('team', 'Les livreurs et closeuses ne se notent que dans un rapport de votre équipe.');
+
+            return;
+        }
+
+        $couriers = $agency->country->couriers()->pluck('id');
+        $closers = $agency->country->closers()->pluck('id');
+
+        foreach ($team as $index => $member) {
+            $known = $member['type'] === 'courier' ? $couriers : $closers;
+
+            if (! $known->contains((int) $member['id'])) {
+                $validator->errors()->add("team.$index.id", 'Cette personne ne fait pas partie de votre équipe dans ce pays.');
             }
         }
     }

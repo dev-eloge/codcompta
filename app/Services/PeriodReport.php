@@ -21,7 +21,10 @@ use Illuminate\Support\Collection;
  */
 class PeriodReport
 {
-    public function __construct(private readonly AdSpendAllocator $allocator = new AdSpendAllocator) {}
+    public function __construct(
+        private readonly AdSpendAllocator $allocator = new AdSpendAllocator,
+        private readonly MonthlyTeamCosts $monthlyTeamCosts = new MonthlyTeamCosts,
+    ) {}
 
     /**
      * @param  string  $from  First day of the period, Y-m-d.
@@ -42,15 +45,19 @@ class PeriodReport
 
         [$productAdByAgency, $productAdLeft] = $this->splitProductAds($country, $adSpends);
 
+        // Salaries and fixed costs of the own team leave the profit once per month, on the team's line.
+        $teamCosts = $this->monthlyTeamCosts->forCountry($country, $from, $to);
+        $monthly = fn (Agency $agency, string $kind) => $agency->is_own_team ? $teamCosts[$kind] : 0;
+
         $rows = $agencies->map(fn (Agency $agency) => [
             'agency_id' => $agency->id,
             'name' => $agency->name,
             'delivered' => $agency->reports->sum(fn (Report $report) => $report->deliveredQuantity()),
             'revenue' => $agency->reports->sum(fn (Report $report) => $report->revenue()),
             'purchase_cost' => $agency->reports->sum(fn (Report $report) => $report->purchaseCost()),
-            'closing_fees' => $agency->reports->sum('closing_fees'),
-            'delivery_fees' => $agency->reports->sum('delivery_fees'),
-            'other_fees' => $agency->reports->sum('other_fees'),
+            'closing_fees' => $agency->reports->sum('closing_fees') + $monthly($agency, 'closing'),
+            'delivery_fees' => $agency->reports->sum('delivery_fees') + $monthly($agency, 'delivery'),
+            'other_fees' => $agency->reports->sum('other_fees') + $agency->reports->sum('fuel_fees') + $monthly($agency, 'other'),
             'direct_ad_spend' => $adSpends->where('agency_id', $agency->id)->sum('amount') + ($productAdByAgency[$agency->id] ?? 0),
         ])->values()->all();
 

@@ -36,6 +36,7 @@ class Report extends Model
         'delivery_fees',
         'closing_fees',
         'other_fees',
+        'fuel_fees',
         'announced_total',
         'status',
         'source',
@@ -62,6 +63,11 @@ class Report extends Model
     /**
      * Ad spend recorded with this report (reports imported from a Google Sheet before that feature was removed).
      */
+    public function teamEntries(): HasMany
+    {
+        return $this->hasMany(ReportTeamEntry::class);
+    }
+
     public function adSpends(): HasMany
     {
         return $this->hasMany(AdSpend::class);

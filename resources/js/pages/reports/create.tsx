@@ -2,6 +2,7 @@ import InputError from '@/components/input-error';
 import { NativeSelect } from '@/components/native-select';
 import { AdFields, AmountHint, ChoiceCard, MoneyField, StepTitle, SummaryLine } from '@/components/report-form/fields';
 import { MobileReportFlow } from '@/components/report-form/mobile-report-flow';
+import { TeamFees } from '@/components/report-form/team-fees';
 import { emptyLine, type Props, type ReportForm, sharedAdText, toNumber, useReportForm } from '@/components/report-form/use-report-form';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -116,7 +117,7 @@ export default function ReportsCreate(props: Props) {
                             Quelle agence, quel jour ?
                         </StepTitle>
                         <div className="grid gap-2 sm:col-span-3">
-                            <Label htmlFor="agency_id">Agence *</Label>
+                            <Label htmlFor="agency_id">Qui a livré ? *</Label>
                             <NativeSelect
                                 id="agency_id"
                                 required
@@ -128,7 +129,7 @@ export default function ReportsCreate(props: Props) {
                                 <option value="">Choisir une agence</option>
                                 {agencies.map((agency) => (
                                     <option key={agency.id} value={agency.id}>
-                                        {agency.name} ({agency.country})
+                                        {agency.is_own_team ? `Mon équipe (${agency.country})` : `${agency.name} (${agency.country})`}
                                     </option>
                                 ))}
                             </NativeSelect>
@@ -403,40 +404,48 @@ export default function ReportsCreate(props: Props) {
                     <section aria-labelledby="fees-title" className="glass grid gap-4 rounded-2xl p-5 sm:grid-cols-2 md:p-6">
                         <div className="sm:col-span-2">
                             <StepTitle id="fees-title" step={4}>
-                                Frais de l'agence
+                                {form.isTeam ? 'Frais du jour' : "Frais de l'agence"}
                             </StepTitle>
                             <p className="text-muted-foreground text-sm">Laissez vide ce qui ne s'applique pas.</p>
                         </div>
-                        <MoneyField
-                            id="delivery_fees"
-                            label="Frais de livraison (F)"
-                            value={data.delivery_fees}
-                            error={errors.delivery_fees}
-                            onChange={(v) => setData('delivery_fees', v)}
-                        />
-                        <MoneyField
-                            id="closing_fees"
-                            label="Closing et crédit d'appel (F)"
-                            help="Commissions des personnes qui confirment les commandes, et crédit téléphonique"
-                            value={data.closing_fees}
-                            error={errors.closing_fees}
-                            onChange={(v) => setData('closing_fees', v)}
-                        />
-                        <MoneyField
-                            id="other_fees"
-                            label="Autres frais (F)"
-                            value={data.other_fees}
-                            error={errors.other_fees}
-                            onChange={(v) => setData('other_fees', v)}
-                        />
-                        <MoneyField
-                            id="announced_total"
-                            label="Total écrit par l'agence (F)"
-                            help="Facultatif. Sert de contrôle : s'il ne correspond pas à vos lignes, le rapport sera marqué « à vérifier »"
-                            value={data.announced_total}
-                            error={errors.announced_total}
-                            onChange={(v) => setData('announced_total', v)}
-                        />
+                        {form.isTeam ? (
+                            <div className="sm:col-span-2">
+                                <TeamFees form={form} />
+                            </div>
+                        ) : (
+                            <>
+                                <MoneyField
+                                    id="delivery_fees"
+                                    label="Frais de livraison (F)"
+                                    value={data.delivery_fees}
+                                    error={errors.delivery_fees}
+                                    onChange={(v) => setData('delivery_fees', v)}
+                                />
+                                <MoneyField
+                                    id="closing_fees"
+                                    label="Closing et crédit d'appel (F)"
+                                    help="Commissions des personnes qui confirment les commandes, et crédit téléphonique"
+                                    value={data.closing_fees}
+                                    error={errors.closing_fees}
+                                    onChange={(v) => setData('closing_fees', v)}
+                                />
+                                <MoneyField
+                                    id="other_fees"
+                                    label="Autres frais (F)"
+                                    value={data.other_fees}
+                                    error={errors.other_fees}
+                                    onChange={(v) => setData('other_fees', v)}
+                                />
+                                <MoneyField
+                                    id="announced_total"
+                                    label="Total écrit par l'agence (F)"
+                                    help="Facultatif. Sert de contrôle : s'il ne correspond pas à vos lignes, le rapport sera marqué « à vérifier »"
+                                    value={data.announced_total}
+                                    error={errors.announced_total}
+                                    onChange={(v) => setData('announced_total', v)}
+                                />
+                            </>
+                        )}
                         <div className="grid gap-2 sm:col-span-2">
                             <Label htmlFor="note">Note (facultatif)</Label>
                             <Input
@@ -460,7 +469,7 @@ export default function ReportsCreate(props: Props) {
                     <dl className="hidden flex-col gap-1.5 border-b border-white/15 pb-3 text-sm lg:flex">
                         <SummaryLine label="Argent encaissé" value={formatFcfa(salesTotal)} />
                         <SummaryLine label="Prix d'achat des produits" value={`− ${formatFcfa(purchaseCost)}`} />
-                        <SummaryLine label="Frais de l'agence" value={`− ${formatFcfa(fees)}`} />
+                        <SummaryLine label={form.isTeam ? 'Livreurs, closeuses et carburant' : "Frais de l'agence"} value={`− ${formatFcfa(fees)}`} />
                         <SummaryLine label="Pub du jour" value={`− ${formatFcfa(adTotal)}`} />
                     </dl>
                     <div className="min-w-0 lg:flex lg:items-baseline lg:justify-between lg:gap-3">

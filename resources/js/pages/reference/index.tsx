@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/app-layout';
 import { formatFcfa, formatShortDate } from '@/lib/format';
 import { type BreadcrumbItem } from '@/types';
-import { Head, useForm } from '@inertiajs/react';
+import { Head, Link, useForm } from '@inertiajs/react';
 import { CircleAlert, CircleCheck, LoaderCircle } from 'lucide-react';
 import { FormEventHandler, useState } from 'react';
 
@@ -26,6 +26,7 @@ interface Country {
     id: number;
     name: string;
     code: string;
+    delivery_mode: 'agency' | 'team' | 'both';
     ad_spends_count: number;
     reports_count: number;
     agencies: Agency[];
@@ -352,6 +353,12 @@ function CountryCard({ country, countries }: { country: Country; countries: Coun
                     <span className="text-muted-foreground ml-2 text-xs font-normal">{plural(country.agencies.length, 'agence')}</span>
                 </h3>
                 <div className="flex items-center">
+                    <Link
+                        href={route('reference.team.edit', country.id)}
+                        className="text-primary hover:bg-accent inline-flex min-h-11 items-center rounded-xl px-3 text-sm font-bold underline-offset-4 hover:underline"
+                    >
+                        {country.delivery_mode === 'agency' ? 'Qui livre ?' : 'Mon équipe'}
+                    </Link>
                     <EditButton
                         label={`Modifier le pays ${country.name}`}
                         active={editing}

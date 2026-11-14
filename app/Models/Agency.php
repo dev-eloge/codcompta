@@ -17,6 +17,7 @@ class Agency extends Model
     protected $fillable = [
         'country_id',
         'name',
+        'is_own_team',
         'contact',
         'report_mode',
         'alert_after_days',
@@ -74,6 +75,7 @@ class Agency extends Model
     {
         return [
             'alert_after_days' => 'integer',
+            'is_own_team' => 'boolean',
             'last_report_at' => 'datetime',
         ];
     }

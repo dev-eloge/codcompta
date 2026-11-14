@@ -1,5 +1,6 @@
 import { type AdPlatform, adPlatformLabel } from '@/lib/ad-platforms';
 import { formatFcfa } from '@/lib/format';
+import { dailyPay, type TeamMember } from '@/lib/team-pay';
 import { router, useForm } from '@inertiajs/react';
 import { FormEventHandler, useEffect, useRef } from 'react';
 
@@ -7,6 +8,10 @@ export interface Agency {
     id: number;
     name: string;
     country: string;
+    /** The merchant's own team in this country: its fees are what the couriers and closers cost that day. */
+    is_own_team: boolean;
+    couriers: TeamMember[];
+    closers: TeamMember[];
 }
 
 export interface Product {
@@ -69,6 +74,10 @@ export type ReportForm = {
     other_fees: string;
     announced_total: string;
     note: string;
+    /** Own team only. */
+    fuel_fees: string;
+    /** Own team only: deliveries of each courier ("courier-3") and orders of each closer ("closer-5"). */
+    team: Record<string, string>;
     lines: Line[];
     /** Keyed by product id. */
     ads: Record<string, AdEntry>;
@@ -84,6 +93,8 @@ export interface EditedReport {
     delivery_fees: number;
     closing_fees: number;
     other_fees: number;
+    fuel_fees: number;
+    team: { type: 'courier' | 'closer'; id: number; count: number }[];
     announced_total: number | null;
     note: string | null;
     lines: { product_id: number; quantity: number; amount: number }[];
@@ -161,6 +172,8 @@ export function useReportForm({ agencies, products, today, sharedAds, report }: 
                       ]),
                   ),
                   no_ads: false,
+                  fuel_fees: amountText(report.fuel_fees),
+                  team: Object.fromEntries(report.team.map((entry) => [`${entry.type}-${entry.id}`, String(entry.count)])),
               }
             : {
                   agency_id: agencies.length === 1 ? String(agencies[0].id) : '',
@@ -175,6 +188,8 @@ export function useReportForm({ agencies, products, today, sharedAds, report }: 
                   lines: [{ ...emptyLine }],
                   ads: {},
                   no_ads: false,
+                  fuel_fees: '',
+                  team: {},
               },
     );
 
@@ -304,15 +319,45 @@ export function useReportForm({ agencies, products, today, sharedAds, report }: 
         return entry.platform === 'facebook_tiktok' ? toNumber(entry.facebook_amount) + toNumber(entry.tiktok_amount) : toNumber(entry.amount);
     };
 
+    const selectedAgency = agencies.find((agency) => String(agency.id) === data.agency_id);
+    const isTeam = selectedAgency?.is_own_team ?? false;
+    const teamCount = (type: 'courier' | 'closer', id: number) => data.team[`${type}-${id}`] ?? '0';
+    const setTeamCount = (type: 'courier' | 'closer', id: number, count: string) => setData('team', { ...data.team, [`${type}-${id}`]: count });
+    const courierPay = (selectedAgency?.couriers ?? []).reduce(
+        (sum, courier) => sum + dailyPay(courier, toNumber(teamCount('courier', courier.id))),
+        0,
+    );
+    const closerPay = (selectedAgency?.closers ?? []).reduce((sum, closer) => sum + dailyPay(closer, toNumber(teamCount('closer', closer.id))), 0);
+
     transform((current) => ({
         ...current,
         lines: current.lines.map(({ auto: _auto, ...line }) => line),
         ads: adsToSend(current),
+        ...(isTeam && selectedAgency
+            ? {
+                  delivery_fees: '',
+                  closing_fees: '',
+                  team: [
+                      ...selectedAgency.couriers.map((courier) => ({
+                          type: 'courier',
+                          id: courier.id,
+                          count: toNumber(current.team[`courier-${courier.id}`] ?? '0'),
+                      })),
+                      ...selectedAgency.closers.map((closer) => ({
+                          type: 'closer',
+                          id: closer.id,
+                          count: toNumber(current.team[`closer-${closer.id}`] ?? '0'),
+                      })),
+                  ],
+              }
+            : { team: [], fuel_fees: '' }),
     }));
 
     const salesTotal = data.lines.reduce((sum, line) => sum + toNumber(line.amount), 0);
     const purchaseCost = data.lines.reduce((sum, line) => sum + toNumber(line.quantity) * (productById(line.product_id)?.unit_cost ?? 0), 0);
-    const fees = toNumber(data.delivery_fees) + toNumber(data.closing_fees) + toNumber(data.other_fees);
+    const fees = isTeam
+        ? courierPay + closerPay + toNumber(data.fuel_fees) + toNumber(data.other_fees)
+        : toNumber(data.delivery_fees) + toNumber(data.closing_fees) + toNumber(data.other_fees);
     const announcedMismatch = data.announced_total !== '' && toNumber(data.announced_total) !== salesTotal;
     const adTotal = adProducts.reduce((sum, productId) => sum + adCost(productId), 0);
     const netProfit = salesTotal - purchaseCost - fees - adTotal;
@@ -356,6 +401,12 @@ export function useReportForm({ agencies, products, today, sharedAds, report }: 
         adEntry,
         updateAd,
         adCost,
+        selectedAgency,
+        isTeam,
+        teamCount,
+        setTeamCount,
+        courierPay,
+        closerPay,
         salesTotal,
         purchaseCost,
         fees,

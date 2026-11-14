@@ -5,6 +5,8 @@ namespace App\Services;
 use App\Http\Requests\StoreReportRequest;
 use App\Models\AdSpend;
 use App\Models\Agency;
+use App\Models\Closer;
+use App\Models\Courier;
 use App\Models\Product;
 use App\Models\Report;
 use App\Models\User;
@@ -20,21 +22,22 @@ class ReportRecorder
      *     delivery_fees?: int|null, closing_fees?: int|null, other_fees?: int|null,
      *     announced_total?: int|null, note?: string|null, raw_message_id?: int|null,
      *     lines: list<array{product_id: int, quantity: int, amount: int}>,
-     *     ads?: list<array<string, mixed>>}  $data
+     *     ads?: list<array<string, mixed>>, fuel_fees?: int|null,
+     *     team?: list<array{type: string, id: int, count: int}>}  $data
      */
     public function record(Agency $agency, array $data, ?User $validator = null): Report
     {
         return DB::transaction(function () use ($agency, $data, $validator) {
             $linesTotal = (int) collect($data['lines'])->sum('amount');
 
+            $team = $this->teamEntries($agency, $data['team'] ?? []);
+
             $report = $agency->reports()->create([
                 'raw_message_id' => $data['raw_message_id'] ?? null,
                 'validated_by' => $validator?->id,
                 'period_start' => $data['period_start'],
                 'period_end' => $data['period_end'],
-                'delivery_fees' => (int) ($data['delivery_fees'] ?? 0),
-                'closing_fees' => (int) ($data['closing_fees'] ?? 0),
-                'other_fees' => (int) ($data['other_fees'] ?? 0),
+                ...$this->fees($agency, $data, $team),
                 'announced_total' => $data['announced_total'] ?? null,
                 'status' => $this->statusFor($data['status'], $data['announced_total'] ?? null, $linesTotal),
                 'source' => $data['source'] ?? Report::SOURCE_MANUAL,
@@ -45,6 +48,7 @@ class ReportRecorder
 
             $this->writeLines($report, $data['lines'], $data['period_end']);
             $this->writeAds($report, $data['ads'] ?? []);
+            $report->teamEntries()->createMany($team);
             $this->touchAgency($agency, $report);
 
             return $report;
@@ -61,12 +65,12 @@ class ReportRecorder
         return DB::transaction(function () use ($report, $data, $validator) {
             $linesTotal = (int) collect($data['lines'])->sum('amount');
 
+            $team = $this->teamEntries($report->agency, $data['team'] ?? []);
+
             $report->update([
                 'period_start' => $data['period_start'],
                 'period_end' => $data['period_end'],
-                'delivery_fees' => (int) ($data['delivery_fees'] ?? 0),
-                'closing_fees' => (int) ($data['closing_fees'] ?? 0),
-                'other_fees' => (int) ($data['other_fees'] ?? 0),
+                ...$this->fees($report->agency, $data, $team),
                 'announced_total' => $data['announced_total'] ?? null,
                 'status' => $this->statusFor($data['status'], $data['announced_total'] ?? null, $linesTotal),
                 'note' => $data['note'] ?? null,
@@ -80,6 +84,8 @@ class ReportRecorder
             // Only the ads typed in this form are replaced; an old ad with no product stays as it was.
             $report->adSpends()->whereNotNull('product_id')->delete();
             $this->writeAds($report, $data['ads'] ?? []);
+            $report->teamEntries()->delete();
+            $report->teamEntries()->createMany($team);
             $this->refreshLastReport($report->agency);
 
             return $report->fresh('lines');
@@ -113,6 +119,66 @@ class ReportRecorder
                 'unit_cost_applied' => $product->costAt($periodEnd) ?? 0,
             ]);
         }
+    }
+
+    /**
+     * Fees of the day. For the own team, delivery and closing are what the couriers and closers
+     * paid that day cost (monthly salaries are counted once a month, elsewhere), plus the fuel.
+     *
+     * @param  array<string, mixed>  $data
+     * @param  list<array<string, mixed>>  $team
+     * @return array{delivery_fees: int, closing_fees: int, other_fees: int, fuel_fees: int}
+     */
+    private function fees(Agency $agency, array $data, array $team): array
+    {
+        if ($agency->is_own_team) {
+            $team = collect($team);
+
+            return [
+                'delivery_fees' => (int) $team->whereNotNull('courier_id')->sum('amount'),
+                'closing_fees' => (int) $team->whereNotNull('closer_id')->sum('amount'),
+                'other_fees' => (int) ($data['other_fees'] ?? 0),
+                'fuel_fees' => (int) ($data['fuel_fees'] ?? 0),
+            ];
+        }
+
+        return [
+            'delivery_fees' => (int) ($data['delivery_fees'] ?? 0),
+            'closing_fees' => (int) ($data['closing_fees'] ?? 0),
+            'other_fees' => (int) ($data['other_fees'] ?? 0),
+            'fuel_fees' => 0,
+        ];
+    }
+
+    /**
+     * What each courier and closer did that day, and what it cost, with their name kept for history.
+     *
+     * @param  list<array{type: string, id: int, count: int}>  $team
+     * @return list<array<string, mixed>>
+     */
+    private function teamEntries(Agency $agency, array $team): array
+    {
+        if (! $agency->is_own_team) {
+            return [];
+        }
+
+        $entries = [];
+
+        foreach ($team as $member) {
+            $person = $member['type'] === 'courier'
+                ? Courier::where('country_id', $agency->country_id)->findOrFail($member['id'])
+                : Closer::where('country_id', $agency->country_id)->findOrFail($member['id']);
+
+            $entries[] = [
+                'courier_id' => $person instanceof Courier ? $person->id : null,
+                'closer_id' => $person instanceof Closer ? $person->id : null,
+                'name' => $person->name,
+                'count' => (int) $member['count'],
+                'amount' => $person->payFor((int) $member['count']),
+            ];
+        }
+
+        return $entries;
     }
 
     /**
