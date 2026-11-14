@@ -10,7 +10,9 @@ use App\Models\Country;
 use App\Models\Product;
 use App\Models\RawMessage;
 use App\Models\Report;
+use App\Services\MerchantOverview;
 use App\Services\Parsing\ProductMatcher;
+use App\Services\PendingItems;
 use App\Services\PeriodReport;
 use App\Services\ProfitDiagnosis;
 use App\Services\ReportPeriod;
@@ -29,21 +31,31 @@ class ReportController extends Controller
     /** Session key holding the country and dates last shown on the results page. */
     private const FILTERS_KEY = 'reports.filters';
 
+    /** All the countries together: "Vue générale" and "Tous les pays". Without one, the page shows one country. */
+    private const VIEWS = ['generale', 'pays'];
+
     /**
      * Financial report of one country for a day, a week, a month (BF-16, BF-17) or any range of days.
      */
-    public function index(Request $request, PeriodReport $periodReport, ProfitDiagnosis $profitDiagnosis, ResultsTrend $trend): Response
-    {
+    public function index(
+        Request $request,
+        PeriodReport $periodReport,
+        ProfitDiagnosis $profitDiagnosis,
+        ResultsTrend $trend,
+        PendingItems $pendingItems,
+        MerchantOverview $overview,
+    ): Response {
         $merchant = $this->merchantOf($request);
 
         // The page remembers what the merchant last looked at: coming back from another page
         // shows the same country and dates, not today's week.
-        $keys = ['country', 'period', 'date', 'du', 'au'];
+        $keys = ['country', 'vue', 'period', 'date', 'du', 'au'];
         $fromSession = ! $request->hasAny($keys);
         $input = $fromSession ? (array) $request->session()->get(self::FILTERS_KEY, []) : $request->only($keys);
 
         $validator = Validator::make($input, [
             'country' => ['nullable', 'integer'],
+            'vue' => ['nullable', Rule::in(self::VIEWS)],
             'period' => ['nullable', Rule::in(ReportPeriod::TYPES)],
             'date' => ['nullable', 'date'],
             'du' => ['nullable', 'required_if:period,'.ReportPeriod::CUSTOM, 'date'],
@@ -81,8 +93,12 @@ class ReportController extends Controller
             throw ValidationException::withMessages(['au' => 'Choisissez au plus un an entre les deux dates.']);
         }
 
+        // A country chip leaves the overview; an overview chip leaves the country.
+        $view = isset($filters['country']) && ! $fromSession ? null : ($filters['vue'] ?? null);
+
         $request->session()->put(self::FILTERS_KEY, array_filter([
             'country' => $country?->id,
+            'vue' => $view,
             'period' => $period->type,
             'date' => $period->type === ReportPeriod::CUSTOM ? null : $period->from->toDateString(),
             'du' => $period->type === ReportPeriod::CUSTOM ? $period->from->toDateString() : null,
@@ -91,6 +107,18 @@ class ReportController extends Controller
 
         $from = $period->from->toDateString();
         $to = $period->to->toDateString();
+
+        if ($view !== null) {
+            return Inertia::render('reports/index', [
+                'countries' => $countries->map->only(['id', 'name', 'code'])->values(),
+                'countryId' => $country?->id,
+                'view' => $view,
+                'period' => $this->periodProps($period, $merchant->timezone),
+                'overview' => $overview->forMerchant($merchant, $period),
+                'report' => null,
+                'entries' => [],
+            ]);
+        }
 
         $report = $country === null ? null : $periodReport->forCountry($country, $from, $to);
         $diagnosis = $country === null || $report === null ? null : $profitDiagnosis->forCountry($country, $period, $report);
@@ -118,56 +146,29 @@ class ReportController extends Controller
         return Inertia::render('reports/index', [
             'countries' => $countries->map->only(['id', 'name', 'code'])->values(),
             'countryId' => $country?->id,
-            'period' => [...$period->toArray(), 'is_current' => $period->type !== ReportPeriod::CUSTOM && $period->from->lessThanOrEqualTo(now($merchant->timezone)) && $period->to->greaterThanOrEqualTo(now($merchant->timezone)->startOfDay())],
+            'view' => 'country',
+            'period' => $this->periodProps($period, $merchant->timezone),
             'report' => $report,
             'diagnosis' => $diagnosis,
             'entries' => $entries,
-            'pending' => $country === null ? [] : $this->pendingFor($country),
+            'pending' => $country === null ? [] : $pendingItems->forCountry($country),
+            'overview' => null,
             // Deferred: the page shows the results first, the small charts arrive right after.
             'trend' => Inertia::defer(fn () => $country === null ? null : $trend->forCountry($country, $period)),
         ]);
     }
 
     /**
-     * What may make the results wrong, shown first on the page: messages read but not saved yet,
-     * messages that could not be read, and reports still waiting to be checked.
-     *
-     * @return list<array{kind: string, id: int|null, agency: string|null, count: int, date: string|null}>
+     * @return array<string, mixed>
      */
-    private function pendingFor(Country $country): array
+    private function periodProps(ReportPeriod $period, string $timezone): array
     {
-        $agencyIds = $country->agencies()->select('id');
-
-        $messages = RawMessage::query()
-            ->whereIn('agency_id', $agencyIds)
-            ->whereIn('status', [RawMessage::STATUS_PARSED, RawMessage::STATUS_FAILED])
-            ->with('agency:id,name')
-            ->latest()
-            ->limit(5)
-            ->get()
-            ->map(fn (RawMessage $message) => [
-                'kind' => $message->status === RawMessage::STATUS_FAILED ? 'message_failed' : 'message_parsed',
-                'id' => $message->id,
-                'agency' => $message->agency->name,
-                'count' => 1,
-                'date' => $message->created_at->toDateString(),
-            ]);
-
-        $toVerify = Report::query()
-            ->whereIn('agency_id', $agencyIds)
-            ->where('status', Report::STATUS_TO_VERIFY)
-            ->count();
-
-        return $messages
-            ->when($toVerify > 0, fn ($items) => $items->push([
-                'kind' => 'reports_to_verify',
-                'id' => null,
-                'agency' => null,
-                'count' => $toVerify,
-                'date' => null,
-            ]))
-            ->values()
-            ->all();
+        return [
+            ...$period->toArray(),
+            'is_current' => $period->type !== ReportPeriod::CUSTOM
+                && $period->from->lessThanOrEqualTo(now($timezone))
+                && $period->to->greaterThanOrEqualTo(now($timezone)->startOfDay()),
+        ];
     }
 
     /**

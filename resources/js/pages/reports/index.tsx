@@ -1,7 +1,7 @@
 import FlashMessage from '@/components/flash-message';
 import { GoalCard, isActive } from '@/components/goals/goal-progress';
 import InputError from '@/components/input-error';
-import { NativeSelect } from '@/components/native-select';
+import { AllCountriesView, GeneralView, type Overview } from '@/components/reports/overview';
 import { ReportTabs } from '@/components/reports/report-tabs';
 import { type Trend, TrendCharts } from '@/components/reports/trend-charts';
 import { DeleteButton } from '@/components/row-actions';
@@ -88,9 +88,14 @@ interface Pending {
     date: string | null;
 }
 
+/** One country, or all of them together. */
+type View = 'country' | 'generale' | 'pays';
+
 interface Props {
     countries: Country[];
     countryId: number | null;
+    view: View;
+    overview?: Overview | null;
     period: Period;
     report: { agencies: Row[]; total: Row } | null;
     entries: Entry[];
@@ -185,7 +190,7 @@ const columns: { key: keyof Row; label: string; help: string; format?: (row: Row
     { key: 'margin', label: 'Marge', help: "Bénéfice net divisé par le chiffre d'affaires", format: (row) => formatPercent(row.margin) },
 ];
 
-export default function ReportsIndex({ countries, countryId, period, report, entries, pending = [], trend }: Props) {
+export default function ReportsIndex({ countries, countryId, view = 'country', overview, period, report, entries, pending = [], trend }: Props) {
     const { goals = [] } = usePage<SharedData>().props;
 
     return (
@@ -221,10 +226,18 @@ export default function ReportsIndex({ countries, countryId, period, report, ent
                     <EmptyAccount />
                 ) : (
                     <>
-                        <PeriodPicker countries={countries} countryId={countryId} period={period} />
+                        <PeriodPicker countries={countries} countryId={countryId} view={view} period={period} />
 
                         <h2 className="sr-only first-letter:uppercase">{periodTitle(period)}</h2>
 
+                        {view === 'generale' && overview && (
+                            <GeneralView overview={overview} period={period} onShowCountries={() => showView('pays', period)} />
+                        )}
+                        {view === 'pays' && overview && <AllCountriesView overview={overview} period={period} />}
+                    </>
+                )}
+                {countries.length > 0 && view === 'country' && (
+                    <>
                         {pending.length > 0 && <PendingList items={pending} />}
 
                         {report && <Summary total={report.total} period={period} trend={trend} />}
@@ -748,7 +761,24 @@ function EmptyAccount() {
 /**
  * Country, period type and dates. "Dates au choix" lets the merchant pick any start and end day.
  */
-function PeriodPicker({ countries, countryId, period }: { countries: Country[]; countryId: number | null; period: Period }) {
+/** Opens "Vue générale" or "Tous les pays" for the same period. */
+function showView(view: Exclude<View, 'country'>, period: Period) {
+    router.get(
+        route('reports.index'),
+        period.type === 'custom'
+            ? { vue: view, period: 'custom', du: period.from, au: period.to }
+            : { vue: view, period: period.type, date: period.from },
+        { preserveScroll: true, preserveState: true },
+    );
+}
+
+const chip = (active: boolean) =>
+    cn(
+        'min-h-11 shrink-0 cursor-pointer rounded-full border px-4 text-sm font-semibold transition-colors duration-150',
+        active ? 'bg-foreground text-background border-foreground' : 'bg-card hover:bg-accent',
+    );
+
+function PeriodPicker({ countries, countryId, view, period }: { countries: Country[]; countryId: number | null; view: View; period: Period }) {
     const { errors } = usePage<SharedData & { errors: Record<string, string> }>().props;
     const [custom, setCustom] = useState(period.type === 'custom');
     const [from, setFrom] = useState(period.from);
@@ -761,7 +791,11 @@ function PeriodPicker({ countries, countryId, period }: { countries: Country[]; 
     }, [period.type, period.from, period.to]);
 
     const show = (params: Record<string, string | number | undefined>) =>
-        router.get(route('reports.index'), { country: countryId ?? undefined, ...params }, { preserveScroll: true, preserveState: true });
+        router.get(
+            route('reports.index'),
+            { ...(view === 'country' ? { country: countryId ?? undefined } : { vue: view }), ...params },
+            { preserveScroll: true, preserveState: true },
+        );
 
     const showRange = (start: string, end: string) => show({ period: 'custom', du: start, au: end });
 
@@ -805,40 +839,44 @@ function PeriodPicker({ countries, countryId, period }: { countries: Country[]; 
     return (
         <section aria-label="Filtres" className="flex flex-col gap-3">
             <div className="flex flex-wrap items-center justify-between gap-3">
-                {countries.length <= 4 ? (
-                    <div role="group" aria-label="Pays" className="-mx-4 flex gap-2 overflow-x-auto px-4 md:mx-0 md:flex-wrap md:px-0">
-                        {countries.map((country) => (
+                <div role="group" aria-label="Vue" className="-mx-4 flex items-center gap-2 overflow-x-auto px-4 md:mx-0 md:flex-wrap md:px-0">
+                    {countries.length > 1 && (
+                        <>
+                            <button
+                                type="button"
+                                aria-pressed={view === 'generale'}
+                                onClick={() => view !== 'generale' && showView('generale', period)}
+                                className={chip(view === 'generale')}
+                            >
+                                Vue générale
+                            </button>
+                            <button
+                                type="button"
+                                aria-pressed={view === 'pays'}
+                                onClick={() => view !== 'pays' && showView('pays', period)}
+                                className={chip(view === 'pays')}
+                            >
+                                Tous les pays
+                            </button>
+                            <span aria-hidden="true" className="bg-border mx-1 h-7 w-px shrink-0" />
+                        </>
+                    )}
+                    {countries.map((country) => {
+                        const active = view === 'country' && country.id === countryId;
+
+                        return (
                             <button
                                 key={country.id}
                                 type="button"
-                                aria-pressed={country.id === countryId}
-                                onClick={() => country.id !== countryId && changeCountry(country.id)}
-                                className={cn(
-                                    'h-10 shrink-0 rounded-full border px-4 text-sm font-semibold transition-colors duration-150',
-                                    country.id === countryId ? 'bg-foreground text-background border-foreground' : 'bg-card hover:bg-accent',
-                                )}
+                                aria-pressed={active}
+                                onClick={() => !active && changeCountry(country.id)}
+                                className={chip(active)}
                             >
                                 {country.name}
                             </button>
-                        ))}
-                    </div>
-                ) : (
-                    <div className="flex items-center gap-2">
-                        <Label htmlFor="report-country">Pays</Label>
-                        <NativeSelect
-                            id="report-country"
-                            className="h-11 w-auto"
-                            value={countryId ?? ''}
-                            onChange={(e) => changeCountry(Number(e.target.value))}
-                        >
-                            {countries.map((country) => (
-                                <option key={country.id} value={country.id}>
-                                    {country.name}
-                                </option>
-                            ))}
-                        </NativeSelect>
-                    </div>
-                )}
+                        );
+                    })}
+                </div>
 
                 <div className="flex flex-wrap items-center gap-3">
                     <div role="group" aria-label="Période" className="bg-muted flex max-w-full gap-0.5 overflow-x-auto rounded-[14px] p-1">
