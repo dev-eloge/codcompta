@@ -6,7 +6,7 @@ export function GoogleSignInButton({ label = 'Continuer avec Google' }: { label?
         <div className="grid gap-5">
             <a
                 href={route('google.sign-in')}
-                className="border-input bg-background hover:bg-accent focus-visible:ring-ring flex h-11 w-full items-center justify-center gap-3 rounded-md border px-4 text-sm font-semibold shadow-xs transition-colors focus-visible:ring-2 focus-visible:outline-hidden"
+                className="border-input bg-card hover:bg-accent focus-visible:ring-ring flex h-12 w-full items-center justify-center gap-3 rounded-xl border px-4 text-[15px] font-bold transition-colors duration-150 focus-visible:ring-[3px] focus-visible:outline-hidden"
             >
                 <svg viewBox="0 0 48 48" className="size-5" aria-hidden="true">
                     <path
