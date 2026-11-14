@@ -232,7 +232,7 @@ class ReferenceController extends Controller
     }
 
     /**
-     * A product already sold in a report cannot go: the report would lose its lines.
+     * A product already sold in a report, or with ads noted, cannot go: they would lose their product.
      */
     public function destroyProduct(Request $request, Product $product): RedirectResponse
     {
@@ -240,6 +240,10 @@ class ReferenceController extends Controller
 
         if ($product->reportLines()->exists()) {
             return back()->with('warning', "« {$product->name} » apparaît dans des rapports : supprimez ou corrigez d'abord ces rapports.");
+        }
+
+        if ($product->adSpends()->exists()) {
+            return back()->with('warning', "« {$product->name} » a des pubs notées : supprimez ou corrigez d'abord ces pubs dans « Dépenses publicitaires ».");
         }
 
         $product->delete();

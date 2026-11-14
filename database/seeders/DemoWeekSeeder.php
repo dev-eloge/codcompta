@@ -72,7 +72,7 @@ class DemoWeekSeeder extends Seeder
             'period_start' => '2026-10-12',
             'period_end' => '2026-10-18',
             'amount' => 150000,
-            'platform' => 'meta',
+            'platform' => 'facebook',
         ]);
     }
 

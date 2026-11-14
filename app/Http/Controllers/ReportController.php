@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreReportRequest;
 use App\Jobs\CheckGoals;
+use App\Models\AdSpend;
 use App\Models\Agency;
 use App\Models\Country;
 use App\Models\Product;
@@ -254,7 +255,7 @@ class ReportController extends Controller
         }
 
         return Inertia::render('reports/create', [
-            ...$this->formProps($request),
+            ...$this->formProps($request, $report),
             'report' => [
                 'id' => $report->id,
                 'agency_id' => $report->agency_id,
@@ -270,6 +271,15 @@ class ReportController extends Controller
                     'product_id' => $line->product_id,
                     'quantity' => $line->quantity,
                     'amount' => $line->amount,
+                ])->values(),
+                'ads' => $report->adSpends()->whereNotNull('product_id')->get()->map(fn (AdSpend $ad) => [
+                    'product_id' => $ad->product_id,
+                    'choice' => $ad->isShared() ? null : StoreReportRequest::AD_SEPARATE,
+                    'platform' => $ad->platform,
+                    'amount' => $ad->amount,
+                    'facebook_amount' => $ad->facebook_amount,
+                    'tiktok_amount' => $ad->tiktok_amount,
+                    'orders_received' => $ad->orders_received,
                 ])->values(),
             ],
         ]);
@@ -312,7 +322,7 @@ class ReportController extends Controller
     /**
      * @return array<string, mixed>
      */
-    private function formProps(Request $request): array
+    private function formProps(Request $request, ?Report $report = null): array
     {
         $merchant = $this->merchantOf($request);
         $today = now($merchant->timezone)->toDateString();
@@ -338,7 +348,49 @@ class ReportController extends Controller
                     'reference_price' => $product->reference_price,
                 ]),
             'today' => $today,
+            // Reloaded by the form each time the agency or the dates change.
+            'sharedAds' => fn () => $this->sharedAdsFor($request, $report),
         ];
+    }
+
+    /**
+     * Ads of a product already noted for the country of the agency on these days, by another report:
+     * the form offers to share them instead of typing them a second time.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function sharedAdsFor(Request $request, ?Report $report): array
+    {
+        $agency = Agency::query()
+            ->whereIn('country_id', $this->merchantOf($request)->countries()->select('id'))
+            ->find($request->integer('agency_id') ?: $report?->agency_id);
+        $from = $request->date('period_start')?->toDateString() ?? $report?->period_start->toDateString();
+        $to = $request->date('period_end')?->toDateString() ?? $report?->period_end->toDateString() ?? $from;
+
+        if ($agency === null || $from === null || $to < $from) {
+            return [];
+        }
+
+        return AdSpend::query()
+            ->where('country_id', $agency->country_id)
+            ->sharedByProduct()
+            ->overlapping($from, $to)
+            ->when($report, fn ($query) => $query->where(fn ($query) => $query->whereNull('report_id')->orWhere('report_id', '!=', $report->id)))
+            ->with('report.agency:id,name')
+            ->orderBy('id')
+            ->get()
+            ->unique('product_id')
+            ->map(fn (AdSpend $ad) => [
+                'id' => $ad->id,
+                'product_id' => $ad->product_id,
+                'platform' => $ad->platform,
+                'amount' => $ad->amount,
+                'facebook_amount' => $ad->facebook_amount,
+                'tiktok_amount' => $ad->tiktok_amount,
+                'noted_by' => $ad->report?->agency?->name,
+            ])
+            ->values()
+            ->all();
     }
 
     public function store(StoreReportRequest $request, ReportRecorder $recorder): RedirectResponse

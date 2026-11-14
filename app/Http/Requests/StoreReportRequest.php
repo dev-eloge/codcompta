@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\AdSpend;
 use App\Models\Country;
 use App\Models\Product;
 use App\Models\Report;
@@ -12,12 +13,28 @@ use Illuminate\Validation\Validator;
 
 class StoreReportRequest extends FormRequest
 {
+    /** The ad of this product is already noted by another agency and is the same one: nothing to type. */
+    public const AD_SAME = 'same';
+
+    /** The ad of this product is already noted by another agency, but this agency paid its own. */
+    public const AD_SEPARATE = 'separate';
+
     /**
      * Determine if the user is authorized to make this request.
      */
     public function authorize(): bool
     {
         return $this->user()?->merchant_id !== null;
+    }
+
+    /**
+     * "No ad today" wins over any ad typed before ticking it.
+     */
+    protected function prepareForValidation(): void
+    {
+        if ($this->boolean('no_ads')) {
+            $this->merge(['ads' => []]);
+        }
     }
 
     /**
@@ -45,6 +62,15 @@ class StoreReportRequest extends FormRequest
             'lines.*.product_id' => ['required', 'integer', 'distinct', Rule::exists('products', 'id')->where('merchant_id', $merchantId)],
             'lines.*.quantity' => ['required', 'integer', 'min:1'],
             'lines.*.amount' => ['required', 'integer', 'min:0'],
+            'no_ads' => ['boolean'],
+            'ads' => ['array'],
+            'ads.*.product_id' => ['required', 'integer', 'distinct'],
+            'ads.*.choice' => ['nullable', Rule::in([self::AD_SAME, self::AD_SEPARATE])],
+            'ads.*.platform' => ['nullable', 'required_unless:ads.*.choice,'.self::AD_SAME, Rule::in(AdSpend::PLATFORMS)],
+            'ads.*.amount' => ['nullable', 'integer', 'min:0'],
+            'ads.*.facebook_amount' => ['nullable', 'integer', 'min:0'],
+            'ads.*.tiktok_amount' => ['nullable', 'integer', 'min:0'],
+            'ads.*.orders_received' => ['nullable', 'integer', 'min:0'],
         ];
     }
 
@@ -72,6 +98,8 @@ class StoreReportRequest extends FormRequest
                         $validator->errors()->add("lines.$index.product_id", "Ajoutez d'abord le coût d'achat de « {$product?->name} » dans le référentiel.");
                     }
                 }
+
+                $this->checkAds($validator);
             },
         ];
     }
@@ -95,10 +123,44 @@ class StoreReportRequest extends FormRequest
             'lines.*.product_id.distinct' => 'Ce produit est déjà sur une autre ligne.',
             'lines.*.quantity.min' => 'La quantité doit être d\'au moins 1.',
             'lines.*.amount.min' => 'Le montant ne peut pas être négatif.',
+            'ads.*.platform.required_unless' => 'Choisissez où tourne la pub.',
+            'ads.*.product_id.distinct' => 'Ce produit a déjà sa pub.',
             '*.integer' => 'Entrez un nombre entier.',
             '*.min' => 'Le montant ne peut pas être négatif.',
             '*.date' => 'Entrez une date valide.',
         ];
+    }
+
+    /**
+     * Each ad is for a product of this report and has an amount, unless it is the ad already noted by another agency.
+     */
+    private function checkAds(Validator $validator): void
+    {
+        $deliveredProducts = collect($this->input('lines'))->pluck('product_id')->map(fn ($id) => (int) $id);
+
+        foreach ($this->input('ads', []) as $index => $ad) {
+            if (! $deliveredProducts->contains((int) $ad['product_id'])) {
+                $validator->errors()->add("ads.$index.product_id", "Cette pub est pour un produit qui n'est pas dans ce rapport.");
+
+                continue;
+            }
+
+            if (($ad['choice'] ?? null) === self::AD_SAME) {
+                continue;
+            }
+
+            if ($ad['platform'] === AdSpend::PLATFORM_FACEBOOK_TIKTOK) {
+                if ((int) ($ad['facebook_amount'] ?? 0) + (int) ($ad['tiktok_amount'] ?? 0) < 1) {
+                    $validator->errors()->add("ads.$index.facebook_amount", 'Indiquez au moins un montant, sur Facebook ou sur TikTok.');
+                }
+
+                continue;
+            }
+
+            if ((int) ($ad['amount'] ?? 0) < 1) {
+                $validator->errors()->add("ads.$index.amount", 'Indiquez le montant payé pour cette pub.');
+            }
+        }
     }
 
     private function overlapsACountedReport(): bool

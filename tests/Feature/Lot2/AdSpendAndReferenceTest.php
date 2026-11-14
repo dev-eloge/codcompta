@@ -56,7 +56,7 @@ it('enregistre une dépense pub pour un pays ou pour une agence', function () {
         'period_start' => '2026-10-12',
         'period_end' => '2026-10-18',
         'amount' => 150000,
-        'platform' => 'meta',
+        'platform' => 'facebook',
     ])->assertRedirect('/pub')->assertSessionHas('success');
 
     $this->actingAs($this->user)->post('/pub', [
@@ -85,7 +85,7 @@ it('refuse une agence qui n\'est pas dans le pays choisi', function () {
         'period_start' => '2026-10-19',
         'period_end' => '2026-10-19',
         'amount' => 1000,
-        'platform' => 'meta',
+        'platform' => 'facebook',
     ])->assertSessionHasErrors('agency_id');
 });
 

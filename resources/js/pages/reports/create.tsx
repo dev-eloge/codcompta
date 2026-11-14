@@ -4,12 +4,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/app-layout';
+import { type AdPlatform, adPlatformLabel, adPlatformLabels } from '@/lib/ad-platforms';
 import { formatFcfa } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link, useForm } from '@inertiajs/react';
-import { CircleAlert, LoaderCircle, Plus, Trash2 } from 'lucide-react';
-import { FormEventHandler, useEffect, useRef } from 'react';
+import { Head, Link, router, useForm } from '@inertiajs/react';
+import { Check, CircleAlert, Info, LoaderCircle, Plus, Trash2 } from 'lucide-react';
+import { FormEventHandler, ReactNode, useEffect, useRef } from 'react';
 
 interface Agency {
     id: number;
@@ -32,6 +33,41 @@ type Line = {
     auto: boolean;
 };
 
+type AdChoice = 'same' | 'separate';
+
+/** The ad typed for one product of the report. */
+type AdEntry = {
+    platform: AdPlatform | '';
+    amount: string;
+    facebook_amount: string;
+    tiktok_amount: string;
+    orders_received: string;
+    /** Only when another report already noted the ad of this product. */
+    choice: AdChoice;
+};
+
+/** An ad of a product already noted for this country and these days, by another report. */
+interface SharedAd {
+    id: number;
+    product_id: number;
+    platform: AdPlatform | null;
+    amount: number;
+    facebook_amount: number | null;
+    tiktok_amount: number | null;
+    noted_by: string | null;
+}
+
+/** One ad as the server receives it. */
+type SentAd = {
+    product_id: string;
+    choice: AdChoice | null;
+    platform?: AdPlatform | '';
+    amount?: string | null;
+    facebook_amount?: string | null;
+    tiktok_amount?: string | null;
+    orders_received?: string;
+};
+
 type ReportForm = {
     agency_id: string;
     period_start: string;
@@ -43,6 +79,9 @@ type ReportForm = {
     announced_total: string;
     note: string;
     lines: Line[];
+    /** Keyed by product id. */
+    ads: Record<string, AdEntry>;
+    no_ads: boolean;
 };
 
 interface EditedReport {
@@ -57,22 +96,39 @@ interface EditedReport {
     announced_total: number | null;
     note: string | null;
     lines: { product_id: number; quantity: number; amount: number }[];
+    ads: {
+        product_id: number;
+        choice: AdChoice | null;
+        platform: AdPlatform | null;
+        amount: number;
+        facebook_amount: number | null;
+        tiktok_amount: number | null;
+        orders_received: number | null;
+    }[];
 }
 
 interface Props {
     agencies: Agency[];
     products: Product[];
     today: string;
+    sharedAds: SharedAd[];
     report?: EditedReport;
 }
 
 const emptyLine: Line = { product_id: '', quantity: '1', amount: '', auto: true };
 
+const emptyAd: AdEntry = { platform: '', amount: '', facebook_amount: '', tiktok_amount: '', orders_received: '', choice: 'same' };
+
+const sharedAdText = (ad: SharedAd) =>
+    ad.platform === 'facebook_tiktok'
+        ? `Facebook ${formatFcfa(ad.facebook_amount)} et TikTok ${formatFcfa(ad.tiktok_amount)}`
+        : `${adPlatformLabel(ad.platform)} : ${formatFcfa(ad.amount)}`;
+
 const toNumber = (value: string) => (value === '' ? 0 : Number(value));
 
 const amountText = (value: number | null) => (value === null || value === 0 ? '' : String(value));
 
-export default function ReportsCreate({ agencies, products, today, report }: Props) {
+export default function ReportsCreate({ agencies, products, today, sharedAds, report }: Props) {
     const editing = report !== undefined;
     const title = editing ? 'Modifier un rapport' : 'Saisir un rapport';
     const breadcrumbs: BreadcrumbItem[] = [
@@ -102,6 +158,20 @@ export default function ReportsCreate({ agencies, products, today, report }: Pro
                           auto: price !== null && price * line.quantity === line.amount,
                       };
                   }),
+                  ads: Object.fromEntries(
+                      report.ads.map((ad) => [
+                          String(ad.product_id),
+                          {
+                              platform: ad.platform ?? '',
+                              amount: ad.platform === 'facebook_tiktok' ? '' : String(ad.amount),
+                              facebook_amount: amountText(ad.facebook_amount),
+                              tiktok_amount: amountText(ad.tiktok_amount),
+                              orders_received: ad.orders_received === null ? '' : String(ad.orders_received),
+                              choice: ad.choice ?? 'same',
+                          },
+                      ]),
+                  ),
+                  no_ads: false,
               }
             : {
                   agency_id: agencies.length === 1 ? String(agencies[0].id) : '',
@@ -114,6 +184,8 @@ export default function ReportsCreate({ agencies, products, today, report }: Pro
                   announced_total: '',
                   note: '',
                   lines: [{ ...emptyLine }],
+                  ads: {},
+                  no_ads: false,
               },
     );
 
@@ -163,12 +235,98 @@ export default function ReportsCreate({ agencies, products, today, report }: Pro
         );
     };
 
-    transform((current) => ({ ...current, lines: current.lines.map(({ auto: _auto, ...line }) => line) }));
+    // The ads already noted by another agency depend on the agency and the days of the report.
+    useEffect(() => {
+        if (data.agency_id === '' || data.period_start === '' || data.period_end < data.period_start) {
+            return;
+        }
+
+        router.reload({
+            only: ['sharedAds'],
+            data: { agency_id: data.agency_id, period_start: data.period_start, period_end: data.period_end },
+        });
+    }, [data.agency_id, data.period_start, data.period_end]);
+
+    const sharedAdOf = (productId: string) => sharedAds.find((ad) => String(ad.product_id) === productId);
+
+    /** Products of the report, once each, in the order of the lines: one ad card per product. */
+    const adProducts = [...new Set(data.lines.map((line) => line.product_id).filter((id) => id !== ''))];
+
+    /**
+     * The ads sent with the report, in a fixed order so that a server error "ads.2.amount" finds its field.
+     * A product with no platform chosen has no ad; a product whose ad is already noted elsewhere sends the choice.
+     */
+    const adsToSend = (form: ReportForm): SentAd[] =>
+        form.no_ads
+            ? []
+            : [...new Set(form.lines.map((line) => line.product_id).filter((id) => id !== ''))].flatMap((productId): SentAd[] => {
+                  const entry = form.ads[productId] ?? emptyAd;
+                  const shared = sharedAdOf(productId) !== undefined;
+
+                  if (shared && entry.choice === 'same') {
+                      return [{ product_id: productId, choice: 'same' }];
+                  }
+
+                  if (entry.platform === '') {
+                      return shared ? [{ product_id: productId, choice: 'separate', platform: '' }] : [];
+                  }
+
+                  const both = entry.platform === 'facebook_tiktok';
+
+                  return [
+                      {
+                          product_id: productId,
+                          choice: shared ? 'separate' : null,
+                          platform: entry.platform,
+                          amount: both ? null : entry.amount,
+                          facebook_amount: both ? entry.facebook_amount : null,
+                          tiktok_amount: both ? entry.tiktok_amount : null,
+                          orders_received: entry.orders_received,
+                      },
+                  ];
+              });
+
+    const sentAds = adsToSend(data);
+    const adError = (productId: string, field: string) => {
+        const index = sentAds.findIndex((ad) => ad.product_id === productId);
+
+        return index === -1 ? undefined : fieldError(`ads.${index}.${field}`);
+    };
+
+    const adEntry = (productId: string) => data.ads[productId] ?? emptyAd;
+    const updateAd = (productId: string, changes: Partial<AdEntry>) =>
+        setData('ads', { ...data.ads, [productId]: { ...adEntry(productId), ...changes } });
+
+    /** What this agency pays for the ad of a product; nothing when it shares an ad noted by another agency. */
+    const adCost = (productId: string) => {
+        const entry = adEntry(productId);
+
+        if (data.no_ads || (sharedAdOf(productId) && entry.choice === 'same')) {
+            return 0;
+        }
+
+        return entry.platform === 'facebook_tiktok' ? toNumber(entry.facebook_amount) + toNumber(entry.tiktok_amount) : toNumber(entry.amount);
+    };
+
+    transform((current) => ({
+        ...current,
+        lines: current.lines.map(({ auto: _auto, ...line }) => line),
+        ads: adsToSend(current),
+    }));
 
     const salesTotal = data.lines.reduce((sum, line) => sum + toNumber(line.amount), 0);
     const purchaseCost = data.lines.reduce((sum, line) => sum + toNumber(line.quantity) * (productById(line.product_id)?.unit_cost ?? 0), 0);
     const fees = toNumber(data.delivery_fees) + toNumber(data.closing_fees) + toNumber(data.other_fees);
     const announcedMismatch = data.announced_total !== '' && toNumber(data.announced_total) !== salesTotal;
+    const adTotal = adProducts.reduce((sum, productId) => sum + adCost(productId), 0);
+    const netProfit = salesTotal - purchaseCost - fees - adTotal;
+    const sharedNotes = data.no_ads
+        ? []
+        : adProducts.flatMap((productId) => {
+              const shared = sharedAdOf(productId);
+
+              return shared && adEntry(productId).choice === 'same' ? [{ productId, shared }] : [];
+          });
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
@@ -231,9 +389,9 @@ export default function ReportsCreate({ agencies, products, today, report }: Pro
                     )}
 
                     <section aria-labelledby="who-title" className="glass grid gap-4 rounded-2xl p-5 sm:grid-cols-3 md:p-6">
-                        <h2 id="who-title" className="text-lg font-semibold sm:col-span-3">
-                            Agence et dates
-                        </h2>
+                        <StepTitle id="who-title" step={1} className="sm:col-span-3">
+                            Quelle agence, quel jour ?
+                        </StepTitle>
                         <div className="grid gap-2 sm:col-span-3">
                             <Label htmlFor="agency_id">Agence *</Label>
                             <NativeSelect
@@ -318,9 +476,9 @@ export default function ReportsCreate({ agencies, products, today, report }: Pro
 
                     <section aria-labelledby="lines-title" className="glass space-y-4 rounded-2xl p-5 md:p-6">
                         <div className="flex flex-wrap items-center justify-between gap-3">
-                            <h2 id="lines-title" className="text-lg font-semibold">
+                            <StepTitle id="lines-title" step={2}>
                                 Produits livrés
-                            </h2>
+                            </StepTitle>
                             <Button type="button" variant="outline" onClick={() => setData('lines', [...data.lines, { ...emptyLine }])}>
                                 <Plus aria-hidden="true" />
                                 Ajouter un produit
@@ -425,11 +583,105 @@ export default function ReportsCreate({ agencies, products, today, report }: Pro
                         </div>
                     </section>
 
+                    <section aria-labelledby="ads-title" className="glass space-y-4 rounded-2xl p-5 md:p-6">
+                        <div>
+                            <StepTitle id="ads-title" step={3}>
+                                Publicité du jour, pour ces produits
+                            </StepTitle>
+                            <p className="text-muted-foreground mt-1 text-sm">
+                                Ce que vous avez payé aujourd'hui pour les produits de ce rapport. Une même pub n'est jamais comptée deux fois.
+                            </p>
+                        </div>
+
+                        {adProducts.length === 0 ? (
+                            <p className="text-muted-foreground text-sm">Choisissez d'abord les produits livrés : une carte apparaît pour chacun.</p>
+                        ) : (
+                            !data.no_ads &&
+                            adProducts.map((productId) => {
+                                const name = productById(productId)?.name ?? 'Produit';
+                                const shared = sharedAdOf(productId);
+                                const entry = adEntry(productId);
+                                const showFields = !shared || entry.choice === 'separate';
+
+                                return (
+                                    <div key={productId} className={cn('flex flex-col gap-3.5 rounded-2xl border p-4', shared && 'bg-muted/60')}>
+                                        <div className="flex flex-wrap items-center justify-between gap-2.5">
+                                            <h3 className="text-[15px] font-bold">{name}</h3>
+                                            {shared && (
+                                                <span className="badge-info inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-bold">
+                                                    <Info className="size-3.5" aria-hidden="true" />
+                                                    Pub déjà notée aujourd'hui
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        {shared && (
+                                            <>
+                                                <p className="text-[15px]">
+                                                    <span className="font-semibold tabular-nums">{sharedAdText(shared)}</span>,{' '}
+                                                    {shared.noted_by
+                                                        ? `notés dans le rapport d'${shared.noted_by}. Ce produit est aussi livré par cette agence.`
+                                                        : 'notés dans « Dépenses publicitaires ».'}
+                                                </p>
+                                                <fieldset className="flex flex-col gap-2">
+                                                    <legend className="mb-2 text-sm font-bold">Pour cette agence :</legend>
+                                                    <ChoiceCard
+                                                        name={`ad-choice-${productId}`}
+                                                        checked={entry.choice === 'same'}
+                                                        onSelect={() => updateAd(productId, { choice: 'same' })}
+                                                        title="C'est la même pub pour les deux agences"
+                                                        help={`Les ${formatFcfa(shared.amount)} sont partagés selon les livraisons de chaque agence. Rien à retaper.`}
+                                                    />
+                                                    <ChoiceCard
+                                                        name={`ad-choice-${productId}`}
+                                                        checked={entry.choice === 'separate'}
+                                                        onSelect={() => updateAd(productId, { choice: 'separate' })}
+                                                        title="J'ai payé une pub à part pour cette agence"
+                                                        help="Vous notez son montant ici, comme pour un autre produit."
+                                                    />
+                                                </fieldset>
+                                            </>
+                                        )}
+
+                                        {showFields && (
+                                            <AdFields
+                                                productId={productId}
+                                                entry={entry}
+                                                cost={adCost(productId)}
+                                                error={(field) => adError(productId, field)}
+                                                onChange={(changes) => updateAd(productId, changes)}
+                                            />
+                                        )}
+
+                                        {shared && (
+                                            <Link
+                                                href={route('ad-spends.index')}
+                                                className="text-primary inline-flex min-h-11 items-center self-start font-bold underline underline-offset-4"
+                                            >
+                                                {shared.noted_by ? `Modifier la pub d'${shared.noted_by}` : 'Modifier cette pub'}
+                                            </Link>
+                                        )}
+                                    </div>
+                                );
+                            })
+                        )}
+
+                        <label className="flex min-h-12 cursor-pointer items-center gap-3 text-[15px] font-semibold">
+                            <input
+                                type="checkbox"
+                                className="accent-primary size-5"
+                                checked={data.no_ads}
+                                onChange={(e) => setData('no_ads', e.target.checked)}
+                            />
+                            Pas de publicité aujourd'hui pour ces produits
+                        </label>
+                    </section>
+
                     <section aria-labelledby="fees-title" className="glass grid gap-4 rounded-2xl p-5 sm:grid-cols-2 md:p-6">
                         <div className="sm:col-span-2">
-                            <h2 id="fees-title" className="text-lg font-semibold">
+                            <StepTitle id="fees-title" step={4}>
                                 Frais de l'agence
-                            </h2>
+                            </StepTitle>
                             <p className="text-muted-foreground text-sm">Laissez vide ce qui ne s'applique pas.</p>
                         </div>
                         <MoneyField
@@ -479,25 +731,33 @@ export default function ReportsCreate({ agencies, products, today, report }: Pro
                     aria-labelledby="recap-title"
                     className="glass-hero sticky bottom-[92px] z-20 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-2xl p-4 shadow-[var(--shadow-raised)] md:bottom-4 lg:top-6 lg:bottom-auto lg:flex lg:flex-col lg:items-stretch lg:p-6"
                 >
-                    <div className="min-w-0">
-                        <h2 id="recap-title" className="text-hero-muted font-[family-name:var(--font-sans)] text-sm font-semibold">
-                            Ce qu'il vous reste, avant la pub
-                        </h2>
+                    <h2 id="recap-title" className="hidden font-[family-name:var(--font-sans)] text-lg font-bold lg:block">
+                        Ce qu'il vous reste
+                    </h2>
+                    <dl className="hidden flex-col gap-1.5 border-b border-white/15 pb-3 text-sm lg:flex">
+                        <SummaryLine label="Argent encaissé" value={formatFcfa(salesTotal)} />
+                        <SummaryLine label="Prix d'achat des produits" value={`− ${formatFcfa(purchaseCost)}`} />
+                        <SummaryLine label="Frais de l'agence" value={`− ${formatFcfa(fees)}`} />
+                        <SummaryLine label="Pub du jour" value={`− ${formatFcfa(adTotal)}`} />
+                    </dl>
+                    <div className="min-w-0 lg:flex lg:items-baseline lg:justify-between lg:gap-3">
+                        <p className="text-hero-muted lg:text-hero-foreground text-sm font-semibold">Bénéfice net du jour</p>
                         <p
                             className={cn(
-                                'mt-1 font-[family-name:var(--font-display)] text-[26px] leading-none font-bold tabular-nums lg:mt-3 lg:text-[40px]',
-                                salesTotal - purchaseCost - fees < 0 && 'text-on-hero-loss',
+                                'mt-1 font-[family-name:var(--font-display)] text-[26px] leading-none font-bold tabular-nums lg:mt-0 lg:text-[32px]',
+                                netProfit < 0 && 'text-on-hero-loss',
                             )}
                             aria-live="polite"
                         >
-                            {formatFcfa(salesTotal - purchaseCost - fees)}
+                            {formatFcfa(netProfit)}
                         </p>
                     </div>
-                    <dl className="col-span-2 hidden flex-col gap-1.5 border-t border-white/15 pt-3 text-sm lg:flex">
-                        <SummaryLine label="Argent encaissé" value={formatFcfa(salesTotal)} />
-                        <SummaryLine label="Prix d'achat" value={`− ${formatFcfa(purchaseCost)}`} />
-                        <SummaryLine label="Frais de l'agence" value={`− ${formatFcfa(fees)}`} />
-                    </dl>
+                    {sharedNotes.map(({ productId, shared }) => (
+                        <p key={productId} className="text-hero-muted hidden text-xs lg:block">
+                            {productById(productId)?.name} : la pub {shared.noted_by ? `d'${shared.noted_by}` : 'déjà notée'} est partagée selon les
+                            livraisons. Elle n'est pas retirée une deuxième fois.
+                        </p>
+                    ))}
                     {announcedMismatch && (
                         <p role="status" className="text-on-hero-gold col-span-2 flex items-start gap-2 text-sm font-semibold">
                             <CircleAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
@@ -526,6 +786,189 @@ export default function ReportsCreate({ agencies, products, today, report }: Pro
                 </aside>
             </form>
         </AppLayout>
+    );
+}
+
+function StepTitle({ id, step, className, children }: { id: string; step: number; className?: string; children: ReactNode }) {
+    return (
+        <h2 id={id} className={cn('flex items-center gap-2.5 text-lg font-semibold', className)}>
+            <span
+                aria-hidden="true"
+                className="bg-foreground text-background grid size-7 shrink-0 place-items-center rounded-full text-sm tabular-nums"
+            >
+                {step}
+            </span>
+            {children}
+        </h2>
+    );
+}
+
+/**
+ * A radio choice shown as a card, with a title and one line of help.
+ */
+function ChoiceCard({ name, checked, onSelect, title, help }: { name: string; checked: boolean; onSelect: () => void; title: string; help: string }) {
+    return (
+        <label
+            className={cn(
+                'bg-card has-[:focus-visible]:ring-ring/50 flex min-h-12 cursor-pointer items-start gap-3 rounded-xl border px-3.5 py-3 text-[15px] has-[:focus-visible]:ring-[3px]',
+                checked ? 'border-primary border-2' : 'border-input',
+            )}
+        >
+            <input type="radio" name={name} checked={checked} onChange={onSelect} className="accent-primary mt-0.5 size-5 shrink-0" />
+            <span>
+                <span className="block font-bold">{title}</span>
+                <span className="text-muted-foreground block text-xs">{help}</span>
+            </span>
+        </label>
+    );
+}
+
+/**
+ * Where the ad of one product runs, and only the amounts that this choice needs.
+ */
+function AdFields({
+    productId,
+    entry,
+    cost,
+    error,
+    onChange,
+}: {
+    productId: string;
+    entry: AdEntry;
+    cost: number;
+    error: (field: string) => string | undefined;
+    onChange: (changes: Partial<AdEntry>) => void;
+}) {
+    const both = entry.platform === 'facebook_tiktok';
+    const field = (name: string) => `ad-${productId}-${name}`;
+
+    return (
+        <>
+            <fieldset className="flex flex-col gap-2">
+                <legend className="mb-2 text-sm font-bold">Où tourne la pub ?</legend>
+                <div className="flex flex-wrap gap-2">
+                    {(Object.keys(adPlatformLabels) as AdPlatform[]).map((platform) => {
+                        const checked = entry.platform === platform;
+
+                        return (
+                            <label
+                                key={platform}
+                                className={cn(
+                                    'has-[:focus-visible]:ring-ring/50 inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-xl px-4 text-[15px] font-semibold transition-colors duration-150 has-[:focus-visible]:ring-[3px]',
+                                    checked
+                                        ? 'border-primary bg-success-bg text-success-fg border-2 font-bold'
+                                        : 'border-input bg-card hover:bg-accent border',
+                                )}
+                            >
+                                <input
+                                    type="radio"
+                                    name={field('platform')}
+                                    value={platform}
+                                    checked={checked}
+                                    onChange={() => onChange({ platform })}
+                                    className="sr-only"
+                                />
+                                {checked && <Check className="size-4 stroke-[2.8]" aria-hidden="true" />}
+                                {adPlatformLabels[platform]}
+                            </label>
+                        );
+                    })}
+                </div>
+                <InputError message={error('platform')} />
+            </fieldset>
+
+            {entry.platform !== '' && (
+                <>
+                    <div className="grid items-start gap-3 sm:grid-cols-3">
+                        {both ? (
+                            <>
+                                <AdNumberField
+                                    id={field('facebook')}
+                                    label="Dépensé sur Facebook (F)"
+                                    value={entry.facebook_amount}
+                                    error={error('facebook_amount')}
+                                    onChange={(value) => onChange({ facebook_amount: value })}
+                                />
+                                <AdNumberField
+                                    id={field('tiktok')}
+                                    label="Dépensé sur TikTok (F)"
+                                    value={entry.tiktok_amount}
+                                    error={error('tiktok_amount')}
+                                    onChange={(value) => onChange({ tiktok_amount: value })}
+                                />
+                            </>
+                        ) : (
+                            <AdNumberField
+                                id={field('amount')}
+                                label={`Dépensé sur ${entry.platform === 'autre' ? 'la pub' : adPlatformLabels[entry.platform]} (F)`}
+                                value={entry.amount}
+                                error={error('amount')}
+                                onChange={(value) => onChange({ amount: value })}
+                            />
+                        )}
+                        <AdNumberField
+                            id={field('orders')}
+                            label={both ? 'Commandes reçues (les deux)' : 'Commandes reçues'}
+                            placeholder="Facultatif"
+                            value={entry.orders_received}
+                            error={error('orders_received')}
+                            onChange={(value) => onChange({ orders_received: value })}
+                        />
+                    </div>
+                    <div className="flex flex-wrap items-center justify-between gap-2.5">
+                        {both ? (
+                            <p className="text-muted-foreground max-w-xl text-xs">
+                                Avec les deux en même temps, on ne sépare pas les commandes : ce produit est suivi comme « Facebook et TikTok » pour
+                                ces jours-là.
+                            </p>
+                        ) : (
+                            <button
+                                type="button"
+                                onClick={() => onChange({ platform: '', amount: '', facebook_amount: '', tiktok_amount: '', orders_received: '' })}
+                                className="text-muted-foreground hover:text-foreground min-h-11 text-sm font-semibold underline underline-offset-4"
+                            >
+                                Pas de pub pour ce produit
+                            </button>
+                        )}
+                        <p className="text-sm font-bold tabular-nums">Pub du produit : {formatFcfa(cost)}</p>
+                    </div>
+                </>
+            )}
+        </>
+    );
+}
+
+function AdNumberField({
+    id,
+    label,
+    value,
+    error,
+    placeholder = '0',
+    onChange,
+}: {
+    id: string;
+    label: string;
+    value: string;
+    error?: string;
+    placeholder?: string;
+    onChange: (value: string) => void;
+}) {
+    return (
+        <div className="grid gap-2">
+            <Label htmlFor={id}>{label}</Label>
+            <Input
+                id={id}
+                type="number"
+                inputMode="numeric"
+                min={0}
+                value={value}
+                placeholder={placeholder}
+                aria-invalid={error ? true : undefined}
+                className="tabular-nums"
+                onChange={(e) => onChange(e.target.value)}
+            />
+            <InputError message={error} />
+        </div>
     );
 }
 

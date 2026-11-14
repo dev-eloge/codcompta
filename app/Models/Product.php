@@ -35,6 +35,11 @@ class Product extends Model
         return $this->hasMany(ProductAlias::class);
     }
 
+    public function adSpends(): HasMany
+    {
+        return $this->hasMany(AdSpend::class);
+    }
+
     public function reportLines(): HasMany
     {
         return $this->hasMany(ReportLine::class);

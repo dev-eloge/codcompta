@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Http\Requests\StoreReportRequest;
+use App\Models\AdSpend;
 use App\Models\Agency;
 use App\Models\Product;
 use App\Models\Report;
@@ -17,7 +19,8 @@ class ReportRecorder
      * @param  array{period_start: string, period_end: string, status: string, source?: string,
      *     delivery_fees?: int|null, closing_fees?: int|null, other_fees?: int|null,
      *     announced_total?: int|null, note?: string|null, raw_message_id?: int|null,
-     *     lines: list<array{product_id: int, quantity: int, amount: int}>}  $data
+     *     lines: list<array{product_id: int, quantity: int, amount: int}>,
+     *     ads?: list<array<string, mixed>>}  $data
      */
     public function record(Agency $agency, array $data, ?User $validator = null): Report
     {
@@ -41,6 +44,7 @@ class ReportRecorder
             ]);
 
             $this->writeLines($report, $data['lines'], $data['period_end']);
+            $this->writeAds($report, $data['ads'] ?? []);
             $this->touchAgency($agency, $report);
 
             return $report;
@@ -72,6 +76,10 @@ class ReportRecorder
 
             $report->lines()->delete();
             $this->writeLines($report, $data['lines'], $data['period_end']);
+
+            // Only the ads typed in this form are replaced; an old ad with no product stays as it was.
+            $report->adSpends()->whereNotNull('product_id')->delete();
+            $this->writeAds($report, $data['ads'] ?? []);
             $this->refreshLastReport($report->agency);
 
             return $report->fresh('lines');
@@ -103,6 +111,56 @@ class ReportRecorder
                 'quantity' => $line['quantity'],
                 'amount' => $line['amount'],
                 'unit_cost_applied' => $product->costAt($periodEnd) ?? 0,
+            ]);
+        }
+    }
+
+    /**
+     * Saves the ads of the products of the report. One ad covers one product, one country and
+     * one day: when another agency already noted it, it is shared, never created a second time.
+     *
+     * @param  list<array<string, mixed>>  $ads
+     */
+    private function writeAds(Report $report, array $ads): void
+    {
+        $countryId = $report->agency->country_id;
+        $from = $report->period_start->toDateString();
+        $to = $report->period_end->toDateString();
+
+        foreach ($ads as $ad) {
+            $alreadyNoted = AdSpend::query()
+                ->where('country_id', $countryId)
+                ->where('product_id', $ad['product_id'])
+                ->sharedByProduct()
+                ->overlapping($from, $to)
+                ->lockForUpdate()
+                ->exists();
+
+            $choice = $ad['choice'] ?? null;
+
+            if ($alreadyNoted && $choice !== StoreReportRequest::AD_SEPARATE) {
+                continue;
+            }
+
+            if (! $alreadyNoted && $choice === StoreReportRequest::AD_SAME) {
+                continue;
+            }
+
+            $bothPlatforms = $ad['platform'] === AdSpend::PLATFORM_FACEBOOK_TIKTOK;
+            $facebookAmount = $bothPlatforms ? (int) ($ad['facebook_amount'] ?? 0) : null;
+            $tiktokAmount = $bothPlatforms ? (int) ($ad['tiktok_amount'] ?? 0) : null;
+
+            $report->adSpends()->create([
+                'country_id' => $countryId,
+                'agency_id' => $choice === StoreReportRequest::AD_SEPARATE ? $report->agency_id : null,
+                'product_id' => $ad['product_id'],
+                'period_start' => $from,
+                'period_end' => $to,
+                'platform' => $ad['platform'],
+                'amount' => $bothPlatforms ? $facebookAmount + $tiktokAmount : (int) $ad['amount'],
+                'facebook_amount' => $facebookAmount,
+                'tiktok_amount' => $tiktokAmount,
+                'orders_received' => $ad['orders_received'] ?? null,
             ]);
         }
     }

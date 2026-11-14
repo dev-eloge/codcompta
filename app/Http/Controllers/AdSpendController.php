@@ -30,7 +30,7 @@ class AdSpendController extends Controller
             ]),
             'adSpends' => AdSpend::query()
                 ->whereIn('country_id', $countries->pluck('id'))
-                ->with(['country:id,name', 'agency:id,name'])
+                ->with(['country:id,name', 'agency:id,name', 'product:id,name'])
                 ->latest('period_end')
                 ->latest('id')
                 ->limit(50)
@@ -43,17 +43,23 @@ class AdSpendController extends Controller
                     'agency' => $adSpend->agency?->name,
                     'period_start' => $adSpend->period_start->toDateString(),
                     'period_end' => $adSpend->period_end->toDateString(),
+                    'product_id' => $adSpend->product_id,
+                    'product' => $adSpend->product?->name,
                     'amount' => $adSpend->amount,
+                    'facebook_amount' => $adSpend->facebook_amount,
+                    'tiktok_amount' => $adSpend->tiktok_amount,
                     'platform' => $adSpend->platform,
+                    'orders_received' => $adSpend->orders_received,
                 ]),
-            'platforms' => StoreAdSpendRequest::PLATFORMS,
+            'products' => $merchant->products()->orderBy('name')->get(['id', 'name']),
+            'platforms' => AdSpend::PLATFORMS,
             'today' => now($merchant->timezone)->toDateString(),
         ]);
     }
 
     public function store(StoreAdSpendRequest $request): RedirectResponse
     {
-        AdSpend::create($request->validated());
+        AdSpend::create($request->adSpend());
         CheckGoals::dispatch($this->merchantOf($request)->id);
 
         return to_route('ad-spends.index')->with('success', 'Dépense pub enregistrée.');
@@ -63,7 +69,7 @@ class AdSpendController extends Controller
     {
         $this->ensureOwned($request, $adSpend->country->merchant_id);
 
-        $adSpend->update($request->validated());
+        $adSpend->update($request->adSpend());
         CheckGoals::dispatch($adSpend->country->merchant_id);
 
         return to_route('ad-spends.index')->with('success', 'Dépense pub modifiée.');

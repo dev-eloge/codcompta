@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/app-layout';
+import { adPlatformLabel } from '@/lib/ad-platforms';
 import { formatNumber, formatPeriod } from '@/lib/format';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, useForm } from '@inertiajs/react';
@@ -24,31 +25,41 @@ interface AdSpend {
     agency_id: number | null;
     country: string;
     agency: string | null;
+    product_id: number | null;
+    product: string | null;
     period_start: string;
     period_end: string;
     amount: number;
-    platform: string;
+    facebook_amount: number | null;
+    tiktok_amount: number | null;
+    platform: string | null;
+    orders_received: number | null;
 }
 
 interface Props {
     countries: Country[];
     adSpends: AdSpend[];
+    products: { id: number; name: string }[];
     platforms: string[];
     today: string;
 }
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Dépenses publicitaires', href: '/pub' }];
 
-const platformLabels: Record<string, string> = { meta: 'Meta (Facebook, Instagram)', tiktok: 'TikTok', autre: 'Autre' };
+const numberText = (value: number | null) => (value === null ? '' : String(value));
 
-export default function AdSpendsIndex({ countries, adSpends, platforms, today }: Props) {
+export default function AdSpendsIndex({ countries, adSpends, products, platforms, today }: Props) {
     const blank = {
         country_id: countries.length > 0 ? String(countries[0].id) : '',
         agency_id: '',
+        product_id: '',
         period_start: today,
         period_end: today,
         amount: '',
-        platform: 'meta',
+        facebook_amount: '',
+        tiktok_amount: '',
+        platform: 'facebook',
+        orders_received: '',
     };
     const { data, setData, post, put, processing, errors, reset, clearErrors } = useForm(blank);
     const [editingId, setEditingId] = useState<number | null>(null);
@@ -60,14 +71,18 @@ export default function AdSpendsIndex({ countries, adSpends, platforms, today }:
         setData({
             country_id: String(adSpend.country_id),
             agency_id: adSpend.agency_id === null ? '' : String(adSpend.agency_id),
+            product_id: numberText(adSpend.product_id),
             period_start: adSpend.period_start,
             period_end: adSpend.period_end,
             amount: String(adSpend.amount),
-            platform: adSpend.platform,
+            facebook_amount: numberText(adSpend.facebook_amount),
+            tiktok_amount: numberText(adSpend.tiktok_amount),
+            platform: adSpend.platform ?? '',
+            orders_received: numberText(adSpend.orders_received),
         });
         const smooth = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         formRef.current?.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'start' });
-        formRef.current?.querySelector<HTMLElement>('#amount')?.focus({ preventScroll: true });
+        formRef.current?.querySelector<HTMLElement>('#product_id')?.focus({ preventScroll: true });
     };
 
     const stopEditing = () => {
@@ -77,6 +92,7 @@ export default function AdSpendsIndex({ countries, adSpends, platforms, today }:
     };
 
     const agencies = countries.find((country) => String(country.id) === data.country_id)?.agencies ?? [];
+    const bothPlatforms = data.platform === 'facebook_tiktok';
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
@@ -86,7 +102,10 @@ export default function AdSpendsIndex({ countries, adSpends, platforms, today }:
             return;
         }
 
-        post(route('ad-spends.store'), { preserveScroll: true, onSuccess: () => reset('amount') });
+        post(route('ad-spends.store'), {
+            preserveScroll: true,
+            onSuccess: () => reset('amount', 'facebook_amount', 'tiktok_amount', 'orders_received'),
+        });
     };
 
     return (
@@ -151,7 +170,7 @@ export default function AdSpendsIndex({ countries, adSpends, platforms, today }:
                                 ))}
                             </NativeSelect>
                             <p id="agency-help" className="text-muted-foreground text-xs">
-                                Choisissez une agence seulement si la publicité ne concerne que sa ville.
+                                Choisissez une agence seulement si elle a payé sa propre pub. Sinon, la pub d'un produit est répartie selon les livraisons de ce produit.
                             </p>
                             <InputError message={errors.agency_id} />
                         </div>
@@ -182,34 +201,96 @@ export default function AdSpendsIndex({ countries, adSpends, platforms, today }:
                         </div>
 
                         <div className="grid gap-2">
-                            <Label htmlFor="amount">Montant dépensé (F CFA) *</Label>
-                            <Input
-                                id="amount"
-                                type="number"
-                                required
-                                aria-describedby="amount-help"
-                                inputMode="numeric"
-                                min={1}
-                                value={data.amount}
-                                onChange={(e) => setData('amount', e.target.value)}
-                                placeholder="0"
-                            />
-                            <p id="amount-help" className="text-muted-foreground text-xs">
-                                Le montant réellement débité, converti en francs CFA.
-                            </p>
-                            <InputError message={errors.amount} />
+                            <Label htmlFor="product_id">Produit</Label>
+                            <NativeSelect id="product_id" value={data.product_id} onChange={(e) => setData('product_id', e.target.value)}>
+                                <option value="">Pub sans produit</option>
+                                {products.map((product) => (
+                                    <option key={product.id} value={product.id}>
+                                        {product.name}
+                                    </option>
+                                ))}
+                            </NativeSelect>
+                            <InputError message={errors.product_id} />
                         </div>
 
                         <div className="grid gap-2">
-                            <Label htmlFor="platform">Plateforme</Label>
-                            <NativeSelect id="platform" value={data.platform} onChange={(e) => setData('platform', e.target.value)}>
+                            <Label htmlFor="platform">Où tourne la pub ? *</Label>
+                            <NativeSelect id="platform" required value={data.platform} onChange={(e) => setData('platform', e.target.value)}>
+                                {data.platform === '' && <option value="">Choisir</option>}
                                 {platforms.map((platform) => (
                                     <option key={platform} value={platform}>
-                                        {platformLabels[platform] ?? platform}
+                                        {adPlatformLabel(platform)}
                                     </option>
                                 ))}
                             </NativeSelect>
                             <InputError message={errors.platform} />
+                        </div>
+
+                        {bothPlatforms ? (
+                            <>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="facebook_amount">Dépensé sur Facebook (F) *</Label>
+                                    <Input
+                                        id="facebook_amount"
+                                        type="number"
+                                        required
+                                        inputMode="numeric"
+                                        min={0}
+                                        value={data.facebook_amount}
+                                        onChange={(e) => setData('facebook_amount', e.target.value)}
+                                        placeholder="0"
+                                    />
+                                    <InputError message={errors.facebook_amount} />
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="tiktok_amount">Dépensé sur TikTok (F) *</Label>
+                                    <Input
+                                        id="tiktok_amount"
+                                        type="number"
+                                        required
+                                        inputMode="numeric"
+                                        min={0}
+                                        value={data.tiktok_amount}
+                                        onChange={(e) => setData('tiktok_amount', e.target.value)}
+                                        placeholder="0"
+                                    />
+                                    <InputError message={errors.tiktok_amount} />
+                                </div>
+                            </>
+                        ) : (
+                            <div className="grid gap-2">
+                                <Label htmlFor="amount">Montant dépensé (F CFA) *</Label>
+                                <Input
+                                    id="amount"
+                                    type="number"
+                                    required
+                                    aria-describedby="amount-help"
+                                    inputMode="numeric"
+                                    min={1}
+                                    value={data.amount}
+                                    onChange={(e) => setData('amount', e.target.value)}
+                                    placeholder="0"
+                                />
+                                <p id="amount-help" className="text-muted-foreground text-xs">
+                                    Le montant réellement débité, converti en francs CFA.
+                                </p>
+                                <InputError message={errors.amount} />
+                            </div>
+                        )}
+
+                        <div className="grid gap-2">
+                            <Label htmlFor="orders_received">
+                                Commandes reçues <span className="text-muted-foreground font-normal">(facultatif)</span>
+                            </Label>
+                            <Input
+                                id="orders_received"
+                                type="number"
+                                inputMode="numeric"
+                                min={0}
+                                value={data.orders_received}
+                                onChange={(e) => setData('orders_received', e.target.value)}
+                            />
+                            <InputError message={errors.orders_received} />
                         </div>
 
                         <div className="flex gap-2 sm:col-span-2">
@@ -237,7 +318,7 @@ export default function AdSpendsIndex({ countries, adSpends, platforms, today }:
                         </div>
                     ) : (
                         <div className="glass overflow-x-auto rounded-2xl">
-                            <table className="w-full min-w-[640px] text-sm">
+                            <table className="w-full min-w-[760px] text-sm">
                                 <caption className="sr-only">Dernières dépenses publicitaires</caption>
                                 <thead className="bg-primary/8 text-left">
                                     <tr>
@@ -246,6 +327,9 @@ export default function AdSpendsIndex({ countries, adSpends, platforms, today }:
                                         </th>
                                         <th scope="col" className="px-3 py-3 font-semibold">
                                             Pays
+                                        </th>
+                                        <th scope="col" className="px-3 py-3 font-semibold">
+                                            Produit
                                         </th>
                                         <th scope="col" className="px-3 py-3 font-semibold">
                                             Agence
@@ -268,8 +352,11 @@ export default function AdSpendsIndex({ countries, adSpends, platforms, today }:
                                                 {formatPeriod(adSpend.period_start, adSpend.period_end)}
                                             </td>
                                             <td className="px-3 py-2.5">{adSpend.country}</td>
+                                            <td className="px-3 py-2.5">
+                                                {adSpend.product ?? <span className="text-muted-foreground">Pub sans produit</span>}
+                                            </td>
                                             <td className="px-3 py-2.5">{adSpend.agency ?? 'Toutes (répartie)'}</td>
-                                            <td className="px-3 py-2.5">{platformLabels[adSpend.platform] ?? adSpend.platform}</td>
+                                            <td className="px-3 py-2.5">{adPlatformLabel(adSpend.platform)}</td>
                                             <td className="px-4 py-2.5 text-right font-semibold tabular-nums">{formatNumber(adSpend.amount)}</td>
                                             <td className="px-2 py-1.5">
                                                 <div className="flex justify-end">

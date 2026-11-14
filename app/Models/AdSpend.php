@@ -8,6 +8,17 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class AdSpend extends Model
 {
+    public const PLATFORM_FACEBOOK = 'facebook';
+
+    public const PLATFORM_TIKTOK = 'tiktok';
+
+    public const PLATFORM_FACEBOOK_TIKTOK = 'facebook_tiktok';
+
+    public const PLATFORM_OTHER = 'autre';
+
+    /** Where an ad can run. With both Facebook and TikTok, orders are never split between them. */
+    public const PLATFORMS = [self::PLATFORM_FACEBOOK, self::PLATFORM_TIKTOK, self::PLATFORM_FACEBOOK_TIKTOK, self::PLATFORM_OTHER];
+
     /**
      * The attributes that are mass assignable.
      *
@@ -17,10 +28,14 @@ class AdSpend extends Model
         'country_id',
         'agency_id',
         'report_id',
+        'product_id',
         'period_start',
         'period_end',
         'amount',
+        'facebook_amount',
+        'tiktok_amount',
         'platform',
+        'orders_received',
     ];
 
     public function country(): BelongsTo
@@ -31,6 +46,40 @@ class AdSpend extends Model
     public function agency(): BelongsTo
     {
         return $this->belongsTo(Agency::class);
+    }
+
+    public function product(): BelongsTo
+    {
+        return $this->belongsTo(Product::class);
+    }
+
+    public function report(): BelongsTo
+    {
+        return $this->belongsTo(Report::class);
+    }
+
+    /**
+     * An ad with no agency is shared by every agency of the country that delivered its product.
+     */
+    public function isShared(): bool
+    {
+        return $this->agency_id === null;
+    }
+
+    /**
+     * Ads of one product shared by the agencies of their country (no agency of their own).
+     */
+    public function scopeSharedByProduct(Builder $query): void
+    {
+        $query->whereNull('agency_id')->whereNotNull('product_id');
+    }
+
+    /**
+     * Ad spends that cover at least one day of the period.
+     */
+    public function scopeOverlapping(Builder $query, string $from, string $to): void
+    {
+        $query->whereDate('period_start', '<=', $to)->whereDate('period_end', '>=', $from);
     }
 
     /**
@@ -52,6 +101,9 @@ class AdSpend extends Model
             'period_start' => 'date',
             'period_end' => 'date',
             'amount' => 'integer',
+            'facebook_amount' => 'integer',
+            'tiktok_amount' => 'integer',
+            'orders_received' => 'integer',
         ];
     }
 }
