@@ -5,6 +5,7 @@ use App\Http\Controllers\AdSpendController;
 use App\Http\Controllers\Auth\GoogleSignIn;
 use App\Http\Controllers\GoalController;
 use App\Http\Controllers\LegalController;
+use App\Http\Controllers\ProfitSettingsController;
 use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\RawMessageController;
 use App\Http\Controllers\ReferenceController;
@@ -50,6 +51,8 @@ Route::middleware(['auth', 'merchant.active'])->group(function () {
     Route::put('pub/{adSpend}', [AdSpendController::class, 'update'])->name('ad-spends.update');
     Route::delete('pub/{adSpend}', [AdSpendController::class, 'destroy'])->name('ad-spends.destroy');
 
+    Route::get('partage-et-devise', [ProfitSettingsController::class, 'edit'])->name('profit-settings.edit');
+    Route::put('partage-et-devise', [ProfitSettingsController::class, 'update'])->name('profit-settings.update');
     Route::get('referentiel', [ReferenceController::class, 'index'])->name('reference.index');
     Route::post('referentiel/pays', [ReferenceController::class, 'storeCountry'])->name('reference.countries.store');
     Route::post('referentiel/agences', [ReferenceController::class, 'storeAgency'])->name('reference.agencies.store');

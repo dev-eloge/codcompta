@@ -3,7 +3,19 @@ import { NavUser } from '@/components/nav-user';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { type NavItem, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
-import { ChartLine, ClipboardPlus, History, LayoutDashboard, Megaphone, MessageSquareText, ScrollText, Settings2, Store, Target } from 'lucide-react';
+import {
+    ChartLine,
+    ClipboardPlus,
+    History,
+    LayoutDashboard,
+    Megaphone,
+    MessageSquareText,
+    PieChart,
+    ScrollText,
+    Settings2,
+    Store,
+    Target,
+} from 'lucide-react';
 import AppLogo from './app-logo';
 import { GoalSidebarBadge } from './goals/goal-progress';
 import { InstallSidebarButton } from './install-app';
@@ -21,7 +33,10 @@ const inputNavItems: NavItem[] = [
     { title: 'Dépenses publicitaires', url: '/pub', icon: Megaphone },
 ];
 
-const setupNavItems: NavItem[] = [{ title: 'Pays, agences et produits', url: '/referentiel', icon: Settings2 }];
+const setupNavItems: NavItem[] = [
+    { title: 'Pays, agences et produits', url: '/referentiel', icon: Settings2 },
+    { title: 'Partage et devise', url: '/partage-et-devise', icon: PieChart },
+];
 
 const adminNavItems: NavItem[] = [
     { title: "Vue d'ensemble", url: '/admin', icon: LayoutDashboard },

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\ProfitSplit;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -20,6 +21,8 @@ class Merchant extends Model
         'share_savings',
         'share_pocket',
         'share_reinvestment',
+        'profit_split',
+        'display_currency',
         'suspended_at',
         'suspension_reason',
     ];
@@ -62,17 +65,19 @@ class Merchant extends Model
     }
 
     /**
-     * Profit split used by the reports (RG-03), in percent.
-     *
-     * @return array{savings: int, pocket: int, reinvestment: int}
+     * How the merchant cuts the net profit: the merchant's own rule, or the 3 historical shares.
      */
-    public function profitShares(): array
+    public function profitSplit(): ProfitSplit
     {
-        return [
-            'savings' => $this->share_savings,
-            'pocket' => $this->share_pocket,
-            'reinvestment' => $this->share_reinvestment,
-        ];
+        if (is_array($this->profit_split) && $this->profit_split !== []) {
+            return new ProfitSplit(array_values($this->profit_split));
+        }
+
+        return new ProfitSplit([
+            ['name' => 'Épargne', 'percent' => (int) ($this->share_savings ?? 40)],
+            ['name' => 'Votre poche', 'percent' => (int) ($this->share_pocket ?? 20)],
+            ['name' => 'À réinvestir', 'percent' => (int) ($this->share_reinvestment ?? 40)],
+        ]);
     }
 
     /**
@@ -86,6 +91,7 @@ class Merchant extends Model
             'share_savings' => 'integer',
             'share_pocket' => 'integer',
             'share_reinvestment' => 'integer',
+            'profit_split' => 'array',
             'suspended_at' => 'datetime',
         ];
     }

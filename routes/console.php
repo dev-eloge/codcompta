@@ -10,3 +10,6 @@ Artisan::command('inspire', function () {
 
 // Sika: a goal can end without a new report, so its result is checked every hour.
 Schedule::command('codcompta:verifier-objectifs')->hourly()->withoutOverlapping();
+
+// Dollar rate of the day, for merchants who read their reports in dollars.
+Schedule::command('codcompta:taux-dollar')->dailyAt('07:10')->withoutOverlapping();

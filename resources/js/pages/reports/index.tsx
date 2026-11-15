@@ -2,13 +2,15 @@ import FlashMessage from '@/components/flash-message';
 import { GoalCard, isActive } from '@/components/goals/goal-progress';
 import InputError from '@/components/input-error';
 import { AllCountriesView, GeneralView, type Overview } from '@/components/reports/overview';
+import { InFcfa, type SplitPart, SplitTiles } from '@/components/reports/profit-split';
 import { ReportTabs } from '@/components/reports/report-tabs';
 import { type Trend, TrendCharts } from '@/components/reports/trend-charts';
 import { DeleteButton } from '@/components/row-actions';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/app-layout';
-import { formatFcfa, formatNumber, formatPercent, formatPeriod } from '@/lib/format';
+import { formatNumber, formatPercent, formatPeriod } from '@/lib/format';
+import { currencySymbol, type DisplayCurrency, formatRate, formatRateDate, MoneyProvider, useMoney } from '@/lib/money';
 import { cn } from '@/lib/utils';
 import { type BreadcrumbItem, type GoalProgress, type SharedData } from '@/types';
 import { Deferred, Head, Link, router, usePage } from '@inertiajs/react';
@@ -60,9 +62,7 @@ interface Row {
     profit: number;
     margin: number;
     ad_spend_per_delivered: number;
-    savings: number;
-    pocket: number;
-    reinvestment: number;
+    split: SplitPart[];
 }
 
 interface Entry {
@@ -101,6 +101,8 @@ interface Props {
     entries: Entry[];
     pending?: Pending[];
     trend?: Trend | null;
+    /** Second currency chosen in "Partage et devise", or null for francs CFA only. */
+    currency?: DisplayCurrency | null;
 }
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Mes rapports', href: '/rapports' }];
@@ -175,86 +177,209 @@ const statusHelp: Record<Entry['status'], string> = {
     to_verify: "Ce rapport n'entre pas encore dans le calcul : ouvrez-le pour le vérifier.",
 };
 
-const columns: { key: keyof Row; label: string; help: string; format?: (row: Row) => string }[] = [
-    { key: 'delivered', label: 'Produits livrés', help: 'Nombre de produits remis aux clients', format: (row) => formatNumber(row.delivered) },
-    { key: 'revenue', label: "Chiffre d'affaires", help: 'Argent encaissé à la livraison' },
-    { key: 'purchase_cost', label: "Coût d'achat", help: 'Prix payé au fournisseur pour les produits livrés' },
-    { key: 'ad_spend', label: 'Publicité', help: 'Dépenses Facebook, TikTok, etc. sur la période' },
-    { key: 'closing_fees', label: 'Closing', help: 'Commissions des personnes qui confirment les commandes par téléphone' },
-    { key: 'delivery_fees', label: 'Livraison', help: 'Frais payés aux livreurs' },
-    { key: 'other_fees', label: 'Autres frais', help: 'Toutes les autres dépenses déclarées dans les rapports' },
-    { key: 'profit', label: 'Bénéfice net', help: 'Ce qui reste après toutes les dépenses' },
-    { key: 'savings', label: 'Épargne', help: 'Part du bénéfice à mettre de côté' },
-    { key: 'pocket', label: 'Votre poche', help: 'Part du bénéfice pour vous' },
-    { key: 'reinvestment', label: 'Réinvestissement', help: 'Part du bénéfice à remettre dans le stock et la pub' },
-    { key: 'margin', label: 'Marge', help: "Bénéfice net divisé par le chiffre d'affaires", format: (row) => formatPercent(row.margin) },
+type Column = { key: string; label: string; help: string; value: (row: Row) => number; kind?: 'count' | 'percent' };
+
+const baseColumns: Column[] = [
+    { key: 'delivered', label: 'Produits livrés', help: 'Nombre de produits remis aux clients', value: (row) => row.delivered, kind: 'count' },
+    { key: 'revenue', label: "Chiffre d'affaires", help: 'Argent encaissé à la livraison', value: (row) => row.revenue },
+    { key: 'purchase_cost', label: "Coût d'achat", help: 'Prix payé au fournisseur pour les produits livrés', value: (row) => row.purchase_cost },
+    { key: 'ad_spend', label: 'Publicité', help: 'Dépenses Facebook, TikTok, etc. sur la période', value: (row) => row.ad_spend },
+    {
+        key: 'closing_fees',
+        label: 'Closing',
+        help: 'Commissions des personnes qui confirment les commandes par téléphone',
+        value: (row) => row.closing_fees,
+    },
+    { key: 'delivery_fees', label: 'Livraison', help: 'Frais payés aux livreurs', value: (row) => row.delivery_fees },
+    { key: 'other_fees', label: 'Autres frais', help: 'Toutes les autres dépenses déclarées dans les rapports', value: (row) => row.other_fees },
+    { key: 'profit', label: 'Bénéfice net', help: 'Ce qui reste après toutes les dépenses', value: (row) => row.profit },
 ];
 
-export default function ReportsIndex({ countries, countryId, view = 'country', overview, period, report, entries, pending = [], trend }: Props) {
+/** The detailed columns: the figures, one column per part of the merchant's split, then the margin. */
+function columnsFor(split: SplitPart[]): Column[] {
+    return [
+        ...baseColumns,
+        ...split.map((part, index) => ({
+            key: `split-${index}`,
+            label: part.name,
+            help: `${part.percent} % du bénéfice net, selon votre partage`,
+            value: (row: Row) => row.split[index]?.amount ?? 0,
+        })),
+        {
+            key: 'margin',
+            label: 'Marge',
+            help: "Bénéfice net divisé par le chiffre d'affaires",
+            value: (row: Row) => row.margin,
+            kind: 'percent' as const,
+        },
+    ];
+}
+
+export default function ReportsIndex({
+    countries,
+    countryId,
+    view = 'country',
+    overview,
+    period,
+    report,
+    entries,
+    pending = [],
+    trend,
+    currency = null,
+}: Props) {
     const { goals = [] } = usePage<SharedData>().props;
+    const [inForeign, setInForeign] = useForeignCurrency(currency);
+    const shown = currency && inForeign ? currency : null;
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Rapports" />
-
-            <div className="mx-auto flex w-full max-w-[1240px] flex-col gap-6 px-4 py-6 md:px-8 md:py-8">
-                <header className="flex flex-wrap items-end justify-between gap-4">
-                    <h1 className="text-[28px] font-bold md:text-[32px]">Mes rapports</h1>
-                    {countries.length > 0 && (
-                        <div className="hidden flex-wrap gap-2.5 md:flex">
-                            <Button asChild variant="outline">
-                                <Link href={route('messages.create')} prefetch>
-                                    <MessageSquareText aria-hidden="true" />
-                                    Coller un message WhatsApp
-                                </Link>
-                            </Button>
-                            <Button asChild>
-                                <Link href={route('reports.create')} prefetch>
-                                    <ClipboardPlus aria-hidden="true" />
-                                    Saisir un rapport
-                                </Link>
-                            </Button>
+            <MoneyProvider currency={shown}>
+                <div className="mx-auto flex w-full max-w-[1240px] flex-col gap-6 px-4 py-6 md:px-8 md:py-8">
+                    <header className="flex flex-wrap items-end justify-between gap-4">
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                            <h1 className="text-[28px] font-bold md:text-[32px]">Mes rapports</h1>
+                            {currency && <CurrencySwitch currency={currency} inForeign={inForeign} onChange={setInForeign} />}
                         </div>
-                    )}
-                </header>
-
-                <ReportTabs />
-
-                <FlashMessage />
-
-                {countries.length === 0 ? (
-                    <EmptyAccount />
-                ) : (
-                    <>
-                        <PeriodPicker countries={countries} countryId={countryId} view={view} period={period} />
-
-                        <h2 className="sr-only first-letter:uppercase">{periodTitle(period)}</h2>
-
-                        {view === 'generale' && overview && (
-                            <GeneralView overview={overview} period={period} onShowCountries={() => showView('pays', period)} />
+                        {countries.length > 0 && (
+                            <div className="hidden flex-wrap gap-2.5 md:flex">
+                                <Button asChild variant="outline">
+                                    <Link href={route('messages.create')} prefetch>
+                                        <MessageSquareText aria-hidden="true" />
+                                        Coller un message WhatsApp
+                                    </Link>
+                                </Button>
+                                <Button asChild>
+                                    <Link href={route('reports.create')} prefetch>
+                                        <ClipboardPlus aria-hidden="true" />
+                                        Saisir un rapport
+                                    </Link>
+                                </Button>
+                            </div>
                         )}
-                        {view === 'pays' && overview && <AllCountriesView overview={overview} period={period} />}
-                    </>
-                )}
-                {countries.length > 0 && view === 'country' && (
-                    <>
-                        {pending.length > 0 && <PendingList items={pending} />}
+                    </header>
 
-                        {report && <Summary total={report.total} period={period} trend={trend} />}
+                    <ReportTabs />
 
-                        {goals.length > 0 && <GoalsOverview goals={goals} />}
+                    {shown && <RateNote currency={shown} />}
 
-                        {report && <AgencyTable rows={report.agencies} total={report.total} />}
+                    <FlashMessage />
 
-                        <Deferred data="trend" fallback={<TrendSkeleton />}>
-                            {trend ? <TrendCharts trend={trend} /> : <></>}
-                        </Deferred>
+                    {countries.length === 0 ? (
+                        <EmptyAccount />
+                    ) : (
+                        <>
+                            <PeriodPicker countries={countries} countryId={countryId} view={view} period={period} />
 
-                        <EntryList entries={entries} countryId={countryId} period={period} />
-                    </>
-                )}
-            </div>
+                            <h2 className="sr-only first-letter:uppercase">{periodTitle(period)}</h2>
+
+                            {view === 'generale' && overview && (
+                                <GeneralView overview={overview} period={period} onShowCountries={() => showView('pays', period)} />
+                            )}
+                            {view === 'pays' && overview && <AllCountriesView overview={overview} period={period} />}
+                        </>
+                    )}
+                    {countries.length > 0 && view === 'country' && (
+                        <>
+                            {pending.length > 0 && <PendingList items={pending} />}
+
+                            {report && <Summary total={report.total} period={period} trend={trend} />}
+
+                            {goals.length > 0 && <GoalsOverview goals={goals} />}
+
+                            {report && <AgencyTable rows={report.agencies} total={report.total} />}
+
+                            <Deferred data="trend" fallback={<TrendSkeleton />}>
+                                {trend ? <TrendCharts trend={trend} /> : <></>}
+                            </Deferred>
+
+                            <EntryList entries={entries} countryId={countryId} period={period} />
+                        </>
+                    )}
+                </div>
+            </MoneyProvider>
         </AppLayout>
+    );
+}
+
+const FOREIGN_KEY = 'codcompta-devise';
+
+/** Whether the merchant reads the reports in the second currency; remembered on this device. */
+function useForeignCurrency(currency: DisplayCurrency | null): [boolean, (value: boolean) => void] {
+    const [inForeign, setInForeign] = useState(false);
+
+    useEffect(() => {
+        try {
+            setInForeign(currency !== null && window.localStorage.getItem(FOREIGN_KEY) === currency.code);
+        } catch {
+            // Private browsing: the choice is simply not remembered.
+        }
+    }, [currency]);
+
+    const change = (value: boolean) => {
+        setInForeign(value);
+
+        try {
+            if (value && currency) {
+                window.localStorage.setItem(FOREIGN_KEY, currency.code);
+            } else {
+                window.localStorage.removeItem(FOREIGN_KEY);
+            }
+        } catch {
+            // Private browsing: the choice is simply not remembered.
+        }
+    };
+
+    return [inForeign, change];
+}
+
+/** "F CFA | €": the same figures in the second currency. */
+function CurrencySwitch({ currency, inForeign, onChange }: { currency: DisplayCurrency; inForeign: boolean; onChange: (value: boolean) => void }) {
+    const options = [
+        { value: false, label: 'F CFA', name: 'francs CFA' },
+        { value: true, label: currencySymbol[currency.code], name: currency.code === 'EUR' ? 'euros' : 'dollars' },
+    ];
+
+    return (
+        <div role="group" aria-label="Devise des montants" className="bg-hero inline-flex rounded-xl p-1">
+            {options.map((option) => (
+                <button
+                    key={option.label}
+                    type="button"
+                    aria-pressed={inForeign === option.value}
+                    aria-label={`Montants en ${option.name}`}
+                    onClick={() => onChange(option.value)}
+                    className={cn(
+                        'focus-visible:ring-gold-brand min-h-11 min-w-12 rounded-lg px-3.5 text-sm font-bold transition-colors focus-visible:ring-2 focus-visible:outline-none',
+                        inForeign === option.value ? 'bg-gold-brand text-hero' : 'text-hero-foreground hover:bg-white/10',
+                    )}
+                >
+                    {option.label}
+                </button>
+            ))}
+        </div>
+    );
+}
+
+/** Which rate the amounts use; a warning when today's dollar rate is missing. */
+function RateNote({ currency }: { currency: DisplayCurrency }) {
+    if (currency.code === 'EUR') {
+        return <p className="text-muted-foreground -mt-2 text-sm">Montants convertis au taux fixe de {formatRate(currency)}, arrondis au centime.</p>;
+    }
+
+    if (currency.stale && currency.rate_date) {
+        return (
+            <p role="status" className="bg-warning-bg text-warning-fg flex items-start gap-2 rounded-xl px-4 py-3 text-sm font-semibold">
+                <CircleAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+                Taux du jour indisponible : montants au dernier taux connu, celui du {formatRateDate(currency.rate_date)} ({formatRate(currency)}).
+            </p>
+        );
+    }
+
+    return (
+        <p className="text-muted-foreground -mt-2 text-sm">
+            Montants convertis au taux du {currency.rate_date ? formatRateDate(currency.rate_date) : 'jour'} : {formatRate(currency)}.
+        </p>
     );
 }
 
@@ -313,6 +438,7 @@ function PendingList({ items }: { items: Pending[] }) {
 
 /** Change against the previous period of the same length, in words and with an arrow, never by colour alone. */
 function Change({ now, before, compact = false }: { now: number; before: number; compact?: boolean }) {
+    const { format: formatFcfa } = useMoney();
     if (before === 0) {
         return null;
     }
@@ -348,13 +474,9 @@ function Change({ now, before, compact = false }: { now: number; before: number;
 }
 
 function Summary({ total, period, trend }: { total: Row; period: Period; trend?: Trend | null }) {
+    const { format: formatFcfa } = useMoney();
     // The comparison only makes sense when the charts cover exactly this period.
     const previous = trend && !trend.extended ? trend.previous : null;
-    const shares = [
-        { label: 'Épargne, 40 %', value: total.savings },
-        { label: 'Votre poche, 20 %', value: total.pocket },
-        { label: 'À réinvestir, 40 %', value: total.reinvestment },
-    ];
     const adShare = total.revenue > 0 ? total.ad_spend / total.revenue : 0;
 
     return (
@@ -374,22 +496,11 @@ function Summary({ total, period, trend }: { total: Row; period: Period; trend?:
                     >
                         {formatFcfa(total.profit)}
                     </p>
+                    <InFcfa amount={total.profit} className="text-hero-muted mt-1 text-[15px]" />
                     {total.profit < 0 && <p className="text-on-hero-loss mt-1 text-sm font-semibold">Perte : les dépenses dépassent les ventes.</p>}
                     {previous && <Change now={total.profit} before={previous.profit} />}
                 </div>
-                <div>
-                    <p className="text-hero-muted mb-2.5 text-sm">Comment le partager, selon la règle 40/20/40</p>
-                    <dl className="grid grid-cols-3 gap-2 sm:gap-2.5">
-                        {shares.map((share) => (
-                            <div key={share.label} className="hero-tile rounded-xl p-2.5 sm:p-3">
-                                <dt className="text-hero-muted text-[13px]">{share.label}</dt>
-                                <dd className="text-on-hero-gold mt-1 font-[family-name:var(--font-display)] text-[15px] font-semibold tabular-nums sm:text-lg">
-                                    {formatFcfa(share.value)}
-                                </dd>
-                            </div>
-                        ))}
-                    </dl>
-                </div>
+                <SplitTiles split={total.split} />
             </div>
 
             <dl className="grid grid-cols-2 gap-3">
@@ -422,7 +533,15 @@ function Figure({ label, value, wide = false, children }: { label: string; value
 }
 
 function AgencyTable({ rows, total }: { rows: Row[]; total: Row }) {
-    const cell = (row: Row, column: (typeof columns)[number]) => (column.format ? column.format(row) : formatNumber(row[column.key] as number));
+    const { format: formatFcfa, plain, currency } = useMoney();
+    const columns = columnsFor(total.split);
+    const cell = (row: Row, column: Column) =>
+        column.kind === 'percent'
+            ? formatPercent(column.value(row))
+            : column.kind === 'count'
+              ? formatNumber(column.value(row))
+              : plain(column.value(row));
+    const unit = currency ? (currency.code === 'EUR' ? 'en euros' : 'en dollars') : 'en francs CFA';
     const ranked = [...rows].sort((a, b) => b.profit - a.profit);
     const positiveTotal = ranked.reduce((sum, row) => sum + Math.max(0, row.profit), 0);
 
@@ -434,7 +553,7 @@ function AgencyTable({ rows, total }: { rows: Row[]; total: Row }) {
 
             <div className="mt-3 overflow-x-auto">
                 <table className="w-full min-w-[680px] text-[15px]">
-                    <caption className="sr-only">Résultats par agence, en francs CFA, classés par bénéfice net</caption>
+                    <caption className="sr-only">Résultats par agence, {unit}, classés par bénéfice net</caption>
                     <thead className="text-muted-foreground text-left text-[13px]">
                         <tr>
                             <th scope="col" className="px-2 py-2.5 font-bold">
@@ -510,7 +629,7 @@ function AgencyTable({ rows, total }: { rows: Row[]; total: Row }) {
                 </summary>
                 <div className="overflow-x-auto pb-3">
                     <table className="w-full min-w-[960px] text-sm">
-                        <caption className="sr-only">Détail complet par agence, en francs CFA</caption>
+                        <caption className="sr-only">Détail complet par agence, {unit}</caption>
                         <thead className="text-muted-foreground text-left text-[13px]">
                             <tr>
                                 <th scope="col" className="px-2 py-2.5 font-bold">
@@ -579,13 +698,17 @@ function EntryList({ entries, countryId, period }: { entries: Entry[]; countryId
     const [all, setAll] = useState(false);
     // Newest first: the report just added is the one the merchant looks for.
     const shown = (all ? [...entries] : entries.slice(-ENTRIES_SHOWN)).reverse();
+    const { currency } = useMoney();
 
     return (
         <section aria-labelledby="entries" className="space-y-3">
-            <div className="flex items-center justify-between gap-4">
+            <div className="flex flex-col gap-1">
                 <h2 id="entries" className="text-lg font-semibold">
                     Rapports reçus sur la période
                 </h2>
+                {currency && entries.length > 0 && (
+                    <p className="text-muted-foreground text-sm">Montants en francs CFA, tels que reçus des agences.</p>
+                )}
             </div>
 
             {entries.length === 0 ? (

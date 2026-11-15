@@ -61,7 +61,7 @@ it('additionne tous les pays sans conversion dans la vue générale', function (
             ->where('overview.total.delivered', 14)
             // 140 000 − 42 000 bought − 10 000 of ad.
             ->where('overview.total.profit', 88000)
-            ->where('overview.total.savings', 35200)
+            ->where('overview.total.split.0.amount', 35200)
             ->where('overview.previous_profit', 14000)
             ->where('overview.countries.0.name', 'Togo')
             ->where('overview.countries.0.profit', 60000)

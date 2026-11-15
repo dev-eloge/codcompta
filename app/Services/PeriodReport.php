@@ -61,7 +61,7 @@ class PeriodReport
             'direct_ad_spend' => $adSpends->where('agency_id', $agency->id)->sum('amount') + ($productAdByAgency[$agency->id] ?? 0),
         ])->values()->all();
 
-        $calculator = new ProfitCalculator(allocator: $this->allocator, shares: $country->merchant->profitShares());
+        $calculator = new ProfitCalculator(allocator: $this->allocator, split: $country->merchant->profitSplit());
 
         return $calculator->forAgencies(
             $rows,

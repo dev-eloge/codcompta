@@ -1,5 +1,7 @@
+import { InFcfa, type SplitPart, SplitTiles } from '@/components/reports/profit-split';
 import { adPlatformLabel } from '@/lib/ad-platforms';
-import { formatFcfa, formatNumber, formatPercent } from '@/lib/format';
+import { formatNumber, formatPercent } from '@/lib/format';
+import { useMoney } from '@/lib/money';
 import { cn } from '@/lib/utils';
 import { Link } from '@inertiajs/react';
 import { ArrowDownRight, ArrowUpRight, ChevronRight, CircleAlert } from 'lucide-react';
@@ -25,9 +27,7 @@ export interface Overview {
         delivered: number;
         profit: number;
         margin: number;
-        savings: number;
-        pocket: number;
-        reinvestment: number;
+        split: SplitPart[];
     };
     previous_profit: number;
     countries: CountryResult[];
@@ -151,11 +151,7 @@ function Figure({ label, value, children }: { label: string; value: string; chil
 export function GeneralView({ overview, period, onShowCountries }: { overview: Overview; period: OverviewPeriod; onShowCountries: () => void }) {
     const { total } = overview;
     const count = overview.countries.length;
-    const shares = [
-        { label: 'Épargne, 40 %', value: total.savings },
-        { label: 'Votre poche, 20 %', value: total.pocket },
-        { label: 'À réinvestir, 40 %', value: total.reinvestment },
-    ];
+    const { format: formatFcfa } = useMoney();
     const bestProduct = Math.max(1, ...overview.products.map((product) => product.profit));
 
     return (
@@ -174,6 +170,7 @@ export function GeneralView({ overview, period, onShowCountries }: { overview: O
                         >
                             {formatFcfa(total.profit)}
                         </p>
+                        <InFcfa amount={total.profit} className="text-hero-muted mt-1 text-[15px]" />
                         {overview.previous_profit !== 0 && (
                             <p className="mt-3 flex flex-wrap items-center gap-2 text-[15px]">
                                 <ChangeBadge now={total.profit} before={overview.previous_profit} onHero />
@@ -183,19 +180,7 @@ export function GeneralView({ overview, period, onShowCountries }: { overview: O
                             </p>
                         )}
                     </div>
-                    <div>
-                        <p className="text-hero-muted mb-2.5 text-sm">Comment le partager, selon la règle 40/20/40</p>
-                        <dl className="grid grid-cols-3 gap-2 sm:gap-2.5">
-                            {shares.map((share) => (
-                                <div key={share.label} className="hero-tile rounded-xl p-2.5 sm:p-3">
-                                    <dt className="text-hero-muted text-[13px]">{share.label}</dt>
-                                    <dd className="text-on-hero-gold mt-1 font-[family-name:var(--font-display)] text-[15px] font-semibold tabular-nums sm:text-lg">
-                                        {formatFcfa(share.value)}
-                                    </dd>
-                                </div>
-                            ))}
-                        </dl>
-                    </div>
+                    <SplitTiles split={total.split} />
                 </div>
 
                 <dl className="grid grid-cols-2 gap-3">
@@ -353,6 +338,7 @@ export function GeneralView({ overview, period, onShowCountries }: { overview: O
  */
 export function AllCountriesView({ overview, period }: { overview: Overview; period: OverviewPeriod }) {
     const { total } = overview;
+    const { format: formatFcfa } = useMoney();
 
     return (
         <>
@@ -473,6 +459,7 @@ function CompareRow({
     row: { revenue: number; ad_spend: number; delivered: number; profit: number };
     isTotal?: boolean;
 }) {
+    const { format: formatFcfa } = useMoney();
     const perDelivery = row.delivered > 0 ? Math.round(row.profit / row.delivered) : null;
     const cell = 'px-2 py-3 text-right tabular-nums';
 

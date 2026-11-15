@@ -10,6 +10,7 @@ use App\Models\Country;
 use App\Models\Product;
 use App\Models\RawMessage;
 use App\Models\Report;
+use App\Services\DisplayCurrency;
 use App\Services\MerchantOverview;
 use App\Services\Parsing\ProductMatcher;
 use App\Services\PendingItems;
@@ -44,6 +45,7 @@ class ReportController extends Controller
         ResultsTrend $trend,
         PendingItems $pendingItems,
         MerchantOverview $overview,
+        DisplayCurrency $displayCurrency,
     ): Response {
         $merchant = $this->merchantOf($request);
 
@@ -117,6 +119,7 @@ class ReportController extends Controller
                 'overview' => $overview->forMerchant($merchant, $period),
                 'report' => null,
                 'entries' => [],
+                'currency' => $displayCurrency->forMerchant($merchant),
             ]);
         }
 
@@ -153,6 +156,7 @@ class ReportController extends Controller
             'entries' => $entries,
             'pending' => $country === null ? [] : $pendingItems->forCountry($country),
             'overview' => null,
+            'currency' => $displayCurrency->forMerchant($merchant),
             // Deferred: the page shows the results first, the small charts arrive right after.
             'trend' => Inertia::defer(fn () => $country === null ? null : $trend->forCountry($country, $period)),
         ]);

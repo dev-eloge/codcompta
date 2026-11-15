@@ -90,9 +90,7 @@ class MerchantOverview
             'margin' => $revenue === 0 ? 0.0 : $profit / $revenue,
         ];
 
-        foreach ($merchant->profitShares() as $name => $percent) {
-            $total[$name] = (int) round($profit * $percent / 100);
-        }
+        $total['split'] = $merchant->profitSplit()->of($profit);
 
         return $total;
     }

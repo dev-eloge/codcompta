@@ -1,4 +1,5 @@
-import { formatFcfa, formatNumber } from '@/lib/format';
+import { formatNumber } from '@/lib/format';
+import { useMoney } from '@/lib/money';
 import { cn } from '@/lib/utils';
 import { Minus, TrendingDown, TrendingUp } from 'lucide-react';
 import { useState } from 'react';
@@ -25,11 +26,18 @@ export interface Trend {
 
 type Measure = 'revenue' | 'profit' | 'delivered';
 
-const measures: { key: Measure; title: string; format: (value: number) => string }[] = [
-    { key: 'revenue', title: "Chiffre d'affaires", format: formatFcfa },
-    { key: 'profit', title: 'Bénéfice net', format: formatFcfa },
-    { key: 'delivered', title: 'Produits livrés', format: formatNumber },
-];
+type MeasureDef = { key: Measure; title: string; format: (value: number) => string };
+
+/** Amounts follow the currency chosen on the page; counts stay plain numbers. */
+function useMeasures(): MeasureDef[] {
+    const { format } = useMoney();
+
+    return [
+        { key: 'revenue', title: "Chiffre d'affaires", format },
+        { key: 'profit', title: 'Bénéfice net', format },
+        { key: 'delivered', title: 'Produits livrés', format: formatNumber },
+    ];
+}
 
 const dayFormat = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short', timeZone: 'UTC' });
 const monthFormat = new Intl.DateTimeFormat('fr-FR', { month: 'short', year: 'numeric', timeZone: 'UTC' });
@@ -54,6 +62,7 @@ const bucketNames: Record<Bucket, string> = { day: 'jour', week: 'semaine', mont
  * (or week, or month), each compared with the same length of time just before.
  */
 export function TrendCharts({ trend }: { trend: Trend }) {
+    const measures = useMeasures();
     const days = Math.round((utc(trend.to).getTime() - utc(trend.from).getTime()) / 86_400_000) + 1;
 
     return (
@@ -79,7 +88,7 @@ export function TrendCharts({ trend }: { trend: Trend }) {
     );
 }
 
-function TrendCard({ trend, measure, days }: { trend: Trend; measure: (typeof measures)[number]; days: number }) {
+function TrendCard({ trend, measure, days }: { trend: Trend; measure: MeasureDef; days: number }) {
     const [hovered, setHovered] = useState<number | null>(null);
     const values = trend.points.map((point) => point[measure.key]);
     const total = trend.totals[measure.key];

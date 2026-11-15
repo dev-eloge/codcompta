@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use InvalidArgumentException;
+use App\Support\ProfitSplit;
 
 /**
  * Computes profit, margin and profit split for a set of agencies over one period.
@@ -14,16 +14,16 @@ class ProfitCalculator
 {
     private const AMOUNT_KEYS = ['delivered', 'revenue', 'purchase_cost', 'closing_fees', 'delivery_fees', 'other_fees', 'direct_ad_spend'];
 
+    private readonly ProfitSplit $split;
+
     /**
-     * @param  array{savings: int, pocket: int, reinvestment: int}  $shares  Profit split in percent (RG-03).
+     * @param  ProfitSplit|null  $split  How the merchant cuts the profit (RG-03); 40/20/40 when not given.
      */
     public function __construct(
         private readonly AdSpendAllocator $allocator = new AdSpendAllocator,
-        private readonly array $shares = ['savings' => 40, 'pocket' => 20, 'reinvestment' => 40],
+        ?ProfitSplit $split = null,
     ) {
-        if (array_sum($this->shares) !== 100) {
-            throw new InvalidArgumentException('Les parts de répartition doivent faire 100 %.');
-        }
+        $this->split = $split ?? ProfitSplit::default();
     }
 
     /**
@@ -84,9 +84,7 @@ class ProfitCalculator
         $row['margin'] = $row['revenue'] === 0 ? 0.0 : $profit / $row['revenue'];
         $row['ad_spend_per_delivered'] = $row['delivered'] === 0 ? 0 : (int) round($row['ad_spend'] / $row['delivered']);
 
-        foreach ($this->shares as $name => $percent) {
-            $row[$name] = (int) round($profit * $percent / 100);
-        }
+        $row['split'] = $this->split->of($profit);
 
         return $row;
     }

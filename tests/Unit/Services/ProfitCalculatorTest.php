@@ -1,6 +1,7 @@
 <?php
 
 use App\Services\ProfitCalculator;
+use App\Support\ProfitSplit;
 
 /*
  * Test de référence (données fictives de démonstration) :
@@ -36,9 +37,8 @@ it('calcule la marge sur le chiffre d\'affaires (RG-02)', function () {
 it('répartit le bénéfice en épargne, poche et réinvestissement (RG-03)', function () {
     $total = demoWeek()['total'];
 
-    expect($total['savings'])->toBe(131200)
-        ->and($total['pocket'])->toBe(65600)
-        ->and($total['reinvestment'])->toBe(131200);
+    expect(array_column($total['split'], 'amount'))->toBe([131200, 65600, 131200])
+        ->and(array_column($total['split'], 'name'))->toBe(['Épargne', 'Votre poche', 'À réinvestir']);
 });
 
 it('garde la répartition sur un bénéfice négatif, comme le Sheet actuel', function () {
@@ -47,7 +47,7 @@ it('garde la répartition sur un bénéfice négatif, comme le Sheet actuel', fu
     ], sharedAdSpend: 6500)['total'];
 
     expect($total['profit'])->toBe(-6500)
-        ->and($total['savings'])->toBe(-2600)
+        ->and($total['split'][0]['amount'])->toBe(-2600)
         ->and($total['margin'])->toBe(0.0);
 });
 
@@ -63,5 +63,22 @@ it('ajoute la pub payée directement par une agence à sa part de pub partagée'
 });
 
 it('refuse des parts de répartition qui ne font pas 100 %', function () {
-    new ProfitCalculator(shares: ['savings' => 50, 'pocket' => 20, 'reinvestment' => 40]);
+    new ProfitSplit([['name' => 'Épargne', 'percent' => 50], ['name' => 'Stock', 'percent' => 40]]);
 })->throws(InvalidArgumentException::class);
+
+it('refuse un partage d\'une seule part ou de plus de 5 parts', function () {
+    new ProfitSplit([['name' => 'Tout', 'percent' => 100]]);
+})->throws(InvalidArgumentException::class);
+
+it('suit la règle propre du marchand, avec des parts qui tombent juste au franc près', function () {
+    $split = new ProfitSplit([
+        ['name' => 'Épargne', 'percent' => 30],
+        ['name' => 'Mon salaire', 'percent' => 20],
+        ['name' => 'Budget pub', 'percent' => 35],
+        ['name' => 'Stock', 'percent' => 15],
+    ]);
+    $total = (new ProfitCalculator(split: $split))->forAgencies([['revenue' => 100001]])['total'];
+
+    expect(array_column($total['split'], 'amount'))->toBe([30000, 20000, 35001, 15000])
+        ->and(array_sum(array_column($total['split'], 'amount')))->toBe(100001);
+});
