@@ -99,9 +99,44 @@ class ReportRecorder
     {
         DB::transaction(function () use ($report) {
             $agency = $report->agency;
+            $this->releaseAds($report);
             $report->delete();
             $this->refreshLastReport($agency);
         });
+    }
+
+    /**
+     * The ads typed in a deleted report stop counting. An ad of its own agency, or with no product,
+     * goes with it. An ad shared by the country moves to another counted report that delivered the
+     * product on its days, so the other agency keeps it; when there is none, it goes too.
+     */
+    private function releaseAds(Report $report): void
+    {
+        foreach ($report->adSpends()->get() as $ad) {
+            if ($ad->product_id === null || $ad->agency_id !== null) {
+                $ad->delete();
+
+                continue;
+            }
+
+            $heir = Report::query()
+                ->whereKeyNot($report->id)
+                ->whereIn('agency_id', Agency::query()->where('country_id', $ad->country_id)->whereKeyNot($report->agency_id)->select('id'))
+                ->counted()
+                ->whereDate('period_start', '<=', $ad->period_end)
+                ->whereDate('period_end', '>=', $ad->period_start)
+                ->whereHas('lines', fn ($query) => $query->where('product_id', $ad->product_id))
+                ->orderBy('id')
+                ->first();
+
+            if ($heir === null) {
+                $ad->delete();
+
+                continue;
+            }
+
+            $ad->update(['report_id' => $heir->id]);
+        }
     }
 
     /**

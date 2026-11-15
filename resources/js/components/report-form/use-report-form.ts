@@ -331,6 +331,7 @@ export function useReportForm({ agencies, products, today, sharedAds, report }: 
 
     transform((current) => ({
         ...current,
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         lines: current.lines.map(({ auto: _auto, ...line }) => line),
         ads: adsToSend(current),
         ...(isTeam && selectedAgency

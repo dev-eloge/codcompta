@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Frais du jour, ma propre équipe</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&amp;family=Sora:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F3F7F5;font-family:Manrope,system-ui,sans-serif;color:#0B2A33}
+*{box-sizing:border-box}
+h1,h2,h3,.sora{font-family:Sora,system-ui,sans-serif}
+.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+button,a{cursor:pointer}
+a{color:#0F7A60}
+.input{min-height:52px;border-radius:12px;border:1px solid #C9D7D1;background:#FFFFFF;padding:0 14px;font:600 17px Manrope,sans-serif;color:#0B2A33;width:100%}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-size:14px;font-weight:700}
+.step{width:52px;height:52px;border:0;background:transparent;font:700 22px Manrope,sans-serif;color:#0B2A33}
+.icon-btn{width:48px;height:48px;border-radius:12px;border:1px solid #E1EAE6;background:#FFFFFF;display:grid;place-items:center}
+</style>
+</helmet>
+<div style="width: 390px; min-height: 100vh; position: relative; padding-bottom: 120px">
+
+<header style="background: #FFFFFF; border-bottom: 1px solid #E1EAE6; padding: 8px 8px 14px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; align-items: center; gap: 6px">
+<button class="icon-btn" aria-label="Quitter la saisie" style="border: 0"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0B2A33" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+<h1 style="margin: 0; font-size: 19px">Nouveau rapport</h1>
+<span style="margin-left: auto; padding-right: 8px; font-size: 14px; font-weight: 700; color: #4A5E63">Étape 4 sur 4</span>
+</div>
+<ol aria-label="Étapes" style="margin: 0; padding: 0 8px; list-style: none; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px">
+<li style="display: flex; flex-direction: column; gap: 6px"><span aria-hidden="true" style="height: 4px; border-radius: 99px; background: #0F7A60"></span><span style="font-size: 12px; font-weight: 700; color: #0B5E4A">Qui livre</span></li>
+<li style="display: flex; flex-direction: column; gap: 6px"><span aria-hidden="true" style="height: 4px; border-radius: 99px; background: #0F7A60"></span><span style="font-size: 12px; font-weight: 700; color: #0B5E4A">Produits</span></li>
+<li style="display: flex; flex-direction: column; gap: 6px"><span aria-hidden="true" style="height: 4px; border-radius: 99px; background: #0F7A60"></span><span style="font-size: 12px; font-weight: 700; color: #0B5E4A">Pub</span></li>
+<li aria-current="step" style="display: flex; flex-direction: column; gap: 6px"><span aria-hidden="true" style="height: 4px; border-radius: 99px; background: #0F7A60"></span><span style="font-size: 12px; font-weight: 700; color: #0B2A33">Frais</span></li>
+</ol>
+</header>
+
+<main style="padding: 16px; display: flex; flex-direction: column; gap: 14px">
+<p style="margin: 0; display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 15px; background: #FFFFFF; border: 1px solid #E1EAE6; border-radius: 12px; padding: 4px 4px 4px 14px"><span><strong>Mon équipe</strong>, mardi 3 novembre</span><a href="#" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 10px; font-weight: 700">Modifier</a></p>
+<h2 style="margin: 6px 0 0; font-size: 22px">Frais du jour</h2>
+
+<section aria-labelledby="who-d" style="background: #FFFFFF; border: 1px solid #E1EAE6; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 4px">
+<h3 id="who-d" style="margin: 0 0 6px; font-family: Manrope, sans-serif; font-size: 16px; font-weight: 700">Qui a livré aujourd'hui ?</h3>
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 56px; border-top: 1px solid #E8EFEC">
+<span><strong style="display: block; font-size: 15px">Livreur 1</strong><span class="num" style="font-size: 13px; color: #4A5E63">1 000 F par livraison</span></span>
+<div style="display: flex; align-items: center; border: 1px solid #C9D7D1; border-radius: 12px"><button class="step" aria-label="Une livraison de moins" style="width: 44px; height: 44px">−</button><span class="num" style="min-width: 28px; text-align: center; font-weight: 700; font-size: 17px">3</span><button class="step" aria-label="Une livraison de plus" style="width: 44px; height: 44px">+</button></div>
+</div>
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 56px; border-top: 1px solid #E8EFEC">
+<span><strong style="display: block; font-size: 15px">Livreur 2</strong><span style="font-size: 13px; color: #4A5E63">Payé au mois</span></span>
+<div style="display: flex; align-items: center; border: 1px solid #C9D7D1; border-radius: 12px"><button class="step" aria-label="Une livraison de moins" style="width: 44px; height: 44px">−</button><span class="num" style="min-width: 28px; text-align: center; font-weight: 700; font-size: 17px">2</span><button class="step" aria-label="Une livraison de plus" style="width: 44px; height: 44px">+</button></div>
+</div>
+<p class="num" style="margin: 6px 0 0; font-size: 14px; font-weight: 700; color: #33505A">5 livraisons sur 5, à payer : 3 000 F</p>
+</section>
+
+<section aria-labelledby="who-c" style="background: #FFFFFF; border: 1px solid #E1EAE6; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 4px">
+<h3 id="who-c" style="margin: 0 0 6px; font-family: Manrope, sans-serif; font-size: 16px; font-weight: 700">Qui a confirmé les commandes ?</h3>
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 56px; border-top: 1px solid #E8EFEC">
+<span><strong style="display: block; font-size: 15px">Closeuse 1</strong><span class="num" style="font-size: 13px; color: #4A5E63">500 F par commande livrée</span></span>
+<div style="display: flex; align-items: center; border: 1px solid #C9D7D1; border-radius: 12px"><button class="step" aria-label="Une de moins" style="width: 44px; height: 44px">−</button><span class="num" style="min-width: 28px; text-align: center; font-weight: 700; font-size: 17px">3</span><button class="step" aria-label="Une de plus" style="width: 44px; height: 44px">+</button></div>
+</div>
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 56px; border-top: 1px solid #E8EFEC">
+<span><strong style="display: block; font-size: 15px">Closeuse 2</strong><span class="num" style="font-size: 13px; color: #4A5E63">Payée au mois</span></span>
+<div style="display: flex; align-items: center; border: 1px solid #C9D7D1; border-radius: 12px"><button class="step" aria-label="Une de moins" style="width: 44px; height: 44px">−</button><span class="num" style="min-width: 28px; text-align: center; font-weight: 700; font-size: 17px">2</span><button class="step" aria-label="Une de plus" style="width: 44px; height: 44px">+</button></div>
+</div>
+<p class="num" style="margin: 6px 0 0; font-size: 14px; font-weight: 700; color: #33505A">5 commandes livrées, à payer : 1 500 F</p>
+</section>
+
+<div class="field"><label for="carb">Carburant (F)</label><input id="carb" class="input num" inputmode="numeric" value="2 000"></div>
+
+<p style="margin: 0; font-size: 13px; color: #4A5E63">Les salaires du mois et la moto sont comptés une fois par mois, pas ici.</p>
+</main>
+
+<div style="position: absolute; left: 0; right: 0; bottom: 0; background: #FFFFFF; border-top: 1px solid #E1EAE6; padding: 12px 16px 20px; display: flex; align-items: center; gap: 12px">
+<div style="flex: 1; min-width: 0"><p style="margin: 0; font-size: 13px; color: #4A5E63">Bénéfice du jour</p><p class="sora num" aria-live="polite" style="margin: 2px 0 0; font-size: 22px; font-weight: 700">23 500 F</p></div>
+<button style="min-height: 52px; padding: 0 18px; border: 0; border-radius: 12px; background: #0F7A60; color: #FFFFFF; font: 700 16px Manrope,sans-serif; display: flex; align-items: center; gap: 8px">Enregistrer<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></button>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":960}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

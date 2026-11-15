@@ -305,13 +305,13 @@ export function GeneralView({ overview, period, onShowCountries }: { overview: O
                                     <th scope="col" className="py-2 font-semibold">
                                         Pub sur
                                     </th>
-                                    <th scope="col" className="py-2 text-right font-semibold">
+                                    <th scope="col" className="py-2 pl-3 text-right font-semibold whitespace-nowrap">
                                         Pub
                                     </th>
-                                    <th scope="col" className="py-2 text-right font-semibold">
+                                    <th scope="col" className="py-2 pl-3 text-right font-semibold whitespace-nowrap">
                                         Livrés
                                     </th>
-                                    <th scope="col" className="py-2 text-right font-semibold">
+                                    <th scope="col" className="py-2 pl-3 text-right font-semibold whitespace-nowrap">
                                         Par livré
                                     </th>
                                 </tr>
@@ -322,9 +322,9 @@ export function GeneralView({ overview, period, onShowCountries }: { overview: O
                                         <th scope="row" className="py-2.5 pr-2 text-left font-semibold">
                                             {adPlatformLabel(row.platform)}
                                         </th>
-                                        <td className="py-2.5 text-right tabular-nums">{formatFcfa(row.ad_spend)}</td>
-                                        <td className="py-2.5 text-right tabular-nums">{formatNumber(row.delivered)}</td>
-                                        <td className="py-2.5 text-right font-bold tabular-nums">
+                                        <td className="py-2.5 pl-3 text-right whitespace-nowrap tabular-nums">{formatFcfa(row.ad_spend)}</td>
+                                        <td className="py-2.5 pl-3 text-right whitespace-nowrap tabular-nums">{formatNumber(row.delivered)}</td>
+                                        <td className="py-2.5 pl-3 text-right font-bold whitespace-nowrap tabular-nums">
                                             {row.cost_per_delivery === null ? 'Pas de donnée' : formatFcfa(row.cost_per_delivery)}
                                         </td>
                                     </tr>

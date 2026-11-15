@@ -741,7 +741,7 @@ function CollapsedRow({
             {icons[icon]}
             <div className="min-w-0 flex-1">
                 <p className="truncate font-bold">{title}</p>
-                <p className="text-muted-foreground truncate text-sm tabular-nums">
+                <p className="text-muted-foreground text-sm break-words tabular-nums">
                     {icon === 'error' ? <span className="text-danger-fg font-semibold">À corriger. </span> : null}
                     {detail}
                 </p>

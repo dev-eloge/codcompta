@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Qui livre vos commandes</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&amp;family=Sora:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F3F7F5;font-family:Manrope,system-ui,sans-serif;color:#0B2A33}
+*{box-sizing:border-box}
+h1,h2,h3,.sora{font-family:Sora,system-ui,sans-serif}
+.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+a{color:#0F7A60}a:hover{color:#0B5E4A}
+button,a,select{cursor:pointer}
+a:focus-visible,button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid #5FD3B0;outline-offset:2px}
+.nav a{display:flex;align-items:center;gap:12px;min-height:44px;padding:0 12px;border-radius:12px;color:#33505A;text-decoration:none;font-weight:600;font-size:15px}
+.nav a:hover{background:#E8F3EF;color:#0B2A33}
+.nav a[aria-current="page"]{background:#0F8A6C;color:#FFFFFF}
+.card{background:#FFFFFF;border:1px solid #E1EAE6;border-radius: 16px}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-weight:700;font-size:14px}
+.input{min-height:48px;border-radius:12px;border:1px solid #C9D7D1;background:#FFFFFF;padding:0 14px;font:600 16px Manrope,sans-serif;color:#0B2A33;width:100%}
+.help{margin:0;font-size:13px;color:#4A5E63}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:0 18px;border-radius:12px;font:700 15px Manrope,sans-serif;text-decoration:none;border:1px solid transparent}
+.btn-primary{background:#0F8A6C;color:#FFFFFF}.btn-primary:hover{background:#0C7259;color:#FFFFFF}
+.btn-ghost{background:#FFFFFF;border-color:#D5E1DC;color:#0B2A33}.btn-ghost:hover{background:#EEF5F2;color:#0B2A33}
+.step{width:44px;height:48px;border:0;background:transparent;font:700 20px Manrope,sans-serif;color:#0B2A33}
+</style>
+</helmet>
+<div style="display: flex; flex-wrap: wrap; min-height: 100vh; width: 100%">
+
+<nav aria-label="Menu principal" style="flex: 1 1 248px; max-width: 280px; background: #FFFFFF; border-right: 1px solid #E1EAE6; padding: 24px 16px; display: flex; flex-direction: column; gap: 28px">
+<a href="#" style="display: flex; align-items: center; gap: 10px; text-decoration: none; padding: 0 8px" aria-label="CODCompta, accueil">
+<svg width="36" height="36" viewBox="0 0 120 120" aria-hidden="true"><rect width="120" height="120" rx="28" fill="#0F8A6C"></rect><g transform="translate(18 18) scale(0.7)"><path d="M85.46 34.54 A36 36 0 1 0 85.46 85.46" stroke="#FFFFFF" stroke-width="24" fill="none"></path><circle cx="92" cy="60" r="15" fill="#F4B23E"></circle></g></svg>
+<span class="sora" style="font-size: 19px; font-weight: 700; color: #0B2A33; letter-spacing: -0.03em">COD<span style="color: #0F8A6C; font-weight: 600">Compta</span></span>
+</a>
+<div class="nav" style="display: flex; flex-direction: column; gap: 4px">
+<p style="margin: 0 0 6px 12px; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #5B6F75">Résultats</p>
+<a href="#">Mes rapports</a>
+<a href="#">Mes objectifs</a>
+</div>
+<div class="nav" style="display: flex; flex-direction: column; gap: 4px">
+<p style="margin: 0 0 6px 12px; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #5B6F75">Ajouter des chiffres</p>
+<a href="#">Saisir un rapport</a>
+<a href="#">Lire un message WhatsApp</a>
+<a href="#">Dépenses publicitaires</a>
+</div>
+<div class="nav" style="display: flex; flex-direction: column; gap: 4px">
+<p style="margin: 0 0 6px 12px; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #5B6F75">Configuration</p>
+<a href="#" aria-current="page">Pays, livraison et produits</a>
+</div>
+</nav>
+
+<main style="flex: 999 1 560px; min-width: 0; padding: 32px clamp(16px, 3vw, 48px) 48px; display: flex; flex-direction: column; gap: 24px; max-width: 1100px">
+<header><h1 style="margin: 0; font-size: 32px; letter-spacing: -0.02em">Togo : mon équipe</h1>
+<p style="margin: 8px 0 0; font-size: 15px; color: #33505A">Dites qui livre et qui confirme vos commandes. Le rapport du jour et les frais s'adaptent.</p></header>
+
+<section class="card" aria-labelledby="who" style="padding: 22px; display: flex; flex-direction: column; gap: 14px">
+<h2 id="who" style="margin: 0; font-size: 18px">Qui livre vos commandes au Togo ?</h2>
+<div role="radiogroup" aria-labelledby="who" style="display: flex; flex-wrap: wrap; gap: 12px">
+<label style="display: flex; align-items: flex-start; gap: 12px; padding: 16px; border-radius: 14px; cursor: pointer; background: #FFFFFF; border: 1px solid #C9D7D1; flex: 1 1 220px"><input type="radio" name="who"  style="width: 20px; height: 20px; margin: 2px 0 0; accent-color: #0F7A60; flex: 0 0 auto"><span><strong style="display: block; font-size: 16px">Une agence de livraison</strong><span class="help" style="display: block; margin-top: 4px; font-size: 14px">Elle garde le stock, livre et vous envoie son rapport.</span></span></label>
+<label style="display: flex; align-items: flex-start; gap: 12px; padding: 16px; border-radius: 14px; cursor: pointer; background: #FFFFFF; border: 2px solid #0F7A60; background: #F4FAF7; flex: 1 1 220px"><input type="radio" name="who" checked style="width: 20px; height: 20px; margin: 2px 0 0; accent-color: #0F7A60; flex: 0 0 auto"><span><strong style="display: block; font-size: 16px">Ma propre équipe</strong><span class="help" style="display: block; margin-top: 4px; font-size: 14px">Vos livreurs, payés par vous. Vous gardez le stock.</span></span></label>
+<label style="display: flex; align-items: flex-start; gap: 12px; padding: 16px; border-radius: 14px; cursor: pointer; background: #FFFFFF; border: 1px solid #C9D7D1; flex: 1 1 220px"><input type="radio" name="who"  style="width: 20px; height: 20px; margin: 2px 0 0; accent-color: #0F7A60; flex: 0 0 auto"><span><strong style="display: block; font-size: 16px">Les deux</strong><span class="help" style="display: block; margin-top: 4px; font-size: 14px">Une partie par vos livreurs, une partie par une agence.</span></span></label>
+</div>
+</section>
+
+<section class="card" aria-labelledby="team" style="padding: 22px; display: flex; flex-direction: column; gap: 6px">
+<div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px">
+<h2 id="team" style="margin: 0; font-size: 18px">Mes livreurs</h2>
+<span class="help" style="font-size: 14px">2 livreurs</span>
+</div>
+<div style="display: grid; grid-template-columns: minmax(160px, 1.2fr) minmax(170px, 1fr) minmax(150px, 1fr) 44px; gap: 12px; align-items: end; padding: 14px 0; border-top: 1px solid #E8EFEC">
+<div class="field"><label for="ln1">Nom</label><input id="ln1" class="input" value="Livreur 1"></div>
+<div class="field"><label for="lm1">Comment il est payé</label><select id="lm1" class="input"><option selected>Par livraison</option><option>Salaire du mois</option><option>Par jour de travail</option></select></div>
+<div class="field"><label for="la1">Par livraison (F)</label><input id="la1" class="input num" inputmode="numeric" value="1 000"></div>
+<button type="button" aria-label="Retirer Livreur 1" style="width: 44px; height: 48px; border-radius: 12px; border: 1px solid #E1EAE6; background: #FFFFFF; display: grid; place-items: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4A5E63" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"></path></svg></button>
+</div>
+<div style="display: grid; grid-template-columns: minmax(160px, 1.2fr) minmax(170px, 1fr) minmax(150px, 1fr) 44px; gap: 12px; align-items: end; padding: 14px 0; border-top: 1px solid #E8EFEC">
+<div class="field"><label for="ln2">Nom</label><input id="ln2" class="input" value="Livreur 2"></div>
+<div class="field"><label for="lm2">Comment il est payé</label><select id="lm2" class="input"><option>Par livraison</option><option selected>Salaire du mois</option><option>Par jour de travail</option></select></div>
+<div class="field"><label for="la2">Salaire du mois (F)</label><input id="la2" class="input num" inputmode="numeric" value="60 000"></div>
+<button type="button" aria-label="Retirer Livreur 2" style="width: 44px; height: 48px; border-radius: 12px; border: 1px solid #E1EAE6; background: #FFFFFF; display: grid; place-items: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4A5E63" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"></path></svg></button>
+</div>
+<button type="button" class="btn btn-ghost" style="align-self: flex-start; margin-top: 10px; border-style: dashed"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>Ajouter un livreur</button>
+</section>
+
+<section class="card" aria-labelledby="closers" style="padding: 22px; display: flex; flex-direction: column; gap: 6px">
+<div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px">
+<div><h2 id="closers" style="margin: 0; font-size: 18px">Mes closeuses</h2>
+<p class="help" style="margin-top: 4px; font-size: 14px">Elles appellent les clients et confirment les commandes.</p></div>
+<span class="help" style="font-size: 14px">2 closeuses</span>
+</div>
+<div style="display: grid; grid-template-columns: minmax(160px, 1.2fr) minmax(170px, 1fr) minmax(150px, 1fr) 44px; gap: 12px; align-items: end; padding: 14px 0; border-top: 1px solid #E8EFEC">
+<div class="field"><label for="cn1">Nom</label><input id="cn1" class="input" value="Closeuse 1"></div>
+<div class="field"><label for="cm1">Comment elle est payée</label><select id="cm1" class="input"><option selected>Par commande livrée</option><option>Par commande confirmée</option><option>Salaire du mois</option><option>Par jour de travail</option></select></div>
+<div class="field"><label for="ca1">Par commande livrée (F)</label><input id="ca1" class="input num" inputmode="numeric" value="500"></div>
+<button type="button" aria-label="Retirer Closeuse 1" style="width: 44px; height: 48px; border-radius: 12px; border: 1px solid #E1EAE6; background: #FFFFFF; display: grid; place-items: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4A5E63" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"></path></svg></button>
+</div>
+<div style="display: grid; grid-template-columns: minmax(160px, 1.2fr) minmax(170px, 1fr) minmax(150px, 1fr) 44px; gap: 12px; align-items: end; padding: 14px 0; border-top: 1px solid #E8EFEC">
+<div class="field"><label for="cn2">Nom</label><input id="cn2" class="input" value="Closeuse 2"></div>
+<div class="field"><label for="cm2">Comment elle est payée</label><select id="cm2" class="input"><option>Par commande livrée</option><option>Par commande confirmée</option><option selected>Salaire du mois</option><option>Par jour de travail</option></select></div>
+<div class="field"><label for="ca2">Salaire du mois (F)</label><input id="ca2" class="input num" inputmode="numeric" value="40 000"></div>
+<button type="button" aria-label="Retirer Closeuse 2" style="width: 44px; height: 48px; border-radius: 12px; border: 1px solid #E1EAE6; background: #FFFFFF; display: grid; place-items: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4A5E63" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"></path></svg></button>
+</div>
+<button type="button" class="btn btn-ghost" style="align-self: flex-start; margin-top: 10px; border-style: dashed"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>Ajouter une closeuse</button>
+</section>
+
+<section class="card" aria-labelledby="fixed" style="padding: 22px; display: flex; flex-direction: column; gap: 14px">
+<div><h2 id="fixed" style="margin: 0; font-size: 18px">Frais fixes du mois</h2>
+<p class="help" style="margin-top: 6px; font-size: 14px">Ce que vous payez chaque mois, même sans livraison. Laissez vide ce qui ne s'applique pas.</p></div>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(160px, 1fr)); gap: 16px">
+<div class="field"><label for="fx1">Location moto (F)</label><input id="fx1" class="input num" value="30 000"></div>
+<div class="field"><label for="fx2">Crédit téléphone (F)</label><input id="fx2" class="input num" value="5 000"></div>
+<div class="field"><label for="fx3">Magasin ou stockage (F)</label><input id="fx3" class="input num" placeholder="0"></div>
+</div>
+<p style="margin: 0; display: flex; gap: 10px; align-items: flex-start; font-size: 14px; line-height: 1.55; color: #1D4E6B; background: #E3EFF7; border-radius: 12px; padding: 12px 14px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true" style="flex: 0 0 auto; margin-top: 2px"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v5M12 8h.01"></path></svg><span>Les salaires et frais fixes (135 000 F ce mois) sont retirés une fois par mois, dans le bénéfice du mois. Le rapport du jour ne demande que ce qui change chaque jour : livraisons, commandes confirmées, carburant.</span></p>
+</section>
+
+<div style="display: flex; gap: 12px"><button type="button" class="btn btn-primary">Enregistrer</button><a href="#" class="btn btn-ghost">Annuler</a></div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1500}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

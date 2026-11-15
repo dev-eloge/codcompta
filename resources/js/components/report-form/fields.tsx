@@ -385,7 +385,7 @@ export function QuantityStepper({
                     value={value}
                     aria-invalid={error ? true : undefined}
                     onChange={(e) => onChange(e.target.value)}
-                    className="h-full min-w-0 flex-1 [appearance:textfield] bg-transparent text-center text-lg font-semibold tabular-nums outline-none [&::-webkit-inner-spin-button]:appearance-none"
+                    className="h-full w-0 min-w-0 flex-1 [appearance:textfield] bg-transparent text-center text-lg font-semibold tabular-nums outline-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
                 <button
                     type="button"

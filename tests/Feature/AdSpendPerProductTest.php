@@ -160,8 +160,35 @@ it('garde la pub partagée quand le rapport qui l\'a notée est supprimé', func
     $this->actingAs($this->user)->delete('/rapports/'.Report::where('agency_id', $this->agency2->id)->value('id'));
 
     expect(AdSpend::count())->toBe(1)
-        ->and(AdSpend::first()->report_id)->toBeNull()
+        ->and(AdSpend::first()->report_id)->toBe(Report::where('agency_id', $this->agency1->id)->value('id'))
         ->and(adSpendOfTheDay())->toBe(['Agence 1' => 3000, 'Agence 2' => 0, 'Total' => 3000]);
+});
+
+it('retire la pub d\'un rapport supprimé quand aucune autre agence ne livre ce produit', function () {
+    postDayReport($this->agency1, [$this->product1->id => 4], [
+        ['product_id' => $this->product1->id, 'platform' => 'facebook', 'amount' => 10500],
+    ]);
+    postDayReport($this->agency2, [$this->product4->id => 2]);
+
+    $this->actingAs($this->user)->delete('/rapports/'.Report::where('agency_id', $this->agency1->id)->value('id'));
+
+    expect(AdSpend::count())->toBe(0)
+        ->and(adSpendOfTheDay())->toBe(['Agence 1' => 0, 'Agence 2' => 0, 'Total' => 0]);
+});
+
+it('retire la pub à part d\'une agence avec son rapport supprimé', function () {
+    postDayReport($this->agency2, [$this->product4->id => 3], [
+        ['product_id' => $this->product4->id, 'platform' => 'facebook', 'amount' => 3000],
+    ]);
+    postDayReport($this->agency1, [$this->product4->id => 1], [
+        ['product_id' => $this->product4->id, 'choice' => 'separate', 'platform' => 'tiktok', 'amount' => 2000],
+    ]);
+
+    $this->actingAs($this->user)->delete('/rapports/'.Report::where('agency_id', $this->agency1->id)->value('id'));
+
+    expect(AdSpend::count())->toBe(1)
+        ->and(AdSpend::first()->amount)->toBe(3000)
+        ->and(adSpendOfTheDay())->toBe(['Agence 1' => 0, 'Agence 2' => 3000, 'Total' => 3000]);
 });
 
 it('répartit encore une ancienne pub sans produit selon le chiffre d\'affaires', function () {

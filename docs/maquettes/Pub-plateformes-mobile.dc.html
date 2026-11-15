@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Quelle pub rapporte le plus, téléphone</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&amp;family=Sora:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F3F7F5;font-family:Manrope,system-ui,sans-serif;color:#0B2A33}
+*{box-sizing:border-box}
+h1,h2,h3,.sora{font-family:Sora,system-ui,sans-serif}
+.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+a{color:#0F7A60}
+button,a{cursor:pointer}
+.chip{flex:0 0 auto;min-height:40px;padding:0 16px;border-radius:999px;border:1px solid #D5E1DC;background:#FFFFFF;font:600 14px Manrope,sans-serif;color:#0B2A33}
+.chip[aria-pressed="true"]{background:#0B2A33;border-color:#0B2A33;color:#FFFFFF}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:56px;font-size:12px;font-weight:700;color:#4A5E63;text-decoration:none}
+.tab[aria-current="page"]{color:#0F7A60}
+.row{display:flex;align-items:center;gap:12px;min-height:64px;padding:10px 14px;background:#FFFFFF;border:1px solid #E1EAE6;border-radius:14px;text-decoration:none;color:#0B2A33}
+</style>
+</helmet>
+<div style="width: 390px; min-height: 100vh; position: relative; padding-bottom: 96px">
+<header style="background: #FFFFFF; border-bottom: 1px solid #E1EAE6; height: 60px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px">
+<h1 style="margin: 0; font-size: 20px">Quelle pub rapporte</h1>
+<button aria-label="Choisir la période, octobre" style="min-height: 44px; padding: 0 12px; border-radius: 12px; border: 1px solid #D5E1DC; background: #FFFFFF; font: 700 14px Manrope,sans-serif; color: #0B2A33; display: flex; align-items: center; gap: 6px">Octobre<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></button>
+</header>
+
+<main style="padding: 14px 16px; display: flex; flex-direction: column; gap: 14px">
+<p style="margin: 0; font-size: 15px; color: #33505A">Togo. Le bénéfice laissé chaque jour, selon où tourne la pub.</p>
+
+<section aria-labelledby="mp1" style="background: #FFFFFF; border: 1px solid #E1EAE6; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 10px">
+<h2 id="mp1" style="margin: 0; font-size: 19px">Produit 1</h2>
+<p style="margin: 0; display: flex; align-items: center; gap: 8px; border-radius: 12px; padding: 10px 12px; background: #DDF2EA; color: #0B5E4A; font-size: 15px; font-weight: 700"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true" style="flex: 0 0 auto"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"></path><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"></path></svg>Le mieux : Facebook et TikTok ensemble</p>
+<ul style="margin: 0; padding: 0; list-style: none">
+<li style="display: flex; flex-direction: column; gap: 6px; padding: 12px 0; border-top: 1px solid #E8EFEC">
+<div style="display: flex; justify-content: space-between; align-items: baseline; gap: 8px"><strong style="font-size: 15px">Facebook et TikTok</strong><span class="num" style="font-size: 15px; font-weight: 700">11 250 F / jour</span></div>
+<div aria-hidden="true" style="height: 8px; border-radius: 99px; background: #EEF5F2; overflow: hidden"><span style="display: block; height: 100%; width: 100%; border-radius: 99px; background: #0F7A60"></span></div>
+<span class="num" style="font-size: 13px; color: #4A5E63">12 jours, 66 livrés, 2 455 F par livraison</span>
+</li>
+<li style="display: flex; flex-direction: column; gap: 6px; padding: 12px 0; border-top: 1px solid #E8EFEC">
+<div style="display: flex; justify-content: space-between; align-items: baseline; gap: 8px"><strong style="font-size: 15px">TikTok</strong><span class="num" style="font-size: 15px; font-weight: 700">8 727 F / jour</span></div>
+<div aria-hidden="true" style="height: 8px; border-radius: 99px; background: #EEF5F2; overflow: hidden"><span style="display: block; height: 100%; width: 78%; border-radius: 99px; background: #7D9097"></span></div>
+<span class="num" style="font-size: 13px; color: #4A5E63">11 jours, 36 livrés, 1 833 F par livraison</span>
+</li>
+<li style="display: flex; flex-direction: column; gap: 6px; padding: 12px 0; border-top: 1px solid #E8EFEC">
+<div style="display: flex; justify-content: space-between; align-items: baseline; gap: 8px"><strong style="font-size: 15px">Facebook</strong><span class="num" style="font-size: 15px; font-weight: 700">7 875 F / jour</span></div>
+<div aria-hidden="true" style="height: 8px; border-radius: 99px; background: #EEF5F2; overflow: hidden"><span style="display: block; height: 100%; width: 70%; border-radius: 99px; background: #7D9097"></span></div>
+<span class="num" style="font-size: 13px; color: #4A5E63">8 jours, 30 livrés, 2 400 F par livraison</span>
+</li>
+</ul>
+</section>
+
+<a href="#" style="display: flex; align-items: center; gap: 12px; min-height: 64px; background: #FFFFFF; border: 1px solid #E1EAE6; border-radius: 16px; padding: 10px 14px; color: inherit; text-decoration: none">
+<span style="flex: 1"><strong style="display: block; font-size: 15px">Produit 4</strong><span style="font-size: 14px; color: #4A5E63">Facebook uniquement, rien à comparer</span></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4A5E63" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></a>
+
+<a href="#" style="display: flex; align-items: center; gap: 12px; min-height: 64px; background: #FFF8EC; border: 1px solid #F3D9A8; border-radius: 16px; padding: 10px 14px; color: inherit; text-decoration: none">
+<span style="flex: 1"><strong style="display: block; font-size: 15px">Produit 2</strong><span style="font-size: 14px; font-weight: 600; color: #7A4A06">3 jours sans plateforme notée</span></span><span style="font-size: 14px; font-weight: 700; color: #0F7A60">Compléter</span></a>
+</main>
+
+<nav aria-label="Navigation" style="position: absolute; left: 0; right: 0; bottom: 0; background: #FFFFFF; border-top: 1px solid #E1EAE6; display: flex; align-items: center; padding: 6px 8px 14px">
+<a href="#" class="tab"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 3v18h18M7 15l4-4 3 3 5-6"></path></svg>Rapports</a>
+<a href="#" class="tab"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5M12 7v5l3 2"></path></svg>Historique</a>
+<a href="#" aria-label="Ajouter un rapport" style="margin: -26px 6px 0; width: 60px; height: 60px; border-radius: 18px; background: #0F7A60; display: grid; place-items: center; flex: 0 0 auto"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></a>
+<a href="#" class="tab"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="5"></circle><circle cx="12" cy="12" r="1"></circle></svg>Objectifs</a>
+<a href="#" class="tab" aria-current="page"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"></path></svg>Plus</a>
+</nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

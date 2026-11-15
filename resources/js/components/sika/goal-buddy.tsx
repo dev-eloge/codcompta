@@ -1,6 +1,7 @@
 import { isActive } from '@/components/goals/goal-progress';
 import { Button } from '@/components/ui/button';
 import { formatFcfa } from '@/lib/format';
+import { cn } from '@/lib/utils';
 import { type GoalProgress, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
 import { X } from 'lucide-react';
@@ -45,6 +46,8 @@ type Moment = { kind: 'nudge'; text: string } | { kind: 'party'; goal: GoalProgr
 export function GoalBuddy() {
     const { goals, auth } = usePage<SharedData>().props;
     const path = usePage().url.split('?')[0];
+    // Typing a report on a phone is a full-screen task: Sika waits until it is done.
+    const onReportEntry = /^\/rapports\/(saisie|\d+\/modifier)/.test(path);
     const [moment, setMoment] = useState<Moment | null>(null);
     const [visible, setVisible] = useState(false);
     const nudgeText = useMemo(() => nudges[Math.floor(Math.random() * nudges.length)], []);
@@ -103,7 +106,10 @@ export function GoalBuddy() {
         <aside
             aria-label={moment.kind === 'nudge' ? 'Suggestion de Sika' : 'Félicitations de Sika'}
             onKeyDown={(event) => event.key === 'Escape' && close()}
-            className="sika-pop fixed right-4 bottom-24 left-4 z-40 flex items-end gap-2 sm:left-auto sm:max-w-sm md:bottom-4"
+            className={cn(
+                'sika-pop fixed right-4 bottom-24 left-4 z-40 flex items-end gap-2 sm:left-auto sm:max-w-sm md:bottom-4',
+                onReportEntry && 'max-md:hidden',
+            )}
         >
             <Sika mood={moment.kind === 'party' ? 'party' : 'nudge'} className="sika-bob size-20 shrink-0 drop-shadow-lg sm:size-24" />
 

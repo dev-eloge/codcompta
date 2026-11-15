@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Quelle plateforme rapporte le plus</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&amp;family=Sora:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F3F7F5;font-family:Manrope,system-ui,sans-serif;color:#0B2A33}
+*{box-sizing:border-box}
+h1,h2,h3,.sora{font-family:Sora,system-ui,sans-serif}
+.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+a{color:#0F7A60}
+button,a,select{cursor:pointer}
+.card{background:#FFFFFF;border:1px solid #E1EAE6;border-radius:16px}
+.seg{display:flex;gap:2px;background:#EEF5F2;border-radius:14px;padding:4px}
+.seg button{min-height:40px;padding:0 14px;border:0;border-radius:10px;background:transparent;font:600 14px Manrope,sans-serif;color:#4A5E63}
+.seg button[aria-pressed="true"]{background:#FFFFFF;color:#0B2A33;font-weight:700;box-shadow:0 1px 2px rgba(11,42,51,.08)}
+table{width:100%;border-collapse:collapse;font-size:15px}
+th,td{padding:12px 10px}
+thead th{font-size:13px;color:#4A5E63;text-align:right;font-weight:700}
+thead th:first-child{text-align:left}
+tbody th{text-align:left;font-weight:700}
+tbody td{text-align:right}
+tbody tr{border-top:1px solid #E8EFEC}
+.bar{height:8px;border-radius:99px;background:#EEF5F2;overflow:hidden}
+.bar span{display:block;height:100%;border-radius:99px}
+</style>
+</helmet>
+<div style="width: 1440px; min-height: 100vh; padding: 40px 120px 56px; display: flex; flex-direction: column; gap: 22px">
+
+<header style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<h1 style="margin: 0; font-size: 32px; letter-spacing: -0.02em">Dépenses publicitaires</h1>
+<nav aria-label="Dépenses publicitaires" style="display: flex; gap: 24px; border-bottom: 1px solid #E1EAE6">
+<a href="#" style="min-height: 44px; display: flex; align-items: center; color: #4A5E63; font-weight: 600; text-decoration: none">Toutes les pubs</a>
+<a href="#" aria-current="page" style="min-height: 44px; display: flex; align-items: center; color: #0B2A33; font-weight: 700; text-decoration: none; border-bottom: 3px solid #0F7A60; margin-bottom: -1px">Quelle plateforme rapporte le plus</a>
+</nav>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center">
+<label for="pays" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Pays</label>
+<select id="pays" style="min-height: 48px; border-radius: 12px; border: 1px solid #C9D7D1; background: #FFFFFF; padding: 0 14px; font: 600 15px Manrope,sans-serif; color: #0B2A33"><option>Togo</option></select>
+<div role="group" aria-label="Période" class="seg"><button aria-pressed="false">Semaine</button><button aria-pressed="true">Mois</button><button aria-pressed="false">Dates au choix</button></div>
+</div>
+</header>
+
+<p style="margin: -4px 0 0; font-size: 15px; color: #33505A">Octobre 2026. Pour chaque produit, ce que rapporte la pub selon qu'elle tourne sur Facebook, sur TikTok ou sur les deux.</p>
+
+<!-- Product with several ways of running ads -->
+<section aria-labelledby="p1" class="card" style="padding: 24px; display: flex; flex-direction: column; gap: 18px">
+<div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px">
+<h2 id="p1" style="margin: 0; font-size: 22px">Produit 1</h2>
+<p style="margin: 0; display: flex; align-items: center; gap: 8px; border-radius: 12px; padding: 8px 14px; background: #DDF2EA; color: #0B5E4A; font-size: 15px; font-weight: 700"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"></path><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"></path></svg>Facebook et TikTok ensemble rapportent le plus : 11 250 F par jour</p>
+</div>
+<table>
+<caption style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Produit 1 en octobre, selon la plateforme de pub</caption>
+<thead><tr><th scope="col">Pub sur</th><th scope="col">Jours</th><th scope="col">Pub payée</th><th scope="col">Commandes</th><th scope="col">Livraisons</th><th scope="col">Coût par livraison</th><th scope="col">Bénéfice après pub</th><th scope="col">Bénéfice par jour</th></tr></thead>
+<tbody>
+<tr><th scope="row">Facebook et TikTok <span style="margin-left: 6px; border-radius: 99px; padding: 2px 8px; font-size: 12px; background: #DDF2EA; color: #0B5E4A">La plus rentable</span></th><td class="num">12</td><td class="num">162 000 F</td><td class="num">92</td><td class="num">66</td><td class="num">2 455 F</td><td class="num">135 000 F</td><td class="num" style="font-weight: 700">11 250 F</td></tr>
+<tr><th scope="row">TikTok</th><td class="num">11</td><td class="num">66 000 F</td><td class="num">50</td><td class="num">36</td><td class="num">1 833 F</td><td class="num">96 000 F</td><td class="num" style="font-weight: 700">8 727 F</td></tr>
+<tr><th scope="row">Facebook</th><td class="num">8</td><td class="num">72 000 F</td><td class="num">42</td><td class="num">30</td><td class="num">2 400 F</td><td class="num">63 000 F</td><td class="num" style="font-weight: 700">7 875 F</td></tr>
+</tbody>
+</table>
+<div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 28px">
+<figure style="margin: 0; display: flex; flex-direction: column; gap: 10px">
+<figcaption style="font-size: 14px; font-weight: 700">Bénéfice par jour (le plus haut est le mieux)</figcaption>
+<div style="display: grid; grid-template-columns: 150px minmax(0, 1fr) 80px; gap: 10px; align-items: center; font-size: 14px"><span>Facebook et TikTok</span><div class="bar"><span style="width: 100%; background: #0F7A60"></span></div><span class="num" style="text-align: right; font-weight: 700">11 250 F</span></div>
+<div style="display: grid; grid-template-columns: 150px minmax(0, 1fr) 80px; gap: 10px; align-items: center; font-size: 14px"><span>TikTok</span><div class="bar"><span style="width: 78%; background: #7D9097"></span></div><span class="num" style="text-align: right; font-weight: 700">8 727 F</span></div>
+<div style="display: grid; grid-template-columns: 150px minmax(0, 1fr) 80px; gap: 10px; align-items: center; font-size: 14px"><span>Facebook</span><div class="bar"><span style="width: 70%; background: #7D9097"></span></div><span class="num" style="text-align: right; font-weight: 700">7 875 F</span></div>
+</figure>
+<figure style="margin: 0; display: flex; flex-direction: column; gap: 10px">
+<figcaption style="font-size: 14px; font-weight: 700">Coût par livraison (le plus bas est le mieux)</figcaption>
+<div style="display: grid; grid-template-columns: 150px minmax(0, 1fr) 80px; gap: 10px; align-items: center; font-size: 14px"><span>TikTok</span><div class="bar"><span style="width: 75%; background: #0F7A60"></span></div><span class="num" style="text-align: right; font-weight: 700">1 833 F</span></div>
+<div style="display: grid; grid-template-columns: 150px minmax(0, 1fr) 80px; gap: 10px; align-items: center; font-size: 14px"><span>Facebook</span><div class="bar"><span style="width: 98%; background: #7D9097"></span></div><span class="num" style="text-align: right; font-weight: 700">2 400 F</span></div>
+<div style="display: grid; grid-template-columns: 150px minmax(0, 1fr) 80px; gap: 10px; align-items: center; font-size: 14px"><span>Facebook et TikTok</span><div class="bar"><span style="width: 100%; background: #7D9097"></span></div><span class="num" style="text-align: right; font-weight: 700">2 455 F</span></div>
+</figure>
+</div>
+<p style="margin: 0; font-size: 15px; color: #33505A">TikTok coûte le moins par livraison, mais les deux ensemble livrent plus chaque jour et laissent plus de bénéfice.</p>
+<p style="margin: 0; display: flex; gap: 10px; align-items: flex-start; font-size: 14px; line-height: 1.55; color: #1D4E6B; background: #E3EFF7; border-radius: 12px; padding: 12px 14px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true" style="flex: 0 0 auto; margin-top: 2px"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v5M12 8h.01"></path></svg><span>On compare les jours entre eux selon la plateforme utilisée ce jour-là. Les livraisons sont donc les vraies livraisons du produit, sans estimation. On regarde le bénéfice par jour, car chaque façon n'a pas tourné le même nombre de jours.</span></p>
+</section>
+
+<!-- Product with one platform -->
+<section aria-labelledby="p4" class="card" style="padding: 24px; display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px">
+<h2 id="p4" style="margin: 0; font-size: 22px">Produit 4</h2>
+<p style="margin: 0; border-radius: 12px; padding: 8px 14px; background: #EEF2F0; color: #33505A; font-size: 15px; font-weight: 700">Une seule plateforme : rien à comparer</p>
+</div>
+<table>
+<caption style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Produit 4 : Facebook en octobre</caption>
+<thead><tr><th scope="col">Pub sur</th><th scope="col">Pub payée</th><th scope="col">Commandes</th><th scope="col">Coût par commande</th><th scope="col">Livraisons</th><th scope="col">Coût par livraison</th><th scope="col">Bénéfice après pub</th></tr></thead>
+<tbody><tr><th scope="row">Facebook</th><td class="num">64 000 F</td><td class="num">40</td><td class="num">1 600 F</td><td class="num">31</td><td class="num" style="font-weight: 700">2 065 F</td><td class="num" style="font-weight: 700">296 375 F</td></tr></tbody>
+</table>
+<p style="margin: 0; font-size: 14px; color: #4A5E63">Pour comparer, essayez TikTok, ou les deux ensemble, pendant une semaine.</p>
+</section>
+
+<!-- Missing data state -->
+<section aria-labelledby="p2" class="card" style="padding: 24px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px">
+<div style="display: flex; flex-direction: column; gap: 4px">
+<h2 id="p2" style="margin: 0; font-size: 22px">Produit 2</h2>
+<p style="margin: 0; display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600; color: #7A4A06"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v5M12 16h.01"></path></svg>3 jours de pub sans plateforme notée : ces jours ne sont pas comptés.</p>
+</div>
+<a href="#" style="display: inline-flex; align-items: center; min-height: 48px; padding: 0 18px; border-radius: 12px; border: 1px solid #D5E1DC; background: #FFFFFF; color: #0B2A33; font-weight: 700; text-decoration: none">Compléter ces 3 jours</a>
+</section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1150}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

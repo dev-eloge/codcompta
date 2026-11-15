@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Saisir un rapport, avec la pub du jour</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&amp;family=Sora:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F3F7F5;font-family:Manrope,system-ui,sans-serif;color:#0B2A33}
+*{box-sizing:border-box}
+h1,h2,h3,.sora{font-family:Sora,system-ui,sans-serif}
+.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+a{color:#0F7A60}a:hover{color:#0B5E4A}
+button,a,select{cursor:pointer}
+a:focus-visible,button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid #5FD3B0;outline-offset:2px}
+.nav a{display:flex;align-items:center;gap:12px;min-height:44px;padding:0 12px;border-radius:12px;color:#33505A;text-decoration:none;font-weight:600;font-size:15px}
+.nav a:hover{background:#E8F3EF;color:#0B2A33}
+.nav a[aria-current="page"]{background:#0F8A6C;color:#FFFFFF}
+.card{background:#FFFFFF;border:1px solid #E1EAE6;border-radius: 16px}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-weight:700;font-size:14px}
+.input{min-height:48px;border-radius:12px;border:1px solid #C9D7D1;background:#FFFFFF;padding:0 14px;font:600 16px Manrope,sans-serif;color:#0B2A33;width:100%}
+.help{margin:0;font-size:13px;color:#4A5E63}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:0 18px;border-radius:12px;font:700 15px Manrope,sans-serif;text-decoration:none;border:1px solid transparent}
+.btn-primary{background:#0F8A6C;color:#FFFFFF}.btn-primary:hover{background:#0C7259;color:#FFFFFF}
+.btn-ghost{background:#FFFFFF;border-color:#D5E1DC;color:#0B2A33}.btn-ghost:hover{background:#EEF5F2;color:#0B2A33}
+.step{width:44px;height:48px;border:0;background:transparent;font:700 20px Manrope,sans-serif;color:#0B2A33}
+</style>
+</helmet>
+<div style="display: flex; flex-wrap: wrap; min-height: 100vh; width: 100%">
+
+<nav aria-label="Menu principal" style="flex: 1 1 248px; max-width: 280px; background: #FFFFFF; border-right: 1px solid #E1EAE6; padding: 24px 16px; display: flex; flex-direction: column; gap: 28px">
+<a href="#" style="display: flex; align-items: center; gap: 10px; text-decoration: none; padding: 0 8px" aria-label="CODCompta, accueil">
+<svg width="36" height="36" viewBox="0 0 120 120" aria-hidden="true"><rect width="120" height="120" rx="28" fill="#0F8A6C"></rect><g transform="translate(18 18) scale(0.7)"><path d="M85.46 34.54 A36 36 0 1 0 85.46 85.46" stroke="#FFFFFF" stroke-width="24" fill="none"></path><circle cx="92" cy="60" r="15" fill="#F4B23E"></circle></g></svg>
+<span class="sora" style="font-size: 19px; font-weight: 700; color: #0B2A33; letter-spacing: -0.03em">COD<span style="color: #0F8A6C; font-weight: 600">Compta</span></span>
+</a>
+<div class="nav" style="display: flex; flex-direction: column; gap: 4px">
+<p style="margin: 0 0 6px 12px; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #5B6F75">Résultats</p>
+<a href="#">Mes rapports</a>
+<a href="#">Mes objectifs</a>
+</div>
+<div class="nav" style="display: flex; flex-direction: column; gap: 4px">
+<p style="margin: 0 0 6px 12px; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #5B6F75">Ajouter des chiffres</p>
+<a href="#" aria-current="page"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>Saisir un rapport</a>
+<a href="#">Lire un message WhatsApp</a>
+<a href="#">Dépenses publicitaires</a>
+</div>
+<div class="nav" style="display: flex; flex-direction: column; gap: 4px">
+<p style="margin: 0 0 6px 12px; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #5B6F75">Configuration</p>
+<a href="#">Pays, agences et produits</a>
+</div>
+</nav>
+
+<main style="flex: 999 1 560px; min-width: 0; padding: 32px clamp(16px, 3vw, 48px) 48px; display: flex; flex-direction: column; gap: 24px; max-width: 1240px">
+<header style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 16px">
+<div>
+<h1 style="margin: 0; font-size: 32px; letter-spacing: -0.02em">Saisir un rapport</h1></div>
+<a href="#" style="display: inline-flex; align-items: center; gap: 8px; font-weight: 700; min-height: 44px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-12.6 7.3L3 20l1.3-5A8.5 8.5 0 1 1 21 11.5z"></path></svg>Plus rapide : coller le message WhatsApp</a>
+</header>
+
+<div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start">
+<form style="flex: 999 1 520px; min-width: 0; display: flex; flex-direction: column; gap: 20px">
+
+<section class="card" aria-labelledby="s1" style="padding: 22px; display: flex; flex-direction: column; gap: 16px">
+<h2 id="s1" style="margin: 0; font-size: 18px; display: flex; align-items: center; gap: 10px"><span aria-hidden="true" class="num" style="width: 28px; height: 28px; border-radius: 99px; background: #0B2A33; color: #FFFFFF; display: grid; place-items: center; font-size: 14px">1</span>Quelle agence, quel jour ?</h2>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px">
+<div class="field"><label for="agency">Agence</label><select id="agency" class="input"><option>Agence 1 (Togo)</option><option>Agence 2 (Togo)</option><option>Agence 3 (Bénin)</option></select></div>
+<div class="field"><label for="day">Date du rapport</label><button id="day" type="button" class="input" style="display: flex; align-items: center; justify-content: space-between; text-align: left">Mardi 3 novembre 2026<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4A5E63" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M16 3v4M8 3v4M3 10h18"></path></svg></button><p class="help">Le rapport couvre plusieurs jours ? <a href="#" style="font-weight: 700">Choisir une période</a></p></div>
+</div>
+</section>
+
+<section class="card" aria-labelledby="s2" style="padding: 22px; display: flex; flex-direction: column; gap: 16px">
+<div><h2 id="s2" style="margin: 0; font-size: 18px; display: flex; align-items: center; gap: 10px"><span aria-hidden="true" class="num" style="width: 28px; height: 28px; border-radius: 99px; background: #0B2A33; color: #FFFFFF; display: grid; place-items: center; font-size: 14px">2</span>Produits livrés</h2></div>
+
+<div style="border: 1px solid #E1EAE6; border-radius: 16px; padding: 16px; display: grid; grid-template-columns: minmax(180px, 1.4fr) 150px minmax(170px, 1fr) 44px; gap: 14px; align-items: start">
+<div class="field"><label for="p1">Produit</label><select id="p1" class="input"><option>Produit 1</option></select><p class="help">Prix d'achat : <span class="num">3 000 F</span> l'unité</p></div>
+<div class="field"><label for="q1">Quantité livrée</label><div style="display: flex; align-items: center; border: 1px solid #C9D7D1; border-radius: 12px; background: #FFFFFF"><button type="button" class="step" aria-label="Retirer un">−</button><input id="q1" value="4" inputmode="numeric" class="num" style="width: 100%; min-width: 0; border: 0; text-align: center; font: 700 18px Manrope,sans-serif; color: #0B2A33; background: transparent; min-height: 46px"><button type="button" class="step" aria-label="Ajouter un">+</button></div></div>
+<div class="field"><label for="a1">Argent encaissé (F)</label><input id="a1" class="input num" value="38 000" aria-describedby="a1-help"><p id="a1-help" class="help"><span class="num">4 × 10 000 F = 40 000 F</span><br><span style="color: #8A4B12; font-weight: 700">Remise de <span class="num">2 000 F</span></span><br><a href="#" style="font-weight: 700">Remettre 40 000 F</a></p></div>
+<button type="button" aria-label="Supprimer la ligne Produit 1" style="margin-top: 28px; width: 44px; height: 48px; border-radius: 12px; border: 1px solid #E1EAE6; background: #FFFFFF; display: grid; place-items: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#B0442C" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"></path></svg></button>
+</div>
+
+<div style="border: 1px solid #E1EAE6; border-radius: 16px; padding: 16px; display: grid; grid-template-columns: minmax(180px, 1.4fr) 150px minmax(170px, 1fr) 44px; gap: 14px; align-items: start">
+<div class="field"><label for="p2">Produit</label><select id="p2" class="input"><option>Produit 4</option></select><p class="help">Prix d'achat : <span class="num">6 000 F</span> l'unité</p></div>
+<div class="field"><label for="q2">Quantité livrée</label><div style="display: flex; align-items: center; border: 1px solid #C9D7D1; border-radius: 12px; background: #FFFFFF"><button type="button" class="step" aria-label="Retirer un">−</button><input id="q2" value="1" inputmode="numeric" class="num" style="width: 100%; min-width: 0; border: 0; text-align: center; font: 700 18px Manrope,sans-serif; color: #0B2A33; background: transparent; min-height: 46px"><button type="button" class="step" aria-label="Ajouter un">+</button></div></div>
+<div class="field"><label for="a2">Argent encaissé (F)</label><input id="a2" class="input num" value="20 000"><p class="help num">1 × 20 000 F</p></div>
+<button type="button" aria-label="Supprimer la ligne Produit 4" style="margin-top: 28px; width: 44px; height: 48px; border-radius: 12px; border: 1px solid #E1EAE6; background: #FFFFFF; display: grid; place-items: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#B0442C" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"></path></svg></button>
+</div>
+
+<button type="button" class="btn btn-ghost" style="align-self: flex-start; border-style: dashed"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>Ajouter un produit</button>
+</section>
+
+<section class="card" aria-labelledby="s-ad" style="padding: 22px; display: flex; flex-direction: column; gap: 16px">
+<div><h2 id="s-ad" style="margin: 0; font-size: 18px; display: flex; align-items: center; gap: 10px"><span aria-hidden="true" class="num" style="width: 28px; height: 28px; border-radius: 99px; background: #0B2A33; color: #FFFFFF; display: grid; place-items: center; font-size: 14px">3</span>Publicité du jour, pour ces produits</h2>
+<p class="help" style="margin-top: 6px">Ce que vous avez payé aujourd'hui pour les produits de ce rapport. Une même pub n'est jamais comptée deux fois.</p></div>
+
+<div style="border: 1px solid #E1EAE6; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 14px">
+<h3 style="margin: 0; font-family: Manrope, sans-serif; font-size: 15px; font-weight: 700">Produit 1</h3>
+<fieldset style="margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: 8px">
+<legend style="padding: 0; margin-bottom: 8px; font-size: 14px; font-weight: 700">Où tourne la pub ?</legend>
+<div role="radiogroup" aria-label="Où tourne la pub" style="display: flex; flex-wrap: wrap; gap: 8px">
+<button type="button" role="radio" aria-checked="false" style="min-height: 44px; padding: 0 16px; border-radius: 12px; font: 600 15px Manrope,sans-serif; display: inline-flex; align-items: center; gap: 8px; border: 1px solid #C9D7D1; background: #FFFFFF; color: #33505A">Facebook</button>
+<button type="button" role="radio" aria-checked="false" style="min-height: 44px; padding: 0 16px; border-radius: 12px; font: 600 15px Manrope,sans-serif; display: inline-flex; align-items: center; gap: 8px; border: 1px solid #C9D7D1; background: #FFFFFF; color: #33505A">TikTok</button>
+<button type="button" role="radio" aria-checked="true" style="min-height: 44px; padding: 0 16px; border-radius: 12px; font: 600 15px Manrope,sans-serif; display: inline-flex; align-items: center; gap: 8px; border: 2px solid #0F7A60; background: #DDF2EA; color: #0B5E4A; font-weight: 700"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg>Facebook et TikTok</button>
+<button type="button" role="radio" aria-checked="false" style="min-height: 44px; padding: 0 16px; border-radius: 12px; font: 600 15px Manrope,sans-serif; display: inline-flex; align-items: center; gap: 8px; border: 1px solid #C9D7D1; background: #FFFFFF; color: #33505A">Autre</button>
+</div>
+</fieldset>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(150px, 1fr)); gap: 12px; align-items: end">
+<div class="field"><label for="ad1-fb">Dépensé sur Facebook (F)</label><input id="ad1-fb" class="input num" inputmode="numeric" value="6 000"></div>
+<div class="field"><label for="ad1-tt">Dépensé sur TikTok (F)</label><input id="ad1-tt" class="input num" inputmode="numeric" value="4 500"></div>
+<div class="field"><label for="ad1-ord">Commandes reçues (les deux)</label><input id="ad1-ord" class="input num" inputmode="numeric" value="14" placeholder="Facultatif"></div>
+</div>
+<div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px">
+<p class="help" style="margin: 0; max-width: 560px">Avec les deux en même temps, on ne sépare pas les commandes : ce produit est suivi comme « Facebook et TikTok » pour ces jours-là.</p>
+<p class="help num" style="margin: 0; font-weight: 700; color: #33505A">Pub du produit : 10 500 F</p>
+</div>
+</div>
+
+<div style="border: 1px solid #E1EAE6; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 12px; background: #F7FAF8">
+<div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px">
+<h3 style="margin: 0; font-family: Manrope, sans-serif; font-size: 15px; font-weight: 700">Produit 4</h3>
+<span style="display: inline-flex; align-items: center; gap: 6px; border-radius: 99px; padding: 3px 10px; font-size: 12px; font-weight: 700; background: #E3EFF7; color: #1D4E6B"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v5M12 8h.01"></path></svg>Pub déjà notée aujourd'hui</span>
+</div>
+<p style="margin: 0; font-size: 15px">Facebook : <strong class="num">3 000 F</strong>, notés dans le rapport d'Agence 2. Ce produit est aussi livré par cette agence.</p>
+<fieldset style="margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: 8px">
+<legend style="padding: 0; margin-bottom: 8px; font-size: 14px; font-weight: 700">Pour cette agence :</legend>
+<label style="display: flex; align-items: flex-start; gap: 12px; min-height: 48px; padding: 12px 14px; border-radius: 12px; font-size: 15px; cursor: pointer; border: 2px solid #0F7A60; background: #FFFFFF"><input type="radio" name="p4ad" checked style="width: 20px; height: 20px; margin: 2px 0 0; accent-color: #0F7A60; flex: 0 0 auto"><span><strong>C'est la même pub pour les deux agences</strong><br><span class="help" style="margin: 0">Les 3 000 F sont partagés selon les livraisons de chaque agence. Rien à retaper.</span></span></label>
+<label style="display: flex; align-items: flex-start; gap: 12px; min-height: 48px; padding: 12px 14px; border-radius: 12px; font-size: 15px; cursor: pointer; border: 1px solid #C9D7D1; background: #FFFFFF"><input type="radio" name="p4ad" style="width: 20px; height: 20px; margin: 2px 0 0; accent-color: #0F7A60; flex: 0 0 auto"><span><strong>J'ai payé une pub à part pour cette agence</strong><br><span class="help" style="margin: 0">Vous notez son montant ici, comme pour un autre produit.</span></span></label>
+</fieldset>
+<a href="#" style="align-self: flex-start; display: inline-flex; align-items: center; min-height: 44px; font-weight: 700">Modifier la pub d'Agence 2</a>
+</div>
+
+<label style="display: flex; align-items: center; gap: 12px; min-height: 48px; font-size: 15px; font-weight: 600"><input type="checkbox" style="width: 20px; height: 20px; accent-color: #0F7A60; margin: 0">Pas de publicité aujourd'hui pour ces produits</label>
+</section>
+
+<section class="card" aria-labelledby="s3" style="padding: 22px; display: flex; flex-direction: column; gap: 16px">
+<div><h2 id="s3" style="margin: 0; font-size: 18px; display: flex; align-items: center; gap: 10px"><span aria-hidden="true" class="num" style="width: 28px; height: 28px; border-radius: 99px; background: #0B2A33; color: #FFFFFF; display: grid; place-items: center; font-size: 14px">4</span>Frais de l'agence</h2>
+<p class="help" style="margin-top: 6px">Laissez vide ce qui ne s'applique pas.</p></div>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px">
+<div class="field"><label for="f1">Livraison (F)</label><input id="f1" class="input num" value="7 500"></div>
+<div class="field"><label for="f2">Closing et appels (F)</label><input id="f2" class="input num" value="2 000"></div>
+<div class="field"><label for="f3">Autres frais (F)</label><input id="f3" class="input num" placeholder="0"></div>
+</div>
+<div class="field" style="max-width: 360px"><label for="t">Total écrit par l'agence (facultatif)</label><input id="t" class="input num" value="58 000" aria-describedby="t-ok"><p id="t-ok" class="help" style="display: flex; align-items: center; gap: 6px; color: #0B5E4A; font-weight: 700"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M5 12l5 5L20 7"></path></svg>Correspond au détail des produits</p></div>
+</section>
+</form>
+
+<aside aria-labelledby="recap" style="flex: 1 1 320px; max-width: 380px; position: sticky; top: 24px; display: flex; flex-direction: column; gap: 14px">
+<div class="card" style="padding: 22px; display: flex; flex-direction: column; gap: 14px">
+<h2 id="recap" style="margin: 0; font-size: 18px">Ce qu'il vous reste</h2>
+<dl style="margin: 0; display: flex; flex-direction: column; gap: 10px; font-size: 15px">
+<div style="display: flex; justify-content: space-between"><dt>Argent encaissé</dt><dd class="num" style="margin: 0; font-weight: 700">58 000 F</dd></div>
+<div style="display: flex; justify-content: space-between; color: #4A5E63"><dt>Prix d'achat des produits</dt><dd class="num" style="margin: 0">− 18 000 F</dd></div>
+<div style="display: flex; justify-content: space-between; color: #4A5E63"><dt>Frais de l'agence</dt><dd class="num" style="margin: 0">− 9 500 F</dd></div>
+<div style="display: flex; justify-content: space-between; color: #4A5E63"><dt>Pub du jour</dt><dd class="num" style="margin: 0">− 10 500 F</dd></div>
+<div style="border-top: 1px solid #E1EAE6; padding-top: 12px; display: flex; justify-content: space-between; align-items: baseline"><dt style="font-weight: 700">Bénéfice net du jour</dt><dd class="sora num" style="margin: 0; font-size: 26px; font-weight: 700; color: #0B5E4A">20 000 F</dd></div>
+</dl>
+<p class="help">Produit 4 : la pub d'Agence 2 est partagée selon les livraisons. Elle n'est pas retirée une deuxième fois.</p>
+<button type="submit" class="btn btn-primary" style="width: 100%; min-height: 52px; font-size: 16px">Enregistrer le rapport</button>
+<a href="#" class="btn btn-ghost" style="width: 100%">Annuler</a>
+</div></aside>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":2000}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

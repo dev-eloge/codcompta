@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Vue générale, téléphone</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&amp;family=Sora:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F3F7F5;font-family:Manrope,system-ui,sans-serif;color:#0B2A33}
+*{box-sizing:border-box}
+h1,h2,h3,.sora{font-family:Sora,system-ui,sans-serif}
+.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+a{color:#0F7A60}
+button,a{cursor:pointer}
+.chip{flex:0 0 auto;min-height:40px;padding:0 16px;border-radius:999px;border:1px solid #D5E1DC;background:#FFFFFF;font:600 14px Manrope,sans-serif;color:#0B2A33}
+.chip[aria-pressed="true"]{background:#0B2A33;border-color:#0B2A33;color:#FFFFFF}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:56px;font-size:12px;font-weight:700;color:#4A5E63;text-decoration:none}
+.tab[aria-current="page"]{color:#0F7A60}
+.row{display:flex;align-items:center;gap:12px;min-height:64px;padding:10px 14px;background:#FFFFFF;border:1px solid #E1EAE6;border-radius:14px;text-decoration:none;color:#0B2A33}
+</style>
+</helmet>
+<div style="width: 390px; min-height: 100vh; position: relative; padding-bottom: 96px">
+<header style="background: #FFFFFF; border-bottom: 1px solid #E1EAE6; height: 60px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px">
+<h1 style="margin: 0; font-size: 20px">Mes rapports</h1>
+<button aria-label="Choisir la période, semaine du 12 au 18 octobre" style="min-height: 44px; padding: 0 12px; border-radius: 12px; border: 1px solid #D5E1DC; background: #FFFFFF; font: 700 14px Manrope,sans-serif; color: #0B2A33; display: flex; align-items: center; gap: 6px">12 au 18 oct.<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></button>
+</header>
+
+<main style="padding: 14px 16px; display: flex; flex-direction: column; gap: 14px">
+<div role="group" aria-label="Que voir" style="display: flex; gap: 8px; overflow-x: auto; margin: 0 -16px; padding: 0 16px">
+<button class="chip" aria-pressed="true">Vue générale</button><button class="chip" aria-pressed="false">Tous les pays</button><button class="chip" aria-pressed="false">Togo</button><button class="chip" aria-pressed="false">Bénin</button>
+</div>
+
+<section aria-label="Bénéfice net, tous pays" style="background: #0B2A33; color: #FFFFFF; border-radius: 16px; padding: 18px; display: flex; flex-direction: column; gap: 12px">
+<p style="margin: 0; font-size: 14px; color: #B9D4CC">Bénéfice net, 4 pays</p>
+<p class="sora num" style="margin: 0; font-size: 36px; font-weight: 700; letter-spacing: -0.02em">564 500 F</p>
+<p style="margin: 0; font-size: 14px; color: #B9D4CC"><span style="font-weight: 700; color: #7FE3C3">+9 %</span> par rapport à la semaine d'avant</p>
+<dl style="margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; font-size: 13px">
+<div style="background: rgba(255,255,255,.08); border-radius: 10px; padding: 10px"><dt style="color: #B9D4CC">Épargne</dt><dd class="num" style="margin: 2px 0 0; font-weight: 700; font-size: 15px; color: #FFD98A">169 350 F</dd></div>
+<div style="background: rgba(255,255,255,.08); border-radius: 10px; padding: 10px"><dt style="color: #B9D4CC">Mon salaire</dt><dd class="num" style="margin: 2px 0 0; font-weight: 700; font-size: 15px; color: #FFD98A">112 900 F</dd></div>
+<div style="background: rgba(255,255,255,.08); border-radius: 10px; padding: 10px"><dt style="color: #B9D4CC">Budget pub</dt><dd class="num" style="margin: 2px 0 0; font-weight: 700; font-size: 15px; color: #FFD98A">197 575 F</dd></div>
+<div style="background: rgba(255,255,255,.08); border-radius: 10px; padding: 10px"><dt style="color: #B9D4CC">Stock</dt><dd class="num" style="margin: 2px 0 0; font-weight: 700; font-size: 15px; color: #FFD98A">84 675 F</dd></div>
+</dl>
+</section>
+
+<a href="#" class="row" style="background: #FFF7E8; border-color: #F2D9AE"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7A4A06" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v5M12 16h.01"></path></svg><span style="flex: 1; font-weight: 700">3 choses à régler</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4A5E63" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></a>
+
+<h2 style="margin: 6px 0 0; font-size: 18px">Par pays</h2>
+<a href="#" class="row"><span style="flex: 1"><strong style="display: block">Togo</strong><span style="font-size: 13px; color: #4A5E63">41 livrés</span></span><span class="num" style="font-weight: 700">328 000 F</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4A5E63" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></a>
+<a href="#" class="row"><span style="flex: 1"><strong style="display: block">Bénin</strong><span style="font-size: 13px; color: #4A5E63">27 livrés</span></span><span class="num" style="font-weight: 700">142 500 F</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4A5E63" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></a>
+<a href="#" class="row"><span style="flex: 1"><strong style="display: block">Sénégal</strong><span style="font-size: 13px; color: #4A5E63">33 livrés</span></span><span class="num" style="font-weight: 700">118 000 F</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4A5E63" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></a>
+<a href="#" class="row" style="border-color: #F1B9AA"><span style="flex: 1"><strong style="display: block">Niger</strong><span style="font-size: 13px; font-weight: 700; color: #A3361F">En perte</span></span><span class="num" style="font-weight: 700; color: #A3361F">−24 000 F</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4A5E63" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></a>
+</main>
+
+<nav aria-label="Navigation" style="position: absolute; left: 0; right: 0; bottom: 0; background: #FFFFFF; border-top: 1px solid #E1EAE6; display: flex; align-items: center; padding: 6px 8px 14px">
+<a href="#" class="tab" aria-current="page"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 3v18h18M7 15l4-4 3 3 5-6"></path></svg>Rapports</a>
+<a href="#" class="tab"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5M12 7v5l3 2"></path></svg>Historique</a>
+<a href="#" aria-label="Ajouter un rapport" style="margin: -26px 6px 0; width: 60px; height: 60px; border-radius: 18px; background: #0F7A60; display: grid; place-items: center; flex: 0 0 auto"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></a>
+<a href="#" class="tab"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="5"></circle><circle cx="12" cy="12" r="1"></circle></svg>Objectifs</a>
+<a href="#" class="tab"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"></path></svg>Plus</a>
+</nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":970}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>
