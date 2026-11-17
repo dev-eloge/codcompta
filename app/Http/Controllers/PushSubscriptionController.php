@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\PushSubscription;
 use App\Services\Push\WebPush;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
@@ -99,5 +100,17 @@ class PushSubscriptionController extends Controller
         }
 
         return false;
+    }
+
+    /**
+     * Turns on or off the "no report today" reminders, for the whole merchant account.
+     */
+    public function reminders(Request $request): RedirectResponse
+    {
+        $data = $request->validate(['report_reminders' => ['required', 'boolean']]);
+
+        $this->merchantOf($request)->update(['report_reminders' => $data['report_reminders']]);
+
+        return back();
     }
 }

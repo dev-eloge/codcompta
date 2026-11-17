@@ -14,7 +14,10 @@ class CheckGoals implements ShouldQueue
 {
     use Queueable;
 
-    public function __construct(public int $merchantId) {}
+    public function __construct(public int $merchantId)
+    {
+        $this->onQueue(SendPushNotification::QUEUE);
+    }
 
     public function handle(SikaNotifier $notifier): void
     {

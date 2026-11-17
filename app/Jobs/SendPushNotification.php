@@ -14,12 +14,18 @@ class SendPushNotification implements ShouldQueue
 {
     use Queueable;
 
+    public const QUEUE = 'notifications';
+
     public int $tries = 2;
 
     /**
      * @param  array{title: string, body: string, url: string, tag?: string}  $message
      */
-    public function __construct(public int $merchantId, public array $message) {}
+    public function __construct(public int $merchantId, public array $message)
+    {
+        // Own queue, read before the slow jobs (reading agency messages): Sika must not wait behind them.
+        $this->onQueue(self::QUEUE);
+    }
 
     public function handle(WebPush $webPush): void
     {

@@ -86,26 +86,9 @@ export default function MessagesCreate({ agencies, recent, parserReady }: Props)
                 <form onSubmit={submit} className="glass flex flex-col gap-6 rounded-2xl p-5 md:p-8">
                     <h1 className="text-[26px] font-bold md:text-[32px]">Coller le message d'une agence</h1>
 
-                    <ol className="grid gap-3 text-sm sm:grid-cols-3">
-                        {[
-                            'Dans WhatsApp, appuyez longuement sur le message, puis « Copier ».',
-                            "Choisissez l'agence et collez le message ici.",
-                            'Vérifiez les lignes trouvées, puis enregistrez.',
-                        ].map((step, index) => (
-                            <li key={step} className="bg-muted/60 flex gap-3 rounded-xl p-3">
-                                <span
-                                    aria-hidden="true"
-                                    className="bg-foreground text-background flex size-6 shrink-0 items-center justify-center rounded-md text-xs font-bold"
-                                >
-                                    {index + 1}
-                                </span>
-                                <span>
-                                    <span className="sr-only">Étape {index + 1} : </span>
-                                    {step}
-                                </span>
-                            </li>
-                        ))}
-                    </ol>
+                    <p className="text-muted-foreground -mt-3 text-[15px]">
+                        Copiez le message dans WhatsApp, collez-le ici, puis vérifiez les lignes.
+                    </p>
 
                     {!parserReady && (
                         <div role="status" className="badge-warning flex gap-3 rounded-xl p-4 text-sm">
@@ -177,7 +160,6 @@ export default function MessagesCreate({ agencies, recent, parserReady }: Props)
                     <h2 id="recent-title" className="mb-4 text-base font-semibold">
                         Derniers messages
                     </h2>
-                    <p className="text-muted-foreground -mt-2 mb-3 text-xs">Ouvrez un message pour vérifier ou corriger ce qui a été lu.</p>
                     {recent.length === 0 ? (
                         <div className="text-muted-foreground flex flex-col items-center gap-2 py-6 text-center text-sm">
                             <MessageSquareText className="size-6" aria-hidden="true" />

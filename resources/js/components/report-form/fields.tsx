@@ -287,17 +287,13 @@ export function AmountHint({
     onRecalculate: () => void;
 }) {
     if (line.product_id === '') {
-        return (
-            <p id={id} className="text-muted-foreground text-xs">
-                Rempli tout seul après le choix du produit.
-            </p>
-        );
+        return null;
     }
 
     if (price === null || expected === null) {
         return (
             <p id={id} className="text-muted-foreground text-xs">
-                Pas de prix de vente pour ce produit : tapez le montant. Ajoutez son prix dans « Pays, agences et produits » pour ne plus avoir à le
+                Pas de prix de vente pour ce produit : tapez le montant. Ajoutez son prix dans « Pays, livraison et produits » pour ne plus avoir à le
                 faire.
             </p>
         );

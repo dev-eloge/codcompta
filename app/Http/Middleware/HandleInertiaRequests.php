@@ -50,7 +50,10 @@ class HandleInertiaRequests extends Middleware
             // Progress towards the merchant's goals, shown in the sidebar and on the results page.
             'goals' => fn () => $request->user()?->merchant ? app(GoalTracker::class)->current($request->user()->merchant) : [],
             // Public key of Sika's notifications (null until the server owner sets the VAPID keys).
-            'push' => ['publicKey' => config('services.webpush.public_key') ?: null],
+            'push' => [
+                'publicKey' => config('services.webpush.public_key') ?: null,
+                'reportReminders' => (bool) ($request->user()?->merchant?->report_reminders ?? true),
+            ],
             'impersonation' => fn () => $request->session()->has('impersonator_id')
                 ? ['merchant' => $request->session()->get('impersonated_merchant')]
                 : null,

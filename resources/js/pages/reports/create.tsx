@@ -92,7 +92,7 @@ export default function ReportsCreate(props: Props) {
             >
                 <div className="flex min-w-0 flex-col gap-5">
                     <header className="flex flex-wrap items-end justify-between gap-3">
-                        <h1 className="text-[28px] font-bold md:text-[32px]">{editing ? 'Modifier le rapport' : "Saisir le rapport d'une agence"}</h1>
+                        <h1 className="text-[28px] font-bold md:text-[32px]">{editing ? 'Modifier le rapport' : 'Saisir un rapport'}</h1>
                         <p className="text-muted-foreground text-sm">* obligatoire</p>
                     </header>
 
@@ -114,7 +114,7 @@ export default function ReportsCreate(props: Props) {
 
                     <section aria-labelledby="who-title" className="glass grid gap-4 rounded-2xl p-5 sm:grid-cols-3 md:p-6">
                         <StepTitle id="who-title" step={1} className="sm:col-span-3">
-                            Quelle agence, quel jour ?
+                            Qui a livré, quel jour ?
                         </StepTitle>
                         <div className="grid gap-2 sm:col-span-3">
                             <Label htmlFor="agency_id">Qui a livré ? *</Label>
@@ -126,7 +126,7 @@ export default function ReportsCreate(props: Props) {
                                 aria-describedby={editing ? 'agency-help' : undefined}
                                 onChange={(e) => setData('agency_id', e.target.value)}
                             >
-                                <option value="">Choisir une agence</option>
+                                <option value="">Choisir qui a livré</option>
                                 {agencies.map((agency) => (
                                     <option key={agency.id} value={agency.id}>
                                         {agency.is_own_team ? `Mon équipe (${agency.country})` : `${agency.name} (${agency.country})`}
@@ -138,6 +138,14 @@ export default function ReportsCreate(props: Props) {
                                     L'agence d'un rapport ne change pas. Supprimez-le et saisissez-en un nouveau si l'agence est fausse.
                                 </p>
                             )}
+                            {!editing && !agencies.some((option) => option.is_own_team) && (
+                                <p className="text-muted-foreground text-sm">
+                                    Vous livrez avec vos propres livreurs ?{' '}
+                                    <Link href={route('reference.index')} className="text-primary font-semibold underline underline-offset-4">
+                                        Déclarez votre équipe
+                                    </Link>
+                                </p>
+                            )}
                             <InputError message={errors.agency_id} />
                         </div>
 
@@ -147,7 +155,6 @@ export default function ReportsCreate(props: Props) {
                                 id="period_start"
                                 type="date"
                                 required
-                                aria-describedby="period-help"
                                 value={data.period_start}
                                 onChange={(e) => {
                                     const start = e.target.value;
@@ -168,7 +175,6 @@ export default function ReportsCreate(props: Props) {
                                 type="date"
                                 required
                                 min={data.period_start}
-                                aria-describedby="period-help"
                                 value={data.period_end}
                                 onChange={(e) => setData('period_end', e.target.value)}
                             />
@@ -177,25 +183,13 @@ export default function ReportsCreate(props: Props) {
 
                         <div className="grid gap-2">
                             <Label htmlFor="status">Compter dans le bénéfice ?</Label>
-                            <NativeSelect
-                                id="status"
-                                aria-describedby="status-help"
-                                value={data.status}
-                                onChange={(e) => setData('status', e.target.value as ReportForm['status'])}
-                            >
+                            <NativeSelect id="status" value={data.status} onChange={(e) => setData('status', e.target.value as ReportForm['status'])}>
                                 <option value="counted">Oui, le compter</option>
                                 <option value="detail">Non, détail d'un récap déjà saisi</option>
                                 <option value="to_verify">Non, à vérifier d'abord</option>
                             </NativeSelect>
                             <InputError message={errors.status} />
                         </div>
-
-                        <p id="period-help" className="text-muted-foreground text-xs sm:col-span-2">
-                            Rapport d'un seul jour : mettez la même date dans « Du » et « Au ». Récap de la semaine : du premier au dernier jour.
-                        </p>
-                        <p id="status-help" className="text-muted-foreground text-xs">
-                            Choisissez « détail » pour un rapport journalier déjà inclus dans un récap : ses ventes ne seront pas comptées deux fois.
-                        </p>
                     </section>
 
                     <section aria-labelledby="lines-title" className="glass space-y-4 rounded-2xl p-5 md:p-6">
@@ -239,7 +233,7 @@ export default function ReportsCreate(props: Props) {
                                                 <p className="text-muted-foreground text-xs">
                                                     Prix d'achat :{' '}
                                                     {product.unit_cost === null
-                                                        ? 'non renseigné (à ajouter dans Pays, agences et produits)'
+                                                        ? 'non renseigné (à ajouter dans Pays, livraison et produits)'
                                                         : `${formatFcfa(product.unit_cost)} l'unité`}
                                                 </p>
                                             )}
@@ -312,13 +306,10 @@ export default function ReportsCreate(props: Props) {
                             <StepTitle id="ads-title" step={3}>
                                 Publicité du jour, pour ces produits
                             </StepTitle>
-                            <p className="text-muted-foreground mt-1 text-sm">
-                                Ce que vous avez payé aujourd'hui pour les produits de ce rapport. Une même pub n'est jamais comptée deux fois.
-                            </p>
                         </div>
 
                         {adProducts.length === 0 ? (
-                            <p className="text-muted-foreground text-sm">Choisissez d'abord les produits livrés : une carte apparaît pour chacun.</p>
+                            <p className="text-muted-foreground text-sm">Ajoutez d'abord les produits livrés.</p>
                         ) : (
                             !data.no_ads &&
                             adProducts.map((productId) => {
@@ -406,7 +397,6 @@ export default function ReportsCreate(props: Props) {
                             <StepTitle id="fees-title" step={4}>
                                 {form.isTeam ? 'Frais du jour' : "Frais de l'agence"}
                             </StepTitle>
-                            <p className="text-muted-foreground text-sm">Laissez vide ce qui ne s'applique pas.</p>
                         </div>
                         {form.isTeam ? (
                             <div className="sm:col-span-2">
@@ -424,7 +414,6 @@ export default function ReportsCreate(props: Props) {
                                 <MoneyField
                                     id="closing_fees"
                                     label="Closing et crédit d'appel (F)"
-                                    help="Commissions des personnes qui confirment les commandes, et crédit téléphonique"
                                     value={data.closing_fees}
                                     error={errors.closing_fees}
                                     onChange={(v) => setData('closing_fees', v)}
@@ -439,7 +428,7 @@ export default function ReportsCreate(props: Props) {
                                 <MoneyField
                                     id="announced_total"
                                     label="Total écrit par l'agence (F)"
-                                    help="Facultatif. Sert de contrôle : s'il ne correspond pas à vos lignes, le rapport sera marqué « à vérifier »"
+                                    help="Facultatif. S'il ne correspond pas aux lignes, le rapport sera « à vérifier »."
                                     value={data.announced_total}
                                     error={errors.announced_total}
                                     onChange={(v) => setData('announced_total', v)}

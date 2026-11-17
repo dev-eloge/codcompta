@@ -5,10 +5,13 @@ use App\Models\Merchant;
 use App\Models\Report;
 use App\Models\User;
 use App\Services\DisplayCurrency;
+use Illuminate\Http\Client\Factory as HttpFactory;
 use Illuminate\Support\Facades\Http;
 use Inertia\Testing\AssertableInertia as Assert;
 
 beforeEach(function () {
+    // No real call to the exchange rate site during the tests.
+    Http::fake(['api.frankfurter.app/*' => Http::response(['date' => '2026-11-14', 'rates' => ['USD' => 1.1645]])]);
     $this->merchant = Merchant::create(['name' => 'Boutique Démo']);
     $this->user = User::factory()->create(['merchant_id' => $this->merchant->id]);
     $this->country = $this->merchant->countries()->create(['name' => 'Pays démo', 'code' => 'PD']);
@@ -93,8 +96,6 @@ it('donne le dernier taux du dollar connu, et dit quand il n\'est pas celui du j
 });
 
 it('récupère le taux du dollar du jour en passant par l\'euro', function () {
-    Http::fake(['api.frankfurter.app/*' => Http::response(['date' => '2026-11-14', 'rates' => ['USD' => 1.1645]])]);
-
     $this->artisan('codcompta:taux-dollar')->assertSuccessful();
 
     // 655,957 F for 1 € ÷ 1,1645 $ for 1 € = 563,29 F for 1 $.
@@ -102,9 +103,64 @@ it('récupère le taux du dollar du jour en passant par l\'euro', function () {
 });
 
 it('garde l\'ancien taux quand le taux du dollar est indisponible', function () {
-    Http::fake(['api.frankfurter.app/*' => Http::response([], 500)]);
+    Http::swap(new HttpFactory);
+    Http::fake(fn () => Http::response([], 500));
 
     $this->artisan('codcompta:taux-dollar')->assertFailed();
 
     expect(ExchangeRate::count())->toBe(0);
+});
+
+it('change la devise du tableau de bord d\'un seul geste, depuis Mes rapports', function () {
+    $this->actingAs($this->user)->from('/rapports')->put('/devise', ['display_currency' => 'EUR'])->assertRedirect('/rapports');
+
+    expect($this->merchant->fresh()->display_currency)->toBe('EUR');
+
+    $this->actingAs($this->user)->get('/rapports?country='.$this->country->id)
+        ->assertInertia(fn (Assert $page) => $page->where('currency.code', 'EUR')->where('currency.source', 'official'));
+
+    $this->actingAs($this->user)->from('/rapports')->put('/devise', ['display_currency' => null]);
+
+    $this->actingAs($this->user)->get('/rapports?country='.$this->country->id)
+        ->assertInertia(fn (Assert $page) => $page->where('currency', null));
+});
+
+it('va chercher le taux du dollar quand on choisit le dollar pour la première fois', function () {
+    $this->actingAs($this->user)->from('/rapports')->put('/devise', ['display_currency' => 'USD'])->assertSessionHasNoErrors();
+
+    $this->actingAs($this->user)->get('/rapports?country='.$this->country->id)
+        ->assertInertia(fn (Assert $page) => $page->where('currency.code', 'USD')->where('currency.source', 'auto')->where('currency.stale', false));
+});
+
+it('reste en francs CFA et le dit quand le taux du dollar est introuvable', function () {
+    Http::swap(new HttpFactory);
+    Http::fake(fn () => Http::response([], 500));
+
+    $this->actingAs($this->user)->from('/rapports')->put('/devise', ['display_currency' => 'USD'])
+        ->assertSessionHas('warning');
+
+    expect($this->merchant->fresh()->display_currency)->toBeNull();
+});
+
+it('utilise le taux fixé par le marchand à la place du taux automatique', function () {
+    $this->actingAs($this->user)->put('/partage-et-devise', [
+        'parts' => ownRule(),
+        'display_currency' => 'USD',
+        'own_rates' => ['USD' => '600,5', 'EUR' => null],
+    ])->assertSessionHasNoErrors();
+
+    expect($this->merchant->fresh()->custom_rates)->toBe(['USD' => 600.5]);
+
+    $this->actingAs($this->user)->get('/rapports?country='.$this->country->id)
+        ->assertInertia(fn (Assert $page) => $page->where('currency.rate', 600.5)->where('currency.source', 'own'));
+
+    // Back to the automatic rate: the own rate is forgotten.
+    $this->actingAs($this->user)->put('/partage-et-devise', ['parts' => ownRule(), 'display_currency' => 'USD', 'own_rates' => ['USD' => null]]);
+
+    expect($this->merchant->fresh()->custom_rates)->toBeNull();
+});
+
+it('refuse un taux qui n\'est pas un nombre', function () {
+    $this->actingAs($this->user)->put('/partage-et-devise', ['parts' => ownRule(), 'display_currency' => 'EUR', 'own_rates' => ['EUR' => 'abc']])
+        ->assertSessionHasErrors('own_rates.EUR');
 });

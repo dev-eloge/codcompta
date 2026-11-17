@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin;
 use App\Http\Controllers\AdSpendController;
 use App\Http\Controllers\Auth\GoogleSignIn;
+use App\Http\Controllers\DisplayCurrencyController;
 use App\Http\Controllers\GoalController;
 use App\Http\Controllers\LegalController;
 use App\Http\Controllers\ProfitSettingsController;
@@ -53,6 +54,7 @@ Route::middleware(['auth', 'merchant.active'])->group(function () {
 
     Route::get('partage-et-devise', [ProfitSettingsController::class, 'edit'])->name('profit-settings.edit');
     Route::put('partage-et-devise', [ProfitSettingsController::class, 'update'])->name('profit-settings.update');
+    Route::put('devise', [DisplayCurrencyController::class, 'update'])->name('display-currency.update');
     Route::get('referentiel', [ReferenceController::class, 'index'])->name('reference.index');
     Route::post('referentiel/pays', [ReferenceController::class, 'storeCountry'])->name('reference.countries.store');
     Route::post('referentiel/agences', [ReferenceController::class, 'storeAgency'])->name('reference.agencies.store');
@@ -62,6 +64,7 @@ Route::middleware(['auth', 'merchant.active'])->group(function () {
     Route::put('referentiel/pays/{country}', [ReferenceController::class, 'updateCountry'])->name('reference.countries.update');
     Route::get('referentiel/pays/{country}/equipe', [TeamController::class, 'edit'])->name('reference.team.edit');
     Route::put('referentiel/pays/{country}/equipe', [TeamController::class, 'update'])->name('reference.team.update');
+    Route::put('astuces/equipe', [TeamController::class, 'dismissTip'])->name('delivery-tip.dismiss');
     Route::delete('referentiel/pays/{country}', [ReferenceController::class, 'destroyCountry'])->name('reference.countries.destroy');
     Route::put('referentiel/agences/{agency}', [ReferenceController::class, 'updateAgency'])->name('reference.agencies.update');
     Route::delete('referentiel/agences/{agency}', [ReferenceController::class, 'destroyAgency'])->name('reference.agencies.destroy');
@@ -77,6 +80,7 @@ Route::middleware(['auth', 'merchant.active'])->group(function () {
     Route::post('notifications/abonnement', [PushSubscriptionController::class, 'store'])->middleware('throttle:20,1')->name('push.subscribe');
     Route::delete('notifications/abonnement', [PushSubscriptionController::class, 'destroy'])->name('push.unsubscribe');
     Route::post('notifications/essai', [PushSubscriptionController::class, 'test'])->middleware('throttle:5,1')->name('push.test');
+    Route::put('notifications/rappels', [PushSubscriptionController::class, 'reminders'])->name('push.reminders');
 });
 
 // Platform owner area (super admin). Refused (403) to everyone else.

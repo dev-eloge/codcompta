@@ -81,7 +81,7 @@ export default function Privacy({ legal }: LegalPageProps) {
                         notifications sous forme chiffrée.
                     </li>
                     <li>
-                        <strong>Le service d'envoi d'emails</strong>, pour les messages liés à votre compte.
+                        <strong>Gmail (Google)</strong>, qui envoie les emails liés à votre compte, depuis l'adresse codcompta.app@gmail.com.
                     </li>
                 </ul>
                 <p>Certains de ces services sont situés hors de votre pays, notamment aux États-Unis et en Europe.</p>

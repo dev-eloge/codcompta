@@ -94,4 +94,14 @@ class TeamController extends Controller
 
         (clone $members)->whereNotIn('id', $kept)->delete();
     }
+
+    /**
+     * Closes, for good, the Mes rapports card that says a merchant can declare their own delivery team.
+     */
+    public function dismissTip(Request $request): RedirectResponse
+    {
+        $this->merchantOf($request)->update(['delivery_tip_dismissed_at' => now()]);
+
+        return back();
+    }
 }

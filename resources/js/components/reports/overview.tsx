@@ -219,14 +219,7 @@ export function GeneralView({ overview, period, onShowCountries }: { overview: O
                                 >
                                     <span className="min-w-0">
                                         <span className="block font-semibold">{country.name}</span>
-                                        <span
-                                            className={cn(
-                                                'block text-xs',
-                                                country.profit < 0 ? 'text-danger-fg font-semibold' : 'text-muted-foreground',
-                                            )}
-                                        >
-                                            {country.profit < 0 ? 'En perte' : `${formatNumber(country.delivered)} livrés`}
-                                        </span>
+                                        {country.profit < 0 && <span className="text-danger-fg block text-xs font-semibold">En perte</span>}
                                     </span>
                                     <span className="flex items-center gap-1">
                                         <span className={cn('font-bold tabular-nums', country.profit < 0 && 'text-danger-fg')}>
@@ -273,7 +266,6 @@ export function GeneralView({ overview, period, onShowCountries }: { overview: O
                             ))}
                         </ul>
                     )}
-                    <p className="text-muted-foreground text-xs">Bénéfice après le prix d'achat et la pub du produit.</p>
                 </section>
 
                 <section aria-labelledby="by-platform" className="glass flex flex-col gap-3 rounded-2xl p-4 md:p-5">

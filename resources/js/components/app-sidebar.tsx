@@ -34,7 +34,7 @@ const inputNavItems: NavItem[] = [
 ];
 
 const setupNavItems: NavItem[] = [
-    { title: 'Pays, agences et produits', url: '/referentiel', icon: Settings2 },
+    { title: 'Pays, livraison et produits', url: '/referentiel', icon: Settings2 },
     { title: 'Partage et devise', url: '/partage-et-devise', icon: PieChart },
 ];
 

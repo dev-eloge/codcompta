@@ -59,7 +59,7 @@ export interface SharedData {
     auth: Auth;
     impersonation?: { merchant: string } | null;
     goals?: GoalProgress[];
-    push?: { publicKey: string | null };
+    push?: { publicKey: string | null; reportReminders: boolean };
     [key: string]: unknown;
 }
 

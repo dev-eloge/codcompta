@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/app-layout';
 import { formatFcfa, formatShortDate } from '@/lib/format';
+import { cn } from '@/lib/utils';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { CircleAlert, CircleCheck, LoaderCircle } from 'lucide-react';
@@ -49,7 +50,7 @@ interface Props {
     today: string;
 }
 
-const breadcrumbs: BreadcrumbItem[] = [{ title: 'Pays, agences et produits', href: '/referentiel' }];
+const breadcrumbs: BreadcrumbItem[] = [{ title: 'Pays, livraison et produits', href: '/referentiel' }];
 
 export default function ReferenceIndex({ countries, products, today }: Props) {
     const agencyCount = countries.reduce((sum, country) => sum + country.agencies.length, 0);
@@ -62,12 +63,12 @@ export default function ReferenceIndex({ countries, products, today }: Props) {
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Pays, agences et produits" />
+            <Head title="Pays, livraison et produits" />
 
             <div className="mx-auto flex w-full max-w-[1100px] flex-col gap-8 px-4 py-6 md:px-8 md:py-8">
                 <FlashMessage />
 
-                <h1 className="text-[28px] font-bold md:text-[32px]">Pays, agences et produits</h1>
+                <h1 className="text-[28px] font-bold md:text-[32px]">Pays, livraison et produits</h1>
 
                 {!ready && (
                     <section aria-labelledby="setup-title" className="glass space-y-3 rounded-2xl p-5">
@@ -99,7 +100,7 @@ export default function ReferenceIndex({ countries, products, today }: Props) {
                     <div className="space-y-4">
                         <div className="space-y-1">
                             <h2 id="countries-title" className="text-lg font-semibold">
-                                Pays et agences de livraison
+                                Pays et livraison
                             </h2>
                         </div>
                         {countries.length === 0 && (
@@ -125,8 +126,7 @@ export default function ReferenceIndex({ countries, products, today }: Props) {
                                 Produits et prix d'achat
                             </h2>
                             <p className="text-muted-foreground text-sm">
-                                Le prix d'achat (fournisseur, transport compris) sert à calculer votre vrai bénéfice. S'il change, ajoutez le nouveau
-                                prix : les anciens rapports gardent l'ancien.
+                                Prix d'achat transport compris. S'il change, ajoutez le nouveau : les anciens rapports gardent l'ancien.
                             </p>
                         </div>
                         {products.length === 0 ? (
@@ -149,8 +149,24 @@ export default function ReferenceIndex({ countries, products, today }: Props) {
     );
 }
 
+const deliveryChoices: { value: Country['delivery_mode']; title: string; help: string }[] = [
+    { value: 'agency', title: 'Une agence', help: 'Elle garde le stock, livre et vous envoie son rapport.' },
+    { value: 'team', title: 'Ma propre équipe', help: 'Vos livreurs et closeuses, payés par vous.' },
+    { value: 'both', title: 'Les deux', help: 'Une partie par votre équipe, une partie par une agence.' },
+];
+
+const deliveryLabel: Record<Country['delivery_mode'], string> = {
+    agency: 'une agence',
+    team: 'mon équipe',
+    both: 'agence et équipe',
+};
+
 function CountryForm() {
-    const { data, setData, post, processing, errors, reset } = useForm({ name: '', code: '' });
+    const { data, setData, post, processing, errors, reset } = useForm<{ name: string; code: string; delivery_mode: Country['delivery_mode'] }>({
+        name: '',
+        code: '',
+        delivery_mode: 'agency',
+    });
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
@@ -184,6 +200,32 @@ function CountryForm() {
             <p id="country-code-help" className="text-muted-foreground text-xs">
                 Le code à 2 lettres du pays : TG, SN, CI, BJ…
             </p>
+            <fieldset className="grid gap-2">
+                <legend className="mb-1 text-sm font-semibold">Qui livre vos commandes dans ce pays ?</legend>
+                {deliveryChoices.map((choice) => (
+                    <label
+                        key={choice.value}
+                        className={cn(
+                            'flex min-h-11 cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors',
+                            data.delivery_mode === choice.value ? 'border-primary bg-primary/5 border-2' : 'border-input hover:bg-accent',
+                        )}
+                    >
+                        <input
+                            type="radio"
+                            name="delivery_mode"
+                            value={choice.value}
+                            checked={data.delivery_mode === choice.value}
+                            onChange={() => setData('delivery_mode', choice.value)}
+                            className="accent-primary mt-0.5 size-5 shrink-0"
+                        />
+                        <span>
+                            <span className="block text-sm font-semibold">{choice.title}</span>
+                            <span className="text-muted-foreground block text-xs">{choice.help}</span>
+                        </span>
+                    </label>
+                ))}
+                <InputError message={errors.delivery_mode} />
+            </fieldset>
             <Button type="submit" disabled={processing}>
                 {processing && <LoaderCircle className="animate-spin" aria-hidden="true" />}
                 Ajouter le pays
@@ -251,7 +293,7 @@ function AgencyForm({ countries }: { countries: Country[] }) {
                     onChange={(e) => setData('alert_after_days', e.target.value)}
                 />
                 <p id="agency-alert-help" className="text-muted-foreground text-xs">
-                    L'agence est marquée « en retard » si elle ne vous a rien envoyé depuis ce nombre de jours.
+                    Au-delà, l'agence passe « en retard ».
                 </p>
                 <InputError message={errors.alert_after_days} />
             </div>
@@ -357,7 +399,7 @@ function CountryCard({ country, countries }: { country: Country; countries: Coun
                         href={route('reference.team.edit', country.id)}
                         className="text-primary hover:bg-accent inline-flex min-h-11 items-center rounded-xl px-3 text-sm font-bold underline-offset-4 hover:underline"
                     >
-                        {country.delivery_mode === 'agency' ? 'Qui livre ?' : 'Mon équipe'}
+                        Qui livre : {deliveryLabel[country.delivery_mode]}
                     </Link>
                     <EditButton
                         label={`Modifier le pays ${country.name}`}

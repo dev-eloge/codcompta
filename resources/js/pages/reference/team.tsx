@@ -50,7 +50,7 @@ const toNumber = (value: string) => (value === '' ? 0 : Number(value));
 export default function Team({ country, couriers, closers }: Props) {
     const title = `${country.name} : mon équipe`;
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Pays, agences et produits', href: '/referentiel' },
+        { title: 'Pays, livraison et produits', href: '/referentiel' },
         { title, href: `/referentiel/pays/${country.id}/equipe` },
     ];
 
@@ -84,9 +84,6 @@ export default function Team({ country, couriers, closers }: Props) {
                 <FlashMessage />
                 <div className="space-y-1">
                     <h1 className="text-[28px] font-bold md:text-[32px]">{title}</h1>
-                    <p className="text-muted-foreground text-[15px]">
-                        Dites qui livre et qui confirme vos commandes. Le rapport du jour et les frais s'adaptent.
-                    </p>
                 </div>
 
                 <section className="glass rounded-2xl p-5 md:p-6">
@@ -145,9 +142,7 @@ export default function Team({ country, couriers, closers }: Props) {
                                 <h2 id="fixed-title" className="text-lg font-bold">
                                     Frais fixes du mois
                                 </h2>
-                                <p className="text-muted-foreground text-sm">
-                                    Ce que vous payez chaque mois, même sans livraison. Laissez vide ce qui ne s'applique pas.
-                                </p>
+                                <p className="text-muted-foreground text-sm">Ce que vous payez chaque mois, même sans livraison.</p>
                             </div>
                             <div className="grid gap-4 md:grid-cols-3">
                                 <MoneyInput
@@ -175,9 +170,8 @@ export default function Team({ country, couriers, closers }: Props) {
                             <p className="badge-info flex items-start gap-2 rounded-xl px-4 py-3 text-sm">
                                 <Info className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
                                 <span>
-                                    Les salaires et frais fixes (<span className="tabular-nums">{formatFcfa(monthly)}</span> par mois) sont retirés
-                                    une fois par mois, dans le bénéfice du mois. Le rapport du jour ne demande que ce qui change chaque jour :
-                                    livraisons, commandes, carburant.
+                                    Salaires et frais fixes : <span className="tabular-nums">{formatFcfa(monthly)}</span>, retirés une fois par mois
+                                    du bénéfice.
                                 </span>
                             </p>
                         </section>

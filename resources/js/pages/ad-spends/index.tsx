@@ -11,7 +11,7 @@ import { adPlatformLabel } from '@/lib/ad-platforms';
 import { formatNumber, formatPeriod } from '@/lib/format';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, useForm } from '@inertiajs/react';
-import { LoaderCircle, Megaphone } from 'lucide-react';
+import { LoaderCircle, Megaphone, Plus } from 'lucide-react';
 import { FormEventHandler, useRef, useState } from 'react';
 
 interface Country {
@@ -65,6 +65,8 @@ export default function AdSpendsIndex({ countries, adSpends, products, platforms
     };
     const { data, setData, post, put, processing, errors, reset, clearErrors } = useForm(blank);
     const [editingId, setEditingId] = useState<number | null>(null);
+    // The day's ads are typed in the report: this form is only for an ad outside a report.
+    const [formOpen, setFormOpen] = useState(false);
     const formRef = useRef<HTMLFormElement>(null);
 
     const startEditing = (adSpend: AdSpend) => {
@@ -119,7 +121,6 @@ export default function AdSpendsIndex({ countries, adSpends, products, platforms
 
                 <div className="space-y-1">
                     <h1 className="text-[28px] font-bold md:text-[32px]">Dépenses publicitaires</h1>
-                    <p className="text-muted-foreground text-[15px]">Ce que vous payez sur Facebook ou TikTok, déduit de votre bénéfice.</p>
                 </div>
 
                 <AdSpendTabs />
@@ -143,6 +144,14 @@ export default function AdSpendsIndex({ countries, adSpends, products, platforms
                         <p className="text-muted-foreground">Une dépense publicitaire est toujours rattachée au pays où la publicité est diffusée.</p>
                         <Button asChild size="sm">
                             <Link href={route('reference.index')}>Ajouter un pays</Link>
+                        </Button>
+                    </div>
+                ) : !formOpen && editingId === null ? (
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                        <p className="text-muted-foreground text-[15px]">La pub du jour se saisit dans le rapport.</p>
+                        <Button variant="outline" onClick={() => setFormOpen(true)}>
+                            <Plus aria-hidden="true" />
+                            Ajouter une pub hors rapport
                         </Button>
                     </div>
                 ) : (
@@ -187,8 +196,7 @@ export default function AdSpendsIndex({ countries, adSpends, products, platforms
                                 ))}
                             </NativeSelect>
                             <p id="agency-help" className="text-muted-foreground text-xs">
-                                Choisissez une agence seulement si elle a payé sa propre pub. Sinon, la pub d'un produit est répartie selon les
-                                livraisons de ce produit.
+                                Une agence seulement si elle a sa propre pub.
                             </p>
                             <InputError message={errors.agency_id} />
                         </div>
@@ -282,16 +290,12 @@ export default function AdSpendsIndex({ countries, adSpends, products, platforms
                                     id="amount"
                                     type="number"
                                     required
-                                    aria-describedby="amount-help"
                                     inputMode="numeric"
                                     min={1}
                                     value={data.amount}
                                     onChange={(e) => setData('amount', e.target.value)}
                                     placeholder="0"
                                 />
-                                <p id="amount-help" className="text-muted-foreground text-xs">
-                                    Le montant réellement débité, converti en francs CFA.
-                                </p>
                                 <InputError message={errors.amount} />
                             </div>
                         )}
@@ -316,11 +320,16 @@ export default function AdSpendsIndex({ countries, adSpends, products, platforms
                                 {processing && <LoaderCircle className="animate-spin" aria-hidden="true" />}
                                 {editingId !== null ? 'Enregistrer les modifications' : 'Enregistrer la dépense'}
                             </Button>
-                            {editingId !== null && (
-                                <Button type="button" variant="ghost" onClick={stopEditing}>
-                                    Annuler
-                                </Button>
-                            )}
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                onClick={() => {
+                                    stopEditing();
+                                    setFormOpen(false);
+                                }}
+                            >
+                                Annuler
+                            </Button>
                         </div>
                     </form>
                 )}

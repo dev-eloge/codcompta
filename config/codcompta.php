@@ -17,7 +17,7 @@ return [
         'responsible' => env('LEGAL_RESPONSIBLE'),
         'registration' => env('LEGAL_REGISTRATION'),
         'address' => env('LEGAL_ADDRESS'),
-        'email' => env('LEGAL_EMAIL', env('MAIL_FROM_ADDRESS')),
+        'email' => env('LEGAL_EMAIL', 'codcompta.app@gmail.com'),
         'phone' => env('LEGAL_PHONE'),
         'host' => env('LEGAL_HOST'),
         'host_address' => env('LEGAL_HOST_ADDRESS'),

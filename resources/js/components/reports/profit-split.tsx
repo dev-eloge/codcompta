@@ -34,9 +34,7 @@ export function SplitTiles({ split }: { split: SplitPart[] }) {
             <dl className={cn('grid gap-2 sm:gap-2.5', columns[split.length] ?? 'grid-cols-2')}>
                 {split.map((part) => (
                     <div key={part.name} className="hero-tile min-w-0 rounded-xl p-2.5 sm:p-3">
-                        <dt className="text-hero-muted text-[13px] break-words">
-                            {part.name}, {`${part.percent}\u00a0%`}
-                        </dt>
+                        <dt className="text-hero-muted text-[13px] break-words">{part.name}</dt>
                         <dd className="text-on-hero-gold mt-1 font-[family-name:var(--font-display)] text-[15px] font-semibold tabular-nums sm:text-lg">
                             {format(part.amount)}
                         </dd>

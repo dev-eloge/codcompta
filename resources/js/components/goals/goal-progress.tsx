@@ -103,19 +103,10 @@ function GoalDetail({ goal }: { goal: GoalProgress }) {
             );
         default:
             return (
-                <div className="space-y-1 text-sm">
-                    <p>
-                        {strong(percentText(goal.percent))} atteint
-                        {goal.expected_percent > 0 && goal.expected_percent < 100 ? (
-                            <span className="text-muted-foreground">, {goal.expected_percent} % attendu aujourd'hui (le trait)</span>
-                        ) : null}
-                        .
-                    </p>
-                    <p>
-                        Il manque {strong(formatFcfa(goal.remaining))} : environ {strong(formatFcfa(goal.per_day_needed))} par jour pendant{' '}
-                        {daysText(goal.days_left)}.
-                    </p>
-                </div>
+                <p className="text-sm">
+                    {strong(percentText(goal.percent))} atteint. {strong(formatFcfa(goal.per_day_needed))} par jour pendant {daysText(goal.days_left)}
+                    .
+                </p>
             );
     }
 }
@@ -153,6 +144,40 @@ export function GoalCard({ goal, actions }: { goal: GoalProgress; actions?: Reac
 
             <GoalBar goal={goal} />
             <GoalDetail goal={goal} />
+        </li>
+    );
+}
+
+/**
+ * One goal on a single line, for Mes rapports: where it stands, and what is needed per day.
+ */
+export function GoalRow({ goal }: { goal: GoalProgress }) {
+    const state = badge(goal);
+    const Icon = state.icon;
+    const running = goal.status === 'in_progress';
+
+    return (
+        <li className="glass flex flex-wrap items-center gap-x-6 gap-y-3 rounded-2xl p-4 md:p-5">
+            <div className="min-w-0 flex-[1_1_320px] space-y-2">
+                <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="font-semibold">{goal.title}</h3>
+                    <span className={cn('inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold', state.className)}>
+                        <Icon className="size-3.5" aria-hidden="true" />
+                        {state.text}
+                    </span>
+                </div>
+                <p className="text-muted-foreground text-sm tabular-nums">
+                    <strong className="text-foreground">{formatFcfa(goal.achieved)}</strong> sur {formatFcfa(goal.target)} de{' '}
+                    {metricNames[goal.metric]}
+                </p>
+                <GoalBar goal={goal} />
+            </div>
+            {running && (
+                <p className="text-sm tabular-nums">
+                    <strong className="block font-[family-name:var(--font-display)] text-lg">{formatFcfa(goal.per_day_needed)} par jour</strong>
+                    <span className="text-muted-foreground">{daysText(goal.days_left)} restants</span>
+                </p>
+            )}
         </li>
     );
 }

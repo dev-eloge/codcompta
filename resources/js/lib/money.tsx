@@ -6,8 +6,12 @@ export interface DisplayCurrency {
     code: 'EUR' | 'USD';
     /** Francs CFA for one euro or one dollar. */
     rate: number;
-    /** Day of the dollar rate; null for the euro, whose rate is fixed. */
+    /** official: the fixed euro peg; auto: the dollar rate fetched during the day; own: the merchant's own rate. */
+    source: 'official' | 'auto' | 'own';
+    /** Day of the automatic dollar rate; null otherwise. */
     rate_date: string | null;
+    /** When the automatic dollar rate was last checked. */
+    updated_at: string | null;
     /** True when today's dollar rate could not be fetched and an older one is used. */
     stale: boolean;
 }

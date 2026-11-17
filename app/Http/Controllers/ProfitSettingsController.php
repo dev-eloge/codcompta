@@ -18,6 +18,7 @@ class ProfitSettingsController extends Controller
     public function edit(Request $request, DisplayCurrency $currency): Response
     {
         $merchant = $this->merchantOf($request);
+        $currency->ensureDollar();
         $split = $merchant->profitSplit();
 
         return Inertia::render('settings/profit', [
@@ -25,8 +26,14 @@ class ProfitSettingsController extends Controller
             'preset' => $split->preset(),
             'presets' => ProfitSplit::PRESETS,
             'displayCurrency' => $merchant->display_currency,
-            'dollar' => $currency->dollar($merchant->timezone),
-            'euroRate' => DisplayCurrency::EUR_RATE,
+            'automatic' => [
+                'EUR' => $currency->automatic(DisplayCurrency::EUR),
+                'USD' => $currency->automatic(DisplayCurrency::USD, $merchant->timezone ?? 'UTC'),
+            ],
+            'ownRates' => [
+                'EUR' => $currency->ownRate($merchant, DisplayCurrency::EUR),
+                'USD' => $currency->ownRate($merchant, DisplayCurrency::USD),
+            ],
         ]);
     }
 
@@ -40,8 +47,12 @@ class ProfitSettingsController extends Controller
                 'percent' => (int) $part['percent'],
             ])->values()->all(),
             'display_currency' => $data['display_currency'] ?? null,
+            'custom_rates' => collect($data['own_rates'] ?? [])
+                ->filter(fn ($rate) => $rate !== null)
+                ->map(fn ($rate) => round((float) $rate, 4))
+                ->all() ?: null,
         ]);
 
-        return to_route('profit-settings.edit')->with('success', 'Nouveau partage enregistré. Il s\'affiche déjà sur Mes rapports.');
+        return to_route('profit-settings.edit')->with('success', 'Réglages enregistrés. Ils s\'affichent déjà sur Mes rapports.');
     }
 }

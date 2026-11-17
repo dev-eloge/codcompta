@@ -7,6 +7,7 @@ use App\Jobs\CheckGoals;
 use App\Models\AdSpend;
 use App\Models\Agency;
 use App\Models\Country;
+use App\Models\Merchant;
 use App\Models\Product;
 use App\Models\RawMessage;
 use App\Models\Report;
@@ -120,6 +121,7 @@ class ReportController extends Controller
                 'report' => null,
                 'entries' => [],
                 'currency' => $displayCurrency->forMerchant($merchant),
+                'deliveryTip' => $this->deliveryTip($merchant),
             ]);
         }
 
@@ -157,6 +159,7 @@ class ReportController extends Controller
             'pending' => $country === null ? [] : $pendingItems->forCountry($country),
             'overview' => null,
             'currency' => $displayCurrency->forMerchant($merchant),
+            'deliveryTip' => $this->deliveryTip($merchant),
             // Deferred: the page shows the results first, the small charts arrive right after.
             'trend' => Inertia::defer(fn () => $country === null ? null : $trend->forCountry($country, $period)),
         ]);
@@ -450,5 +453,26 @@ class ReportController extends Controller
             'period' => ReportPeriod::WEEK,
             'date' => $report->period_end->toDateString(),
         ])->with($report->status === Report::STATUS_TO_VERIFY ? 'warning' : 'success', $message);
+    }
+
+    /**
+     * The countries to show in the "your own delivery team" card of Mes rapports, or null when the card
+     * is closed or useless: already closed once, no country yet, or a team already declared somewhere.
+     *
+     * @return list<array{id: int, name: string}>|null
+     */
+    private function deliveryTip(Merchant $merchant): ?array
+    {
+        if ($merchant->delivery_tip_dismissed_at !== null) {
+            return null;
+        }
+
+        $countries = $merchant->countries()->orderBy('name')->get(['id', 'name', 'delivery_mode']);
+
+        if ($countries->isEmpty() || $countries->contains(fn (Country $country) => $country->hasOwnTeam())) {
+            return null;
+        }
+
+        return $countries->map(fn (Country $country) => ['id' => $country->id, 'name' => $country->name])->values()->all();
     }
 }

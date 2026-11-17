@@ -1,5 +1,5 @@
 import FlashMessage from '@/components/flash-message';
-import { GoalCard, isActive } from '@/components/goals/goal-progress';
+import { GoalRow, isActive } from '@/components/goals/goal-progress';
 import InputError from '@/components/input-error';
 import { AllCountriesView, GeneralView, type Overview } from '@/components/reports/overview';
 import { InFcfa, type SplitPart, SplitTiles } from '@/components/reports/profit-split';
@@ -10,12 +10,13 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/app-layout';
 import { formatNumber, formatPercent, formatPeriod } from '@/lib/format';
-import { currencySymbol, type DisplayCurrency, formatRate, formatRateDate, MoneyProvider, useMoney } from '@/lib/money';
+import { type DisplayCurrency, formatRate, formatRateDate, MoneyProvider, useMoney } from '@/lib/money';
 import { cn } from '@/lib/utils';
 import { type BreadcrumbItem, type GoalProgress, type SharedData } from '@/types';
 import { Deferred, Head, Link, router, usePage } from '@inertiajs/react';
 import {
     ArrowDownRight,
+    ArrowLeftRight,
     ArrowUpRight,
     CalendarRange,
     ChevronLeft,
@@ -23,9 +24,11 @@ import {
     CircleAlert,
     ClipboardPlus,
     FileSpreadsheet,
+    LoaderCircle,
     MessageSquareText,
     Pencil,
-    Trophy,
+    Truck,
+    X,
 } from 'lucide-react';
 import { FormEvent, useEffect, useState } from 'react';
 
@@ -81,7 +84,7 @@ interface Entry {
 const sourceLabels: Record<Entry['source'], string> = { manual: 'Saisi à la main', message: 'Message WhatsApp', sheet: 'Google Sheet' };
 
 interface Pending {
-    kind: 'message_parsed' | 'message_failed' | 'reports_to_verify';
+    kind: 'report_missing' | 'team_missing' | 'message_parsed' | 'message_failed' | 'reports_to_verify';
     id: number | null;
     agency: string | null;
     count: number;
@@ -103,6 +106,8 @@ interface Props {
     trend?: Trend | null;
     /** Second currency chosen in "Partage et devise", or null for francs CFA only. */
     currency?: DisplayCurrency | null;
+    /** Countries to name in the "your own delivery team" card; null when the card is not shown. */
+    deliveryTip?: { id: number; name: string }[] | null;
 }
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Mes rapports', href: '/rapports' }];
@@ -226,10 +231,10 @@ export default function ReportsIndex({
     pending = [],
     trend,
     currency = null,
+    deliveryTip = null,
 }: Props) {
     const { goals = [] } = usePage<SharedData>().props;
-    const [inForeign, setInForeign] = useForeignCurrency(currency);
-    const shown = currency && inForeign ? currency : null;
+    const shown = currency;
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -239,7 +244,7 @@ export default function ReportsIndex({
                     <header className="flex flex-wrap items-end justify-between gap-4">
                         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                             <h1 className="text-[28px] font-bold md:text-[32px]">Mes rapports</h1>
-                            {currency && <CurrencySwitch currency={currency} inForeign={inForeign} onChange={setInForeign} />}
+                            <CurrencySwitch current={currency?.code ?? null} />
                         </div>
                         {countries.length > 0 && (
                             <div className="hidden flex-wrap gap-2.5 md:flex">
@@ -258,6 +263,10 @@ export default function ReportsIndex({
                             </div>
                         )}
                     </header>
+
+                    <CurrencyTip />
+
+                    {deliveryTip && deliveryTip.length > 0 && <DeliveryTeamTip countries={deliveryTip} />}
 
                     <ReportTabs />
 
@@ -302,83 +311,216 @@ export default function ReportsIndex({
     );
 }
 
-const FOREIGN_KEY = 'codcompta-devise';
+const TIP_KEY = 'codcompta-astuce-devise';
 
-/** Whether the merchant reads the reports in the second currency; remembered on this device. */
-function useForeignCurrency(currency: DisplayCurrency | null): [boolean, (value: boolean) => void] {
-    const [inForeign, setInForeign] = useState(false);
+/**
+ * For merchants who only declared agencies: CODCompta also handles their own couriers and closers.
+ * Closed for good with "Seulement des agences", on every device.
+ */
+function DeliveryTeamTip({ countries }: { countries: { id: number; name: string }[] }) {
+    const [closing, setClosing] = useState(false);
+    const shown = countries.slice(0, 3);
+
+    return (
+        <section
+            aria-labelledby="delivery-tip-title"
+            className="glass flex flex-col gap-3 rounded-2xl p-4 sm:flex-row sm:items-center sm:gap-5 sm:p-5"
+        >
+            <span aria-hidden="true" className="bg-primary/10 text-primary grid size-11 shrink-0 place-items-center rounded-xl">
+                <Truck className="size-5" />
+            </span>
+            <div className="flex-1 space-y-1">
+                <h2 id="delivery-tip-title" className="text-base font-semibold">
+                    Vous livrez avec vos propres livreurs ?
+                </h2>
+                <p className="text-muted-foreground text-sm">
+                    CODCompta gère aussi votre propre équipe : livreurs, closeuses et leur paie, seule ou à côté de vos agences. Dites qui livre dans
+                    chaque pays.
+                </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+                {shown.map((country) => (
+                    <Button key={country.id} asChild variant="outline">
+                        <Link href={route('reference.team.edit', country.id)}>{country.name} : qui livre ?</Link>
+                    </Button>
+                ))}
+                {countries.length > shown.length && (
+                    <Button asChild variant="outline">
+                        <Link href={route('reference.index')}>Autres pays</Link>
+                    </Button>
+                )}
+                <Button
+                    variant="ghost"
+                    disabled={closing}
+                    onClick={() => {
+                        setClosing(true);
+                        router.put(route('delivery-tip.dismiss'), {}, { preserveScroll: true, onFinish: () => setClosing(false) });
+                    }}
+                >
+                    Seulement des agences
+                </Button>
+            </div>
+        </section>
+    );
+}
+
+function rememberTipSeen() {
+    try {
+        window.localStorage.setItem(TIP_KEY, '1');
+    } catch {
+        // Private browsing: the tip may come back.
+    }
+}
+
+/** Shown once, under the title, so new merchants learn the currency switch exists. */
+function CurrencyTip() {
+    const [tip, setTip] = useState(false);
 
     useEffect(() => {
         try {
-            setInForeign(currency !== null && window.localStorage.getItem(FOREIGN_KEY) === currency.code);
+            setTip(window.localStorage.getItem(TIP_KEY) === null);
         } catch {
-            // Private browsing: the choice is simply not remembered.
+            // Private browsing: no tip.
         }
-    }, [currency]);
+    }, []);
 
-    const change = (value: boolean) => {
-        setInForeign(value);
-
-        try {
-            if (value && currency) {
-                window.localStorage.setItem(FOREIGN_KEY, currency.code);
-            } else {
-                window.localStorage.removeItem(FOREIGN_KEY);
-            }
-        } catch {
-            // Private browsing: the choice is simply not remembered.
-        }
+    const closeTip = () => {
+        setTip(false);
+        rememberTipSeen();
     };
 
-    return [inForeign, change];
+    return (
+        <>
+            {tip && (
+                <div
+                    role="note"
+                    className="bg-info-bg text-info-fg -mb-1 flex items-center gap-2 self-start rounded-xl py-1.5 pr-1 pl-3 text-sm font-semibold"
+                >
+                    <ArrowLeftRight className="size-4 shrink-0" aria-hidden="true" />
+                    <span>
+                        Nouveau : lisez vos chiffres en euros ou en dollars. Touchez € ou $ ci-dessus. Votre propre taux se règle dans Partage et
+                        devise.
+                    </span>
+                    <button
+                        type="button"
+                        onClick={closeTip}
+                        aria-label="Fermer l'astuce"
+                        className="hover:bg-info-fg/10 -my-1 grid size-9 shrink-0 place-items-center rounded-lg"
+                    >
+                        <X className="size-4" aria-hidden="true" />
+                    </button>
+                </div>
+            )}
+        </>
+    );
 }
 
-/** "F CFA | €": the same figures in the second currency. */
-function CurrencySwitch({ currency, inForeign, onChange }: { currency: DisplayCurrency; inForeign: boolean; onChange: (value: boolean) => void }) {
-    const options = [
-        { value: false, label: 'F CFA', name: 'francs CFA' },
-        { value: true, label: currencySymbol[currency.code], name: currency.code === 'EUR' ? 'euros' : 'dollars' },
-    ];
+const currencyOptions: { code: DisplayCurrency['code'] | null; label: string; name: string }[] = [
+    { code: null, label: 'F CFA', name: 'francs CFA' },
+    { code: 'EUR', label: '€', name: 'euros' },
+    { code: 'USD', label: '$', name: 'dollars US' },
+];
+
+/**
+ * "F CFA | € | $": the choice is saved for the merchant and the whole page switches at once.
+ * A one-time tip tells new merchants the switch exists.
+ */
+function CurrencySwitch({ current }: { current: DisplayCurrency['code'] | null }) {
+    const [pending, setPending] = useState<DisplayCurrency['code'] | null | undefined>(undefined);
+
+    const choose = (code: DisplayCurrency['code'] | null) => {
+        rememberTipSeen();
+
+        if (code === current || pending !== undefined) {
+            return;
+        }
+
+        setPending(code);
+        router.put(route('display-currency.update'), { display_currency: code }, { preserveScroll: true, onFinish: () => setPending(undefined) });
+    };
 
     return (
-        <div role="group" aria-label="Devise des montants" className="bg-hero inline-flex rounded-xl p-1">
-            {options.map((option) => (
-                <button
-                    key={option.label}
-                    type="button"
-                    aria-pressed={inForeign === option.value}
-                    aria-label={`Montants en ${option.name}`}
-                    onClick={() => onChange(option.value)}
-                    className={cn(
-                        'focus-visible:ring-gold-brand min-h-11 min-w-12 rounded-lg px-3.5 text-sm font-bold transition-colors focus-visible:ring-2 focus-visible:outline-none',
-                        inForeign === option.value ? 'bg-gold-brand text-hero' : 'text-hero-foreground hover:bg-white/10',
-                    )}
-                >
-                    {option.label}
-                </button>
-            ))}
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+            <div role="group" aria-label="Devise des montants" aria-busy={pending !== undefined} className="bg-hero inline-flex rounded-xl p-1">
+                {currencyOptions.map((option) => {
+                    const active = (pending !== undefined ? pending : current) === option.code;
+
+                    return (
+                        <button
+                            key={option.label}
+                            type="button"
+                            aria-pressed={active}
+                            aria-label={`Montants en ${option.name}`}
+                            onClick={() => choose(option.code)}
+                            className={cn(
+                                'focus-visible:ring-gold-brand min-h-11 min-w-12 rounded-lg px-3.5 text-sm font-bold transition-colors focus-visible:ring-2 focus-visible:outline-none',
+                                active ? 'bg-gold-brand text-hero' : 'text-hero-foreground hover:bg-white/10',
+                            )}
+                        >
+                            {option.label}
+                        </button>
+                    );
+                })}
+            </div>
+            {pending !== undefined && (
+                <span role="status" className="text-muted-foreground flex items-center gap-1.5 text-sm">
+                    <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
+                    Conversion…
+                </span>
+            )}
         </div>
     );
 }
 
-/** Which rate the amounts use; a warning when today's dollar rate is missing. */
-function RateNote({ currency }: { currency: DisplayCurrency }) {
-    if (currency.code === 'EUR') {
-        return <p className="text-muted-foreground -mt-2 text-sm">Montants convertis au taux fixe de {formatRate(currency)}, arrondis au centime.</p>;
-    }
+const timeFormat = new Intl.DateTimeFormat('fr-FR', { hour: 'numeric', minute: '2-digit' });
 
-    if (currency.stale && currency.rate_date) {
+/** Which rate the amounts use, with a link to change it; a warning when today's dollar rate is missing. */
+function RateNote({ currency }: { currency: DisplayCurrency }) {
+    const change = (
+        <Link href={route('profit-settings.edit')} className="text-primary inline-flex min-h-11 items-center font-bold underline underline-offset-4">
+            Changer le taux
+        </Link>
+    );
+
+    if (currency.source === 'own') {
         return (
-            <p role="status" className="bg-warning-bg text-warning-fg flex items-start gap-2 rounded-xl px-4 py-3 text-sm font-semibold">
-                <CircleAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-                Taux du jour indisponible : montants au dernier taux connu, celui du {formatRateDate(currency.rate_date)} ({formatRate(currency)}).
+            <p className="text-muted-foreground -my-2 flex flex-wrap items-center gap-x-2 text-sm">
+                <span>Montants convertis au taux que vous avez fixé : {formatRate(currency)}.</span>
+                {change}
             </p>
         );
     }
 
+    if (currency.code === 'EUR') {
+        return (
+            <p className="text-muted-foreground -my-2 flex flex-wrap items-center gap-x-2 text-sm">
+                <span>Montants convertis au taux fixe officiel : {formatRate(currency)}, arrondis au centime.</span>
+                {change}
+            </p>
+        );
+    }
+
+    if (currency.stale && currency.rate_date) {
+        return (
+            <p role="status" className="bg-warning-bg text-warning-fg flex flex-wrap items-center gap-x-2 rounded-xl px-4 py-2 text-sm font-semibold">
+                <CircleAlert className="size-4 shrink-0" aria-hidden="true" />
+                <span>
+                    Taux du jour indisponible : montants au dernier taux connu, celui du {formatRateDate(currency.rate_date)} ({formatRate(currency)}
+                    ).
+                </span>
+                {change}
+            </p>
+        );
+    }
+
+    const checked = currency.updated_at ? ` vérifié à ${timeFormat.format(new Date(currency.updated_at))}` : '';
+
     return (
-        <p className="text-muted-foreground -mt-2 text-sm">
-            Montants convertis au taux du {currency.rate_date ? formatRateDate(currency.rate_date) : 'jour'} : {formatRate(currency)}.
+        <p className="text-muted-foreground -my-2 flex flex-wrap items-center gap-x-2 text-sm">
+            <span>
+                Montants convertis au taux du jour{checked} : {formatRate(currency)}.
+            </span>
+            {change}
         </p>
     );
 }
@@ -395,12 +537,18 @@ function PendingList({ items }: { items: Pending[] }) {
         <section aria-labelledby="todo-title" className="bg-warning-bg/60 border-warning-fg/20 flex flex-col gap-3 rounded-2xl border p-4 md:p-5">
             <h2 id="todo-title" className="flex items-center gap-2 font-[family-name:var(--font-sans)] text-base font-bold">
                 <CircleAlert className="text-warning-fg size-5 shrink-0" aria-hidden="true" />
-                {total > 1 ? `${total} choses à régler pour des chiffres justes` : 'Une chose à régler pour des chiffres justes'}
+                {total > 1 ? `${total} choses à régler` : 'Une chose à régler'}
             </h2>
             <ul className="grid gap-2.5 md:grid-cols-[repeat(auto-fit,minmax(300px,1fr))]">
                 {items.map((item) => (
                     <li key={`${item.kind}-${item.id ?? 'all'}`} className="bg-card flex items-center justify-between gap-3 rounded-xl px-4 py-3">
                         <span className="text-[15px]">
+                            {(item.kind === 'report_missing' || item.kind === 'team_missing') && (
+                                <>
+                                    <strong>{item.kind === 'team_missing' ? 'Mon équipe' : item.agency}</strong> : rien depuis le{' '}
+                                    {dayMonth.format(new Date(`${item.date}T00:00:00Z`))}.
+                                </>
+                            )}
                             {item.kind === 'message_parsed' && (
                                 <>
                                     Message de <strong>{item.agency}</strong> lu, pas encore enregistré.
@@ -423,11 +571,23 @@ function PendingList({ items }: { items: Pending[] }) {
                             href={
                                 item.kind === 'reports_to_verify'
                                     ? route('reports.history', { statut: 'to_verify' })
-                                    : route('messages.show', item.id!)
+                                    : item.kind === 'report_missing'
+                                      ? route('messages.create')
+                                      : item.kind === 'team_missing'
+                                        ? route('reports.create')
+                                        : route('messages.show', item.id!)
                             }
                             className="text-primary inline-flex min-h-11 shrink-0 items-center font-bold whitespace-nowrap underline-offset-4 hover:underline"
                         >
-                            {item.kind === 'message_parsed' ? 'Enregistrer' : item.kind === 'message_failed' ? 'Relire' : 'Vérifier'}
+                            {
+                                {
+                                    report_missing: 'Coller son message',
+                                    team_missing: 'Saisir le rapport',
+                                    message_parsed: 'Enregistrer',
+                                    message_failed: 'Relire',
+                                    reports_to_verify: 'Vérifier',
+                                }[item.kind]
+                            }
                         </Link>
                     </li>
                 ))}
@@ -692,7 +852,7 @@ function AgencyTable({ rows, total }: { rows: Row[]; total: Row }) {
     );
 }
 
-const ENTRIES_SHOWN = 8;
+const ENTRIES_SHOWN = 5;
 
 function EntryList({ entries, countryId, period }: { entries: Entry[]; countryId: number | null; period: Period }) {
     const [all, setAll] = useState(false);
@@ -870,12 +1030,12 @@ function EmptyAccount() {
                 fois (2 minutes), puis envoyez vos rapports.
             </p>
             <ol className="text-muted-foreground space-y-1 text-left text-sm">
-                <li>1. Vos pays de vente et leurs agences de livraison</li>
+                <li>1. Vos pays de vente, et qui y livre : une agence, votre propre équipe, ou les deux</li>
                 <li>2. Vos produits et leur prix d'achat</li>
                 <li>3. Vos rapports : à la main ou en collant le message WhatsApp de l'agence</li>
             </ol>
             <Button asChild>
-                <Link href={route('reference.index')}>Ajouter mes pays, agences et produits</Link>
+                <Link href={route('reference.index')}>Ajouter mes pays, ma livraison et mes produits</Link>
             </Button>
         </div>
     );
@@ -1141,8 +1301,6 @@ function PeriodPicker({ countries, countryId, view, period }: { countries: Count
  */
 function GoalsOverview({ goals }: { goals: GoalProgress[] }) {
     const shown = goals.filter((goal) => goal.status !== 'upcoming');
-    const reached = shown.filter((goal) => goal.status === 'reached');
-    const missed = shown.filter((goal) => goal.status === 'missed');
 
     if (shown.length === 0) {
         return null;
@@ -1161,25 +1319,9 @@ function GoalsOverview({ goals }: { goals: GoalProgress[] }) {
                     Voir mes objectifs
                 </Link>
             </div>
-
-            {reached.length > 0 && (
-                <p role="status" className="badge-success flex items-start gap-2 rounded-xl px-4 py-3 text-sm font-semibold">
-                    <Trophy className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-                    Bravo, objectif{reached.length > 1 ? 's' : ''} atteint{reached.length > 1 ? 's' : ''} :{' '}
-                    {reached.map((goal) => goal.title).join(', ')} !
-                </p>
-            )}
-
-            {missed.length > 0 && (
-                <p className="badge-danger flex items-start gap-2 rounded-xl px-4 py-3 text-sm font-semibold">
-                    <CircleAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-                    <span>Non atteint : {missed.map((goal) => goal.title).join(', ')}. Le détail est sur la carte.</span>
-                </p>
-            )}
-
-            <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <ul className="grid gap-3">
                 {[...shown.filter(isActive), ...shown.filter((goal) => !isActive(goal))].map((goal) => (
-                    <GoalCard key={goal.id} goal={goal} />
+                    <GoalRow key={goal.id} goal={goal} />
                 ))}
             </ul>
         </section>

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import AppLayout from '@/layouts/app-layout';
 import { formatFcfa } from '@/lib/format';
-import { formatRate, formatRateDate, type DisplayCurrency } from '@/lib/money';
+import { formatRate, type DisplayCurrency } from '@/lib/money';
 import { cn } from '@/lib/utils';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, useForm } from '@inertiajs/react';
@@ -24,15 +24,21 @@ interface Props {
     preset: string | null;
     presets: Record<string, Part[]>;
     displayCurrency: CurrencyCode | null;
-    dollar: DisplayCurrency | null;
-    euroRate: number;
+    /** The automatic rates: the fixed euro peg, and the dollar rate of the day (null if never fetched). */
+    automatic: Record<CurrencyCode, DisplayCurrency | null>;
+    /** The merchant's own rates, when set. */
+    ownRates: Record<CurrencyCode, number | null>;
 }
 
 type PartRow = { name: string; percent: string };
 
+type RateMode = 'auto' | 'own';
+
 type ProfitForm = {
     parts: PartRow[];
     display_currency: CurrencyCode | null;
+    rate_mode: Record<CurrencyCode, RateMode>;
+    own_rates: Record<CurrencyCode, string>;
 };
 
 const MIN_PARTS = 2;
@@ -54,10 +60,14 @@ const breadcrumbs: BreadcrumbItem[] = [{ title: 'Partage et devise', href: '/par
 const toRows = (parts: Part[]): PartRow[] => parts.map((part) => ({ name: part.name, percent: String(part.percent) }));
 const percentOf = (row: PartRow) => (row.percent === '' ? 0 : Number(row.percent) || 0);
 
-export default function ProfitSettings({ parts, preset, presets, displayCurrency, dollar, euroRate }: Props) {
-    const { data, setData, put, processing, errors, transform } = useForm<ProfitForm>({
+const rateText = (rate: number | null) => (rate === null ? '' : String(rate).replace('.', ','));
+
+export default function ProfitSettings({ parts, preset, presets, displayCurrency, automatic, ownRates }: Props) {
+    const { data, setData, put, processing, errors, transform, setError, clearErrors } = useForm<ProfitForm>({
         parts: toRows(parts),
         display_currency: displayCurrency,
+        rate_mode: { EUR: ownRates.EUR === null ? 'auto' : 'own', USD: ownRates.USD === null ? 'auto' : 'own' },
+        own_rates: { EUR: rateText(ownRates.EUR), USD: rateText(ownRates.USD) },
     });
     const fieldError = (key: string) => (errors as Record<string, string | undefined>)[key];
     const totalRef = useRef<HTMLParagraphElement>(null);
@@ -97,6 +107,17 @@ export default function ProfitSettings({ parts, preset, presets, displayCurrency
             return;
         }
 
+        const shownCode = data.display_currency;
+
+        if (shownCode && data.rate_mode[shownCode] === 'own' && !(Number(data.own_rates[shownCode].replace(/\s/g, '').replace(',', '.')) > 0)) {
+            setError(`own_rates.${shownCode}` as keyof ProfitForm, 'Entrez votre taux, par exemple 600.');
+            document.getElementById(`own-rate-${shownCode}`)?.focus();
+
+            return;
+        }
+
+        clearErrors();
+
         // A total that is not 100 % is explained right under the list: take the merchant there.
         if (total !== 100) {
             totalRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -105,7 +126,15 @@ export default function ProfitSettings({ parts, preset, presets, displayCurrency
             return;
         }
 
-        transform((form) => ({ ...form, parts: form.parts.map((row) => ({ name: row.name.trim(), percent: percentOf(row) })) }));
+        transform((form) => ({
+            parts: form.parts.map((row) => ({ name: row.name.trim(), percent: percentOf(row) })),
+            display_currency: form.display_currency,
+            // An automatic rate clears the merchant's own one.
+            own_rates: {
+                EUR: form.rate_mode.EUR === 'own' ? form.own_rates.EUR : null,
+                USD: form.rate_mode.USD === 'own' ? form.own_rates.USD : null,
+            },
+        }));
         put(route('profit-settings.update'), { preserveScroll: true });
     };
 
@@ -284,59 +313,13 @@ export default function ProfitSettings({ parts, preset, presets, displayCurrency
                     </div>
                 </section>
 
-                <section aria-labelledby="currency-title" className="glass flex flex-col gap-4 rounded-2xl p-5 md:p-7">
-                    <div className="space-y-1">
-                        <h2 id="currency-title" className="text-xl font-bold">
-                            Devise d'affichage
-                        </h2>
-                        <p className="text-muted-foreground text-[15px]">
-                            Vos rapports restent en francs CFA. Vous pouvez aussi les lire en euros ou en dollars.
-                        </p>
-                    </div>
-                    <fieldset className="flex flex-col gap-2">
-                        <legend className="mb-2 text-sm font-bold">Deuxième devise</legend>
-                        <div className="grid gap-3 md:grid-cols-3">
-                            <ChoiceCard
-                                name="display_currency"
-                                checked={data.display_currency === null}
-                                onSelect={() => setData('display_currency', null)}
-                                title="Aucune"
-                                help="Francs CFA seulement."
-                            />
-                            <ChoiceCard
-                                name="display_currency"
-                                checked={data.display_currency === 'EUR'}
-                                onSelect={() => setData('display_currency', 'EUR')}
-                                title="Euro (€)"
-                                help={`Taux fixe : ${formatRate({ code: 'EUR', rate: euroRate, rate_date: null, stale: false })}.`}
-                            />
-                            <ChoiceCard
-                                name="display_currency"
-                                checked={data.display_currency === 'USD'}
-                                onSelect={() => setData('display_currency', 'USD')}
-                                title="Dollar US ($)"
-                                help="Taux du jour, mis à jour chaque matin."
-                            />
-                        </div>
-                        <InputError message={errors.display_currency} />
-                    </fieldset>
-                    {data.display_currency !== null && (
-                        <p className="badge-info flex items-start gap-2 rounded-xl px-4 py-3 text-sm">
-                            <Info className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-                            <span>
-                                {data.display_currency === 'USD' && dollar === null
-                                    ? "Le taux du dollar n'est pas encore arrivé : le bouton « F CFA / $ » apparaîtra sur Mes rapports dès demain matin."
-                                    : `Un bouton « F CFA / ${data.display_currency === 'EUR' ? '€' : '$'} » apparaît sur Mes rapports. Le taux utilisé est rappelé sous les chiffres.`}
-                                {data.display_currency === 'USD' && dollar?.rate_date && (
-                                    <>
-                                        {' '}
-                                        Dernier taux connu, celui du {formatRateDate(dollar.rate_date)} : {formatRate(dollar)}.
-                                    </>
-                                )}
-                            </span>
-                        </p>
-                    )}
-                </section>
+                <CurrencySection
+                    data={data}
+                    setRate={(code, changes) => setData((form) => ({ ...form, ...changes(form, code) }))}
+                    onCurrency={(code) => setData('display_currency', code)}
+                    automatic={automatic}
+                    errors={errors as Record<string, string | undefined>}
+                />
 
                 <div className="flex flex-wrap justify-end gap-3">
                     <Button asChild variant="outline" size="lg">
@@ -387,5 +370,149 @@ function SplitPreview({ parts }: { parts: PartRow[] }) {
                     : "L'aperçu sera juste quand le total fera 100 %."}
             </p>
         </aside>
+    );
+}
+
+const currencyNames: Record<CurrencyCode, { title: string; symbol: string }> = {
+    EUR: { title: 'Euro (€)', symbol: '€' },
+    USD: { title: 'Dollar US ($)', symbol: '$' },
+};
+
+const checkedAt = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long', hour: 'numeric', minute: '2-digit' });
+
+/** Which currency the dashboard shows, and which rate converts it: automatic, or the merchant's own. */
+function CurrencySection({
+    data,
+    setRate,
+    onCurrency,
+    automatic,
+    errors,
+}: {
+    data: ProfitForm;
+    setRate: (code: CurrencyCode, changes: (form: ProfitForm, code: CurrencyCode) => Partial<ProfitForm>) => void;
+    onCurrency: (code: CurrencyCode | null) => void;
+    automatic: Record<CurrencyCode, DisplayCurrency | null>;
+    errors: Record<string, string | undefined>;
+}) {
+    const code = data.display_currency;
+    const auto = code ? automatic[code] : null;
+    const mode = code ? data.rate_mode[code] : 'auto';
+    const own = code ? Number(data.own_rates[code].replace(/\s/g, '').replace(',', '.')) : NaN;
+    const rate = code && mode === 'own' ? (own > 0 ? own : null) : (auto?.rate ?? null);
+    const example = 100000;
+
+    const autoHelp = (): string => {
+        if (code === 'EUR') {
+            return `Taux fixe officiel : 1 € = 655,957 F CFA. Il ne change jamais.`;
+        }
+
+        if (!auto) {
+            return "Le taux du dollar n'a pas encore pu être récupéré. Fixez votre propre taux en attendant.";
+        }
+
+        const when = auto.updated_at ? `, vérifié le ${checkedAt.format(new Date(auto.updated_at))}` : '';
+
+        return `Taux du jour : ${formatRate(auto)}${when}. Mis à jour toutes les 3 heures.`;
+    };
+
+    return (
+        <section aria-labelledby="currency-title" className="glass flex flex-col gap-5 rounded-2xl p-5 md:p-7">
+            <div className="space-y-1">
+                <h2 id="currency-title" className="text-xl font-bold">
+                    Devise du tableau de bord
+                </h2>
+                <p className="text-muted-foreground text-[15px]">
+                    Vos chiffres restent enregistrés en francs CFA. Choisissez la devise dans laquelle Mes rapports les affiche.
+                </p>
+            </div>
+
+            <fieldset className="flex flex-col gap-2">
+                <legend className="mb-2 text-sm font-bold">Devise affichée</legend>
+                <div className="grid gap-3 md:grid-cols-3">
+                    <ChoiceCard
+                        name="display_currency"
+                        checked={code === null}
+                        onSelect={() => onCurrency(null)}
+                        title="Franc CFA (F)"
+                        help="Vos chiffres tels quels."
+                    />
+                    {(['EUR', 'USD'] as const).map((option) => (
+                        <ChoiceCard
+                            key={option}
+                            name="display_currency"
+                            checked={code === option}
+                            onSelect={() => onCurrency(option)}
+                            title={currencyNames[option].title}
+                            help={option === 'EUR' ? 'Taux officiel ou le vôtre.' : 'Taux du jour ou le vôtre.'}
+                        />
+                    ))}
+                </div>
+                <InputError message={errors.display_currency} />
+            </fieldset>
+
+            {code && (
+                <fieldset className="flex flex-col gap-3">
+                    <legend className="mb-2 text-sm font-bold">Taux utilisé pour le {code === 'EUR' ? 'euro' : 'dollar'}</legend>
+                    <div className="grid gap-3 md:grid-cols-2">
+                        <ChoiceCard
+                            name={`rate_mode_${code}`}
+                            checked={mode === 'auto'}
+                            onSelect={() => setRate(code, (form) => ({ rate_mode: { ...form.rate_mode, [code]: 'auto' } }))}
+                            title={code === 'EUR' ? 'Taux officiel' : 'Taux du jour, automatique'}
+                            help={autoHelp()}
+                        />
+                        <ChoiceCard
+                            name={`rate_mode_${code}`}
+                            checked={mode === 'own'}
+                            onSelect={() => {
+                                setRate(code, (form) => ({ rate_mode: { ...form.rate_mode, [code]: 'own' } }));
+                                window.setTimeout(() => document.getElementById(`own-rate-${code}`)?.focus(), 0);
+                            }}
+                            title="Mon propre taux"
+                            help="Par exemple le taux de votre bureau de change."
+                        />
+                    </div>
+
+                    {mode === 'own' && (
+                        <div className="flex flex-col gap-1.5">
+                            <label htmlFor={`own-rate-${code}`} className="text-sm font-bold">
+                                Votre taux
+                            </label>
+                            <div className="flex items-center gap-3 text-base font-semibold">
+                                <span className="whitespace-nowrap">1 {currencyNames[code].symbol} =</span>
+                                <Input
+                                    id={`own-rate-${code}`}
+                                    value={data.own_rates[code]}
+                                    inputMode="decimal"
+                                    autoComplete="off"
+                                    placeholder={code === 'EUR' ? '655,957' : '600'}
+                                    aria-invalid={Boolean(errors[`own_rates.${code}`])}
+                                    aria-describedby={errors[`own_rates.${code}`] ? `own-rate-${code}-error` : undefined}
+                                    onChange={(e) =>
+                                        setRate(code, (form) => ({
+                                            own_rates: { ...form.own_rates, [code]: e.target.value.replace(/[^\d,.\s]/g, '') },
+                                        }))
+                                    }
+                                    className="h-12 w-36 text-right text-base tabular-nums"
+                                />
+                                <span>F CFA</span>
+                            </div>
+                            <InputError id={`own-rate-${code}-error`} message={errors[`own_rates.${code}`]} />
+                        </div>
+                    )}
+
+                    <p className="badge-info flex items-start gap-2 rounded-xl px-4 py-3 text-sm">
+                        <Info className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+                        <span>
+                            {rate
+                                ? `Exemple : 100 000 F CFA = ${new Intl.NumberFormat('fr-FR', { style: 'currency', currency: code, currencyDisplay: 'narrowSymbol' }).format(example / rate)}. `
+                                : ''}
+                            Mes rapports s'affiche dans cette devise dès l'enregistrement. Le bouton « F CFA | € | $ » de Mes rapports permet aussi de
+                            changer à tout moment.
+                        </span>
+                    </p>
+                </fieldset>
+            )}
+        </section>
     );
 }

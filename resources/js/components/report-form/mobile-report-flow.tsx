@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { adPlatformLabel } from '@/lib/ad-platforms';
 import { formatFcfa, formatPeriod } from '@/lib/format';
 import { cn } from '@/lib/utils';
-import { router } from '@inertiajs/react';
+import { Link, router } from '@inertiajs/react';
 import { ArrowRight, Check, CircleAlert, Info, LoaderCircle, Plus, Trash2, X } from 'lucide-react';
 import { FormEvent, ReactNode, useEffect, useRef, useState } from 'react';
 
@@ -243,7 +243,7 @@ export function MobileReportFlow({ form, agencies, products }: { form: ReportFor
                                 disabled={editing}
                                 onChange={(e) => setData('agency_id', e.target.value)}
                             >
-                                <option value="">Choisir une agence</option>
+                                <option value="">Choisir qui a livré</option>
                                 {agencies.map((option) => (
                                     <option key={option.id} value={option.id}>
                                         {option.is_own_team ? `Mon équipe (${option.country})` : `${option.name} (${option.country})`}
@@ -252,6 +252,14 @@ export function MobileReportFlow({ form, agencies, products }: { form: ReportFor
                             </NativeSelect>
                             {editing && <p className="text-muted-foreground text-xs">L'agence d'un rapport ne change pas.</p>}
                             <InputError message={errors.agency_id} />
+                            {!editing && !agencies.some((option) => option.is_own_team) && (
+                                <p className="text-muted-foreground text-sm">
+                                    Vous livrez avec vos propres livreurs ?{' '}
+                                    <Link href={route('reference.index')} className="text-primary font-semibold underline underline-offset-4">
+                                        Déclarez votre équipe
+                                    </Link>
+                                </p>
+                            )}
                         </div>
 
                         {severalDays ? (
@@ -370,8 +378,6 @@ export function MobileReportFlow({ form, agencies, products }: { form: ReportFor
 
                 {step === 3 && (
                     <div className="flex flex-col gap-3">
-                        <p className="text-muted-foreground -mt-2 text-[15px]">Ce que vous avez payé aujourd'hui pour ces produits.</p>
-
                         {!data.no_ads &&
                             form.adProducts.map((productId) =>
                                 openAd === productId ? (
@@ -399,7 +405,6 @@ export function MobileReportFlow({ form, agencies, products }: { form: ReportFor
                             <TeamFees form={form} idPrefix="m-" />
                         ) : (
                             <>
-                                <p className="text-muted-foreground -mt-2 text-[15px]">Laissez vide ce qui ne s'applique pas.</p>
                                 <MoneyField
                                     id="m-delivery_fees"
                                     label="Livraison (F)"

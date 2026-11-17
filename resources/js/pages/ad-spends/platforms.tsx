@@ -8,7 +8,7 @@ import { formatFcfa, formatNumber } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
-import { ChevronLeft, ChevronRight, CircleAlert, Info, Trophy } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CircleAlert, Trophy } from 'lucide-react';
 
 interface Group {
     platform: string;
@@ -63,7 +63,6 @@ const winnerName = (platform: string) => (platform === 'facebook_tiktok' ? 'Face
 const money = (value: number | null) => (value === null ? 'Pas de donnée' : formatFcfa(value));
 
 export default function AdSpendPlatforms({ countries, countryId, period, products }: Props) {
-    const country = countries.find((option) => option.id === countryId);
     const show = (params: Record<string, string | number>) =>
         router.get(
             route('ad-spends.platforms'),
@@ -128,10 +127,7 @@ export default function AdSpendPlatforms({ countries, countryId, period, product
                     </div>
                 </section>
 
-                <p className="text-muted-foreground text-[15px]">
-                    {country ? `${country.name}. ` : ''}Pour chaque produit, ce que rapporte la pub selon qu'elle tourne sur Facebook, sur TikTok ou
-                    sur les deux.
-                </p>
+                <p className="text-muted-foreground text-sm">On compare les jours selon la plateforme utilisée, avec les vraies livraisons.</p>
 
                 {products.length === 0 ? (
                     <div className="glass text-muted-foreground rounded-2xl p-6 text-[15px]">
@@ -194,11 +190,6 @@ function ProductCard({ product }: { product: ProductComparison }) {
                                     <tr key={group.platform} className="border-b last:border-b-0">
                                         <th scope="row" className="px-2.5 py-3 text-left font-bold">
                                             {adPlatformLabel(group.platform)}
-                                            {product.winner === group.platform && (
-                                                <span className="badge-success ml-2 rounded-full px-2 py-0.5 text-xs font-bold">
-                                                    La plus rentable
-                                                </span>
-                                            )}
                                         </th>
                                         <Td>{formatNumber(group.days)}</Td>
                                         <Td>{formatFcfa(group.ad_spend)}</Td>
@@ -221,18 +212,6 @@ function ProductCard({ product }: { product: ProductComparison }) {
                         <p className="text-[15px] tabular-nums md:hidden">
                             {adPlatformLabel(best.platform)} uniquement : {formatFcfa(best.ad_spend)} de pub, {formatNumber(best.delivered)} livrés,{' '}
                             {money(best.cost_per_delivery)} par livraison, {formatFcfa(best.profit)} de bénéfice après pub.
-                        </p>
-                    )}
-
-                    {product.groups.length > 1 ? (
-                        <p className="badge-info flex items-start gap-2 rounded-xl px-4 py-3 text-sm">
-                            <Info className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-                            On compare les jours entre eux selon la plateforme utilisée ce jour-là. Les livraisons sont donc les vraies livraisons du
-                            produit, sans estimation. On regarde le bénéfice par jour, car chaque façon n'a pas tourné le même nombre de jours.
-                        </p>
-                    ) : (
-                        <p className="text-muted-foreground text-sm">
-                            Pour comparer, essayez une autre plateforme, ou les deux ensemble, pendant une semaine.
                         </p>
                     )}
                 </>

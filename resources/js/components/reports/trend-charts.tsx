@@ -74,8 +74,6 @@ export function TrendCharts({ trend }: { trend: Trend }) {
                 <p className="text-muted-foreground text-sm">
                     Par {bucketNames[trend.bucket]}, du {dayFormat.format(utc(trend.from))} au {dayFormat.format(utc(trend.to))}, comparé aux {days}{' '}
                     jours d'avant.
-                    {trend.extended && ' La période affichée étant courte, les graphiques montrent les 14 derniers jours.'} Une publicité compte le
-                    jour où elle se termine.
                 </p>
             </div>
 

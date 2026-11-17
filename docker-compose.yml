@@ -3,8 +3,8 @@
 #   web        Nginx, reachable only from the server itself on 127.0.0.1:${APP_PORT}
 #              (the server's existing reverse proxy adds HTTPS in front of it)
 #   app        Laravel on php-fpm; runs the database migrations at start
-#   queue      background jobs: reading agency messages
-#   scheduler  Laravel scheduled tasks (Sika checks finished goals every hour)
+#   queue      background jobs: Sika's notifications first, then reading agency messages
+#   scheduler  Laravel scheduled tasks (finished goals, report reminders, dollar rate)
 #   db         MySQL 8.4, data kept in the "mysql-data" volume
 #
 # Every setting comes from the .env file next to this one (see deploy/production.env.example).
@@ -50,7 +50,7 @@ services:
       DB_HOST: db
       DB_PORT: 3306
       CONTAINER_ROLE: queue
-    command: ["php", "artisan", "queue:work", "--sleep=3", "--tries=1", "--timeout=180", "--max-time=3600"]
+    command: ["php", "artisan", "queue:work", "--queue=notifications,default", "--sleep=1", "--tries=1", "--timeout=180", "--max-time=3600"]
     depends_on:
       app:
         condition: service_healthy

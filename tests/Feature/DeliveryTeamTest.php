@@ -176,3 +176,35 @@ it('propose « Mon équipe » en premier dans le formulaire, avec ses livreurs e
             ->where('agencies.1.is_own_team', false)
         );
 });
+
+it('demande qui livre dès l\'ajout d\'un pays, et envoie vers l\'équipe quand le commerçant livre lui-même', function () {
+    $this->actingAs($this->user)->post('/referentiel/pays', ['name' => 'Bénin', 'code' => 'bj', 'delivery_mode' => 'team'])
+        ->assertRedirect()
+        ->assertSessionHas('success');
+
+    $benin = $this->merchant->countries()->where('code', 'BJ')->sole();
+
+    expect($benin->delivery_mode)->toBe('team')
+        ->and($benin->ownTeam()->exists())->toBeTrue();
+
+    $this->actingAs($this->user)->post('/referentiel/pays', ['name' => 'Niger', 'code' => 'NE']);
+
+    expect($this->merchant->countries()->where('code', 'NE')->sole()->delivery_mode)->toBe('agency');
+});
+
+it('signale sur Mes rapports qu\'on peut déclarer sa propre équipe, jusqu\'à ce que le commerçant ferme la carte', function () {
+    $this->actingAs($this->user)->get('/rapports')
+        ->assertInertia(fn ($page) => $page->where('deliveryTip.0.name', 'Togo'));
+
+    $this->actingAs($this->user)->put('/astuces/equipe')->assertRedirect();
+
+    $this->actingAs($this->user)->get('/rapports')
+        ->assertInertia(fn ($page) => $page->where('deliveryTip', null));
+});
+
+it('ne montre pas la carte à qui a déjà déclaré son équipe', function () {
+    withTeam();
+
+    $this->actingAs($this->user)->get('/rapports')
+        ->assertInertia(fn ($page) => $page->where('deliveryTip', null));
+});

@@ -163,6 +163,8 @@ it('liste en tête ce qui reste à régler : message lu non enregistré, message
     $message(RawMessage::STATUS_FAILED);
     $message(RawMessage::STATUS_VALIDATED);
     Report::whereIn('agency_id', [$this->agency1->id])->limit(2)->update(['status' => Report::STATUS_TO_VERIFY]);
+    // Every agency reported recently: no "silent agency" line here.
+    Agency::query()->update(['last_report_at' => now()]);
 
     $this->actingAs($this->user)
         ->get('/rapports?period=week&date=2026-10-14')
@@ -172,4 +174,15 @@ it('liste en tête ce qui reste à régler : message lu non enregistré, message
             ->where('pending.2.count', 2)
             ->where('pending', fn ($items) => collect($items)->pluck('kind')->sort()->values()->all() === ['message_failed', 'message_parsed', 'reports_to_verify'])
         );
+});
+
+it('signale une agence restée trop longtemps sans rapport', function () {
+    Agency::query()->update(['last_report_at' => now()]);
+    $this->agency1->forceFill(['last_report_at' => now()->subDays(5), 'alert_after_days' => 2])->save();
+
+    $this->actingAs($this->user)
+        ->get('/rapports?period=week&date=2026-10-14')
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('pending.0.kind', 'report_missing')
+            ->where('pending.0.agency', $this->agency1->name));
 });

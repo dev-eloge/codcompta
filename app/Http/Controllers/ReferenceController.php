@@ -73,6 +73,7 @@ class ReferenceController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:100'],
             'code' => ['required', 'string', 'size:2', Rule::unique('countries')->where('merchant_id', $merchant->id)],
+            'delivery_mode' => ['nullable', Rule::in(Country::DELIVERY_MODES)],
         ], [
             'name.required' => 'Indiquez le nom du pays.',
             'code.required' => 'Indiquez le code du pays (2 lettres).',
@@ -80,9 +81,21 @@ class ReferenceController extends Controller
             'code.unique' => 'Ce pays existe déjà.',
         ]);
 
-        $merchant->countries()->create([...$data, 'code' => strtoupper($data['code'])]);
+        $country = $merchant->countries()->create([
+            'name' => $data['name'],
+            'code' => strtoupper($data['code']),
+            'delivery_mode' => $data['delivery_mode'] ?? Country::DELIVERY_AGENCY,
+        ]);
 
-        return back()->with('success', 'Pays ajouté.');
+        if (! $country->hasOwnTeam()) {
+            return back()->with('success', "{$country->name} ajouté. Ajoutez maintenant son agence de livraison.");
+        }
+
+        // The team reports like an agency: it needs its own line in the country.
+        $country->agencies()->create(['name' => 'Mon équipe', 'is_own_team' => true]);
+
+        return to_route('reference.team.edit', $country)
+            ->with('success', "{$country->name} ajouté. Ajoutez maintenant vos livreurs et vos closeuses, et comment vous les payez.");
     }
 
     public function storeAgency(Request $request): RedirectResponse

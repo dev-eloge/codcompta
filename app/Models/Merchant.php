@@ -23,6 +23,9 @@ class Merchant extends Model
         'share_reinvestment',
         'profit_split',
         'display_currency',
+        'custom_rates',
+        'report_reminders',
+        'delivery_tip_dismissed_at',
         'suspended_at',
         'suspension_reason',
     ];
@@ -92,6 +95,9 @@ class Merchant extends Model
             'share_pocket' => 'integer',
             'share_reinvestment' => 'integer',
             'profit_split' => 'array',
+            'custom_rates' => 'array',
+            'report_reminders' => 'boolean',
+            'delivery_tip_dismissed_at' => 'datetime',
             'suspended_at' => 'datetime',
         ];
     }

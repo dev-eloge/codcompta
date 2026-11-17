@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Agency;
 use App\Models\Country;
 use App\Models\RawMessage;
 use App\Models\Report;
@@ -37,12 +38,27 @@ class PendingItems
                 'date' => $message->created_at->toDateString(),
             ]);
 
+        // Agencies silent for longer than their alert delay (RG-08): their missing days make the results too low.
+        $silent = $country->agencies()
+            ->whereNotNull('last_report_at')
+            ->orderBy('last_report_at')
+            ->get()
+            ->filter(fn (Agency $agency) => $agency->isLate(now($country->merchant->timezone ?? 'UTC')))
+            ->map(fn (Agency $agency) => [
+                'kind' => $agency->is_own_team ? 'team_missing' : 'report_missing',
+                'id' => $agency->id,
+                'agency' => $agency->name,
+                'count' => 1,
+                'date' => $agency->last_report_at->toDateString(),
+            ]);
+
         $toVerify = Report::query()
             ->whereIn('agency_id', $agencyIds)
             ->where('status', Report::STATUS_TO_VERIFY)
             ->count();
 
-        return $messages
+        return $silent
+            ->concat($messages)
             ->when($toVerify > 0, fn ($items) => $items->push([
                 'kind' => 'reports_to_verify',
                 'id' => null,
