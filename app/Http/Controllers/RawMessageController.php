@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreRawMessageRequest;
 use App\Jobs\ParseRawMessage;
+use App\Models\AdSpend;
 use App\Models\Agency;
 use App\Models\Merchant;
 use App\Models\Product;
@@ -175,6 +176,8 @@ class RawMessageController extends Controller
             'index' => $index,
             'suggested_status' => $status,
             'warnings' => $warnings,
+            // Ads already noted by another agency for these days, as on the report form.
+            'shared_ads' => AdSpend::sharedWith($agency, $proposal['period_start'], $proposal['period_end']),
             'recorded' => $report === null ? null : [
                 'id' => $report->id,
                 'status' => $report->status,

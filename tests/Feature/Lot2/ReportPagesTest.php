@@ -186,3 +186,20 @@ it('signale une agence restée trop longtemps sans rapport', function () {
             ->where('pending.0.kind', 'report_missing')
             ->where('pending.0.agency', $this->agency1->name));
 });
+
+it('masque une alerte avec sa croix, jusqu\'à ce que la situation change', function () {
+    Agency::query()->update(['last_report_at' => now()]);
+    $this->agency1->forceFill(['last_report_at' => now()->subDays(5), 'alert_after_days' => 2])->save();
+    $key = 'silent:'.$this->agency1->id.':'.now()->subDays(5)->toDateString();
+
+    $this->actingAs($this->user)->put('/alertes/masquer', ['keys' => [$key]])->assertRedirect();
+
+    $this->actingAs($this->user)->get('/rapports?period=week&date=2026-10-14')
+        ->assertInertia(fn (Assert $page) => $page->where('pending', fn ($items) => collect($items)->where('kind', 'report_missing')->isEmpty()));
+
+    // A new silence, from another day, is a new alert.
+    $this->agency1->forceFill(['last_report_at' => now()->subDays(3)])->save();
+
+    $this->actingAs($this->user)->get('/rapports?period=week&date=2026-10-14')
+        ->assertInertia(fn (Assert $page) => $page->where('pending.0.kind', 'report_missing'));
+});

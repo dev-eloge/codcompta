@@ -17,10 +17,14 @@ class PendingItems
      * What may make the results wrong, shown first on the page: messages read but not saved yet,
      * messages that could not be read, and reports still waiting to be checked.
      *
-     * @return list<array{kind: string, id: int|null, agency: string|null, count: int, date: string|null}>
+     * Each item has a key; the ones the merchant closed with the cross are left out.
+     *
+     * @return list<array{key: string, kind: string, id: int|null, agency: string|null, count: int, date: string|null}>
      */
     public function forCountry(Country $country): array
     {
+        $dismissed = $country->merchant->dismissed_alerts ?? [];
+
         $agencyIds = $country->agencies()->select('id');
 
         $messages = RawMessage::query()
@@ -31,6 +35,7 @@ class PendingItems
             ->limit(5)
             ->get()
             ->map(fn (RawMessage $message) => [
+                'key' => "message:{$message->id}:{$message->status}",
                 'kind' => $message->status === RawMessage::STATUS_FAILED ? 'message_failed' : 'message_parsed',
                 'id' => $message->id,
                 'agency' => $message->agency->name,
@@ -45,6 +50,7 @@ class PendingItems
             ->get()
             ->filter(fn (Agency $agency) => $agency->isLate(now($country->merchant->timezone ?? 'UTC')))
             ->map(fn (Agency $agency) => [
+                'key' => "silent:{$agency->id}:{$agency->last_report_at->toDateString()}",
                 'kind' => $agency->is_own_team ? 'team_missing' : 'report_missing',
                 'id' => $agency->id,
                 'agency' => $agency->name,
@@ -60,12 +66,14 @@ class PendingItems
         return $silent
             ->concat($messages)
             ->when($toVerify > 0, fn ($items) => $items->push([
+                'key' => "to-verify:{$country->id}:{$toVerify}",
                 'kind' => 'reports_to_verify',
                 'id' => null,
                 'agency' => null,
                 'count' => $toVerify,
                 'date' => null,
             ]))
+            ->reject(fn (array $item) => in_array($item['key'], $dismissed, true))
             ->values()
             ->all();
     }

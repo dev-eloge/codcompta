@@ -17,7 +17,7 @@ import { FormEvent, ReactNode, useEffect, useRef, useState } from 'react';
 type Step = 1 | 2 | 3 | 4;
 
 const steps: { label: string; next: string }[] = [
-    { label: 'Qui livre', next: 'Suivant : les produits' },
+    { label: 'Livraison', next: 'Suivant : les produits' },
     { label: 'Produits', next: 'Suivant : la pub' },
     { label: 'Pub', next: 'Suivant : les frais' },
     { label: 'Frais', next: 'Enregistrer' },
@@ -227,7 +227,7 @@ export function MobileReportFlow({ form, agencies, products }: { form: ReportFor
                 )}
 
                 <h2 ref={stepTitle} tabIndex={-1} className="text-[22px] font-bold outline-none">
-                    {step === 1 && 'Qui livre, quel jour ?'}
+                    {step === 1 && 'Livraison et période'}
                     {step === 2 && 'Produits livrés'}
                     {step === 3 && 'La pub du jour'}
                     {step === 4 && (form.isTeam ? 'Frais du jour' : "Frais de l'agence")}
@@ -236,17 +236,17 @@ export function MobileReportFlow({ form, agencies, products }: { form: ReportFor
                 {step === 1 && (
                     <div className="flex flex-col gap-4">
                         <div className="grid gap-2">
-                            <Label htmlFor="m-agency_id">Qui a livré ?</Label>
+                            <Label htmlFor="m-agency_id">Agence ou équipe</Label>
                             <NativeSelect
                                 id="m-agency_id"
                                 value={data.agency_id}
                                 disabled={editing}
                                 onChange={(e) => setData('agency_id', e.target.value)}
                             >
-                                <option value="">Choisir qui a livré</option>
+                                <option value="">Choisir l'agence ou l'équipe</option>
                                 {agencies.map((option) => (
                                     <option key={option.id} value={option.id}>
-                                        {option.is_own_team ? `Mon équipe (${option.country})` : `${option.name} (${option.country})`}
+                                        {option.is_own_team ? `Équipe interne (${option.country})` : `${option.name} (${option.country})`}
                                     </option>
                                 ))}
                             </NativeSelect>
@@ -254,9 +254,9 @@ export function MobileReportFlow({ form, agencies, products }: { form: ReportFor
                             <InputError message={errors.agency_id} />
                             {!editing && !agencies.some((option) => option.is_own_team) && (
                                 <p className="text-muted-foreground text-sm">
-                                    Vous livrez avec vos propres livreurs ?{' '}
+                                    Vous avez votre propre équipe de livraison ?{' '}
                                     <Link href={route('reference.index')} className="text-primary font-semibold underline underline-offset-4">
-                                        Déclarez votre équipe
+                                        Configurez-la
                                     </Link>
                                 </p>
                             )}
@@ -264,7 +264,7 @@ export function MobileReportFlow({ form, agencies, products }: { form: ReportFor
 
                         {severalDays ? (
                             <div className="grid grid-cols-2 gap-3">
-                                <div className="grid gap-2">
+                                <div className="grid min-w-0 gap-2">
                                     <Label htmlFor="m-period_start">Du</Label>
                                     <Input
                                         id="m-period_start"
@@ -281,7 +281,7 @@ export function MobileReportFlow({ form, agencies, products }: { form: ReportFor
                                     />
                                     <InputError message={errors.period_start} />
                                 </div>
-                                <div className="grid gap-2">
+                                <div className="grid min-w-0 gap-2">
                                     <Label htmlFor="m-period_end">Au</Label>
                                     <Input
                                         id="m-period_end"

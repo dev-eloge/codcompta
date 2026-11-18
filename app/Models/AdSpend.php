@@ -106,4 +106,33 @@ class AdSpend extends Model
             'orders_received' => 'integer',
         ];
     }
+
+    /**
+     * The ads already noted, for the whole country, on these days: one per product, as the report forms show them.
+     *
+     * @return list<array{id: int, product_id: int, platform: string|null, amount: int, facebook_amount: int|null, tiktok_amount: int|null, noted_by: string|null}>
+     */
+    public static function sharedWith(Agency $agency, string $from, string $to, ?int $exceptReportId = null): array
+    {
+        return self::query()
+            ->where('country_id', $agency->country_id)
+            ->sharedByProduct()
+            ->overlapping($from, $to)
+            ->when($exceptReportId, fn ($query) => $query->where(fn ($query) => $query->whereNull('report_id')->orWhere('report_id', '!=', $exceptReportId)))
+            ->with('report.agency:id,name')
+            ->orderBy('id')
+            ->get()
+            ->unique('product_id')
+            ->map(fn (AdSpend $ad) => [
+                'id' => $ad->id,
+                'product_id' => $ad->product_id,
+                'platform' => $ad->platform,
+                'amount' => $ad->amount,
+                'facebook_amount' => $ad->facebook_amount,
+                'tiktok_amount' => $ad->tiktok_amount,
+                'noted_by' => $ad->report?->agency?->name,
+            ])
+            ->values()
+            ->all();
+    }
 }

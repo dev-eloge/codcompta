@@ -112,12 +112,12 @@ export default function ReportsCreate(props: Props) {
                         </div>
                     )}
 
-                    <section aria-labelledby="who-title" className="glass grid gap-4 rounded-2xl p-5 sm:grid-cols-3 md:p-6">
-                        <StepTitle id="who-title" step={1} className="sm:col-span-3">
-                            Qui a livré, quel jour ?
+                    <section aria-labelledby="who-title" className="glass grid gap-4 rounded-2xl p-5 sm:grid-cols-2 md:p-6">
+                        <StepTitle id="who-title" step={1} className="sm:col-span-2">
+                            Livraison et période
                         </StepTitle>
-                        <div className="grid gap-2 sm:col-span-3">
-                            <Label htmlFor="agency_id">Qui a livré ? *</Label>
+                        <div className="grid min-w-0 gap-2 sm:col-span-2">
+                            <Label htmlFor="agency_id">Agence ou équipe *</Label>
                             <NativeSelect
                                 id="agency_id"
                                 required
@@ -126,10 +126,10 @@ export default function ReportsCreate(props: Props) {
                                 aria-describedby={editing ? 'agency-help' : undefined}
                                 onChange={(e) => setData('agency_id', e.target.value)}
                             >
-                                <option value="">Choisir qui a livré</option>
+                                <option value="">Choisir l'agence ou l'équipe</option>
                                 {agencies.map((agency) => (
                                     <option key={agency.id} value={agency.id}>
-                                        {agency.is_own_team ? `Mon équipe (${agency.country})` : `${agency.name} (${agency.country})`}
+                                        {agency.is_own_team ? `Équipe interne (${agency.country})` : `${agency.name} (${agency.country})`}
                                     </option>
                                 ))}
                             </NativeSelect>
@@ -140,16 +140,16 @@ export default function ReportsCreate(props: Props) {
                             )}
                             {!editing && !agencies.some((option) => option.is_own_team) && (
                                 <p className="text-muted-foreground text-sm">
-                                    Vous livrez avec vos propres livreurs ?{' '}
+                                    Vous avez votre propre équipe de livraison ?{' '}
                                     <Link href={route('reference.index')} className="text-primary font-semibold underline underline-offset-4">
-                                        Déclarez votre équipe
+                                        Configurez-la
                                     </Link>
                                 </p>
                             )}
                             <InputError message={errors.agency_id} />
                         </div>
 
-                        <div className="grid gap-2">
+                        <div className="grid min-w-0 gap-2">
                             <Label htmlFor="period_start">Du *</Label>
                             <Input
                                 id="period_start"
@@ -168,7 +168,7 @@ export default function ReportsCreate(props: Props) {
                             <InputError message={errors.period_start} />
                         </div>
 
-                        <div className="grid gap-2">
+                        <div className="grid min-w-0 gap-2">
                             <Label htmlFor="period_end">Au *</Label>
                             <Input
                                 id="period_end"
@@ -181,7 +181,7 @@ export default function ReportsCreate(props: Props) {
                             <InputError message={errors.period_end} />
                         </div>
 
-                        <div className="grid gap-2">
+                        <div className="grid min-w-0 gap-2 sm:col-span-2">
                             <Label htmlFor="status">Compter dans le bénéfice ?</Label>
                             <NativeSelect id="status" value={data.status} onChange={(e) => setData('status', e.target.value as ReportForm['status'])}>
                                 <option value="counted">Oui, le compter</option>
@@ -257,7 +257,7 @@ export default function ReportsCreate(props: Props) {
 
                                         <div className="grid gap-1">
                                             <Label htmlFor={`amount-${index}`} className="text-muted-foreground text-xs">
-                                                Argent encaissé (F) *
+                                                Encaissé (F) *
                                             </Label>
                                             <Input
                                                 id={`amount-${index}`}

@@ -65,6 +65,7 @@ Route::middleware(['auth', 'merchant.active'])->group(function () {
     Route::get('referentiel/pays/{country}/equipe', [TeamController::class, 'edit'])->name('reference.team.edit');
     Route::put('referentiel/pays/{country}/equipe', [TeamController::class, 'update'])->name('reference.team.update');
     Route::put('astuces/equipe', [TeamController::class, 'dismissTip'])->name('delivery-tip.dismiss');
+    Route::put('alertes/masquer', [TeamController::class, 'dismissAlert'])->name('alerts.dismiss');
     Route::delete('referentiel/pays/{country}', [ReferenceController::class, 'destroyCountry'])->name('reference.countries.destroy');
     Route::put('referentiel/agences/{agency}', [ReferenceController::class, 'updateAgency'])->name('reference.agencies.update');
     Route::delete('referentiel/agences/{agency}', [ReferenceController::class, 'destroyAgency'])->name('reference.agencies.destroy');

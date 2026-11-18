@@ -26,6 +26,7 @@ class Merchant extends Model
         'custom_rates',
         'report_reminders',
         'delivery_tip_dismissed_at',
+        'dismissed_alerts',
         'suspended_at',
         'suspension_reason',
     ];
@@ -98,7 +99,21 @@ class Merchant extends Model
             'custom_rates' => 'array',
             'report_reminders' => 'boolean',
             'delivery_tip_dismissed_at' => 'datetime',
+            'dismissed_alerts' => 'array',
             'suspended_at' => 'datetime',
         ];
+    }
+
+    /** Most recent closed alerts kept: older ones no longer match anything. */
+    public const DISMISSED_ALERTS_KEPT = 200;
+
+    /**
+     * Closes one alert of Mes rapports, for good, on every device.
+     */
+    public function dismissAlert(string $key): void
+    {
+        $keys = array_values(array_unique([...($this->dismissed_alerts ?? []), $key]));
+
+        $this->update(['dismissed_alerts' => array_slice($keys, -self::DISMISSED_ALERTS_KEPT)]);
     }
 }

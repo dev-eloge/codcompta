@@ -392,26 +392,7 @@ class ReportController extends Controller
             return [];
         }
 
-        return AdSpend::query()
-            ->where('country_id', $agency->country_id)
-            ->sharedByProduct()
-            ->overlapping($from, $to)
-            ->when($report, fn ($query) => $query->where(fn ($query) => $query->whereNull('report_id')->orWhere('report_id', '!=', $report->id)))
-            ->with('report.agency:id,name')
-            ->orderBy('id')
-            ->get()
-            ->unique('product_id')
-            ->map(fn (AdSpend $ad) => [
-                'id' => $ad->id,
-                'product_id' => $ad->product_id,
-                'platform' => $ad->platform,
-                'amount' => $ad->amount,
-                'facebook_amount' => $ad->facebook_amount,
-                'tiktok_amount' => $ad->tiktok_amount,
-                'noted_by' => $ad->report?->agency?->name,
-            ])
-            ->values()
-            ->all();
+        return AdSpend::sharedWith($agency, $from, $to, $report?->id);
     }
 
     public function store(StoreReportRequest $request, ReportRecorder $recorder): RedirectResponse

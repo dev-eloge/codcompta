@@ -19,6 +19,7 @@ import {
     ArrowLeftRight,
     ArrowUpRight,
     CalendarRange,
+    ChevronDown,
     ChevronLeft,
     ChevronRight,
     CircleAlert,
@@ -84,6 +85,8 @@ interface Entry {
 const sourceLabels: Record<Entry['source'], string> = { manual: 'Saisi à la main', message: 'Message WhatsApp', sheet: 'Google Sheet' };
 
 interface Pending {
+    /** Names the situation; closing the alert hides it until the situation changes. */
+    key: string;
     kind: 'report_missing' | 'team_missing' | 'message_parsed' | 'message_failed' | 'reports_to_verify';
     id: number | null;
     agency: string | null;
@@ -235,6 +238,9 @@ export default function ReportsIndex({
 }: Props) {
     const { goals = [] } = usePage<SharedData>().props;
     const shown = currency;
+    // Nothing sold, no ad, no report on the period: one clear message instead of empty frames and charts.
+    const hasActivity =
+        entries.length > 0 || (report !== null && report !== undefined && (report.total.revenue !== 0 || report.total.ad_spend !== 0));
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -282,27 +288,36 @@ export default function ReportsIndex({
 
                             <h2 className="sr-only first-letter:uppercase">{periodTitle(period)}</h2>
 
-                            {view === 'generale' && overview && (
+                            {view !== 'country' && overview && overview.total.revenue === 0 && overview.total.ad_spend === 0 && <NoActivity />}
+                            {view === 'generale' && overview && (overview.total.revenue !== 0 || overview.total.ad_spend !== 0) && (
                                 <GeneralView overview={overview} period={period} onShowCountries={() => showView('pays', period)} />
                             )}
-                            {view === 'pays' && overview && <AllCountriesView overview={overview} period={period} />}
+                            {view === 'pays' && overview && (overview.total.revenue !== 0 || overview.total.ad_spend !== 0) && (
+                                <AllCountriesView overview={overview} period={period} />
+                            )}
                         </>
                     )}
                     {countries.length > 0 && view === 'country' && (
                         <>
                             {pending.length > 0 && <PendingList items={pending} />}
 
-                            {report && <Summary total={report.total} period={period} trend={trend} />}
+                            {report && !hasActivity && <NoActivity />}
+
+                            {report && hasActivity && <Summary total={report.total} period={period} trend={trend} />}
 
                             {goals.length > 0 && <GoalsOverview goals={goals} />}
 
-                            {report && <AgencyTable rows={report.agencies} total={report.total} />}
+                            {hasActivity && (
+                                <>
+                                    {report && <AgencyTable rows={report.agencies} total={report.total} />}
 
-                            <Deferred data="trend" fallback={<TrendSkeleton />}>
-                                {trend ? <TrendCharts trend={trend} /> : <></>}
-                            </Deferred>
+                                    <Deferred data="trend" fallback={<TrendSkeleton />}>
+                                        {trend ? <TrendCharts trend={trend} /> : <></>}
+                                    </Deferred>
 
-                            <EntryList entries={entries} countryId={countryId} period={period} />
+                                    <EntryList entries={entries} countryId={countryId} period={period} />
+                                </>
+                            )}
                         </>
                     )}
                 </div>
@@ -318,46 +333,60 @@ const TIP_KEY = 'codcompta-astuce-devise';
  * Closed for good with "Seulement des agences", on every device.
  */
 function DeliveryTeamTip({ countries }: { countries: { id: number; name: string }[] }) {
-    const [closing, setClosing] = useState(false);
-    const shown = countries.slice(0, 3);
+    const [closed, setClosed] = useState(false);
 
+    if (closed) {
+        return null;
+    }
+
+    // One country: straight to its delivery settings. Several: the list of countries.
+    const target = countries.length === 1 ? route('reference.team.edit', countries[0].id) : route('reference.index');
+
+    // One slim line, closed for good with the cross.
     return (
-        <section
-            aria-labelledby="delivery-tip-title"
-            className="glass flex flex-col gap-3 rounded-2xl p-4 sm:flex-row sm:items-center sm:gap-5 sm:p-5"
-        >
-            <span aria-hidden="true" className="bg-primary/10 text-primary grid size-11 shrink-0 place-items-center rounded-xl">
-                <Truck className="size-5" />
+        <aside aria-label="Nouveauté" className="bg-card flex items-center gap-2 rounded-xl border py-1 pr-1 pl-3 text-sm">
+            <Truck className="text-primary size-4 shrink-0" aria-hidden="true" />
+            <p className="min-w-0 flex-1">
+                Vos propres livreurs ?{' '}
+                <Link href={target} className="text-primary font-semibold underline underline-offset-4">
+                    Configurer
+                </Link>
+            </p>
+            <button
+                type="button"
+                aria-label="Fermer ce message"
+                title="Fermer"
+                onClick={() => {
+                    setClosed(true);
+                    router.put(route('delivery-tip.dismiss'), {}, { preserveScroll: true, preserveState: true });
+                }}
+                className="text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring grid size-11 shrink-0 place-items-center rounded-lg focus-visible:ring-2 focus-visible:outline-none"
+            >
+                <X className="size-4" aria-hidden="true" />
+            </button>
+        </aside>
+    );
+}
+
+/** The period has no report: say so once, and offer the two ways to add one. */
+function NoActivity() {
+    return (
+        <section aria-labelledby="no-activity-title" className="glass flex flex-col items-center gap-4 rounded-2xl px-5 py-10 text-center">
+            <span aria-hidden="true" className="bg-muted text-muted-foreground grid size-12 place-items-center rounded-2xl">
+                <FileSpreadsheet className="size-6" />
             </span>
-            <div className="flex-1 space-y-1">
-                <h2 id="delivery-tip-title" className="text-base font-semibold">
-                    Vous livrez avec vos propres livreurs ?
+            <div className="space-y-1">
+                <h2 id="no-activity-title" className="text-lg font-semibold">
+                    Aucune activité sur cette période
                 </h2>
-                <p className="text-muted-foreground text-sm">
-                    CODCompta gère aussi votre propre équipe : livreurs, closeuses et leur paie, seule ou à côté de vos agences. Dites qui livre dans
-                    chaque pays.
-                </p>
+                <p className="text-muted-foreground text-[15px]">Ajoutez un rapport pour voir vos chiffres.</p>
             </div>
-            <div className="flex flex-wrap gap-2">
-                {shown.map((country) => (
-                    <Button key={country.id} asChild variant="outline">
-                        <Link href={route('reference.team.edit', country.id)}>{country.name} : qui livre ?</Link>
-                    </Button>
-                ))}
-                {countries.length > shown.length && (
-                    <Button asChild variant="outline">
-                        <Link href={route('reference.index')}>Autres pays</Link>
-                    </Button>
-                )}
-                <Button
-                    variant="ghost"
-                    disabled={closing}
-                    onClick={() => {
-                        setClosing(true);
-                        router.put(route('delivery-tip.dismiss'), {}, { preserveScroll: true, onFinish: () => setClosing(false) });
-                    }}
-                >
-                    Seulement des agences
+            <div className="flex flex-wrap justify-center gap-2.5">
+                <Button asChild>
+                    <Link href={route('reports.create')}>Saisir un rapport</Link>
+                </Button>
+                <Button asChild variant="outline">
+                    <Link href={route('messages.create')}>Coller un message WhatsApp</Link>
                 </Button>
             </div>
         </section>
@@ -531,67 +560,110 @@ const dayMonth = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long
  * What may make the figures wrong, with the action that fixes it. Shown before the results.
  */
 function PendingList({ items }: { items: Pending[] }) {
-    const total = items.reduce((sum, item) => sum + item.count, 0);
+    // Closed alerts disappear at once; the server keeps them closed on every device.
+    const [closed, setClosed] = useState<string[]>([]);
+    const [open, setOpen] = useState(false);
+    const shown = items.filter((item) => !closed.includes(item.key));
+    const total = shown.reduce((sum, item) => sum + item.count, 0);
 
+    if (shown.length === 0) {
+        return null;
+    }
+
+    const close = (keys: string[]) => {
+        setClosed((current) => [...current, ...keys]);
+        router.put(route('alerts.dismiss'), { keys }, { preserveScroll: true, preserveState: true, only: ['pending', 'overview'] });
+    };
+
+    // A single line, closed by default: the details open on demand, so the page stays light.
     return (
-        <section aria-labelledby="todo-title" className="bg-warning-bg/60 border-warning-fg/20 flex flex-col gap-3 rounded-2xl border p-4 md:p-5">
-            <h2 id="todo-title" className="flex items-center gap-2 font-[family-name:var(--font-sans)] text-base font-bold">
-                <CircleAlert className="text-warning-fg size-5 shrink-0" aria-hidden="true" />
-                {total > 1 ? `${total} choses à régler` : 'Une chose à régler'}
-            </h2>
-            <ul className="grid gap-2.5 md:grid-cols-[repeat(auto-fit,minmax(300px,1fr))]">
-                {items.map((item) => (
-                    <li key={`${item.kind}-${item.id ?? 'all'}`} className="bg-card flex items-center justify-between gap-3 rounded-xl px-4 py-3">
-                        <span className="text-[15px]">
-                            {(item.kind === 'report_missing' || item.kind === 'team_missing') && (
-                                <>
-                                    <strong>{item.kind === 'team_missing' ? 'Mon équipe' : item.agency}</strong> : rien depuis le{' '}
-                                    {dayMonth.format(new Date(`${item.date}T00:00:00Z`))}.
-                                </>
-                            )}
-                            {item.kind === 'message_parsed' && (
-                                <>
-                                    Message de <strong>{item.agency}</strong> lu, pas encore enregistré.
-                                </>
-                            )}
-                            {item.kind === 'message_failed' && (
-                                <>
-                                    Le message de <strong>{item.agency}</strong> du {dayMonth.format(new Date(`${item.date}T00:00:00Z`))} n'a pas pu
-                                    être lu.
-                                </>
-                            )}
-                            {item.kind === 'reports_to_verify' && (
-                                <>
-                                    {item.count > 1 ? `${item.count} rapports` : '1 rapport'} <strong>à vérifier</strong>, pas encore compté
-                                    {item.count > 1 ? 's' : ''}.
-                                </>
-                            )}
-                        </span>
-                        <Link
-                            href={
-                                item.kind === 'reports_to_verify'
-                                    ? route('reports.history', { statut: 'to_verify' })
-                                    : item.kind === 'report_missing'
-                                      ? route('messages.create')
-                                      : item.kind === 'team_missing'
-                                        ? route('reports.create')
-                                        : route('messages.show', item.id!)
-                            }
-                            className="text-primary inline-flex min-h-11 shrink-0 items-center font-bold whitespace-nowrap underline-offset-4 hover:underline"
-                        >
-                            {
+        <section aria-labelledby="todo-title" className="bg-warning-bg/60 border-warning-fg/20 rounded-2xl border">
+            <div className="flex items-center gap-1 py-1 pr-1 pl-3">
+                <button
+                    type="button"
+                    aria-expanded={open}
+                    aria-controls="todo-list"
+                    onClick={() => setOpen((value) => !value)}
+                    className="focus-visible:ring-ring flex min-h-11 flex-1 items-center gap-2 rounded-lg text-left text-[15px] font-semibold focus-visible:ring-2 focus-visible:outline-none"
+                >
+                    <CircleAlert className="text-warning-fg size-5 shrink-0" aria-hidden="true" />
+                    <span id="todo-title">{total > 1 ? `${total} choses à régler` : 'Une chose à régler'}</span>
+                    <ChevronDown className={cn('text-muted-foreground size-4 transition-transform', open && 'rotate-180')} aria-hidden="true" />
+                </button>
+                <button
+                    type="button"
+                    onClick={() => close(shown.map((item) => item.key))}
+                    aria-label="Masquer ces alertes"
+                    title="Masquer"
+                    className="text-muted-foreground hover:bg-card hover:text-foreground focus-visible:ring-ring grid size-11 shrink-0 place-items-center rounded-lg focus-visible:ring-2 focus-visible:outline-none"
+                >
+                    <X className="size-4" aria-hidden="true" />
+                </button>
+            </div>
+            {open && (
+                <ul id="todo-list" className="grid gap-2 px-3 pb-3 md:grid-cols-[repeat(auto-fit,minmax(300px,1fr))]">
+                    {shown.map((item) => (
+                        <li key={item.key} className="bg-card flex items-center gap-2 rounded-xl py-2 pr-1.5 pl-4">
+                            <span className="flex-1 text-[15px]">
+                                {(item.kind === 'report_missing' || item.kind === 'team_missing') && (
+                                    <>
+                                        <strong>{item.kind === 'team_missing' ? 'Équipe interne' : item.agency}</strong> : rien depuis le{' '}
+                                        {dayMonth.format(new Date(`${item.date}T00:00:00Z`))}.
+                                    </>
+                                )}
+                                {item.kind === 'message_parsed' && (
+                                    <>
+                                        Message de <strong>{item.agency}</strong> lu, pas encore enregistré.
+                                    </>
+                                )}
+                                {item.kind === 'message_failed' && (
+                                    <>
+                                        Le message de <strong>{item.agency}</strong> du {dayMonth.format(new Date(`${item.date}T00:00:00Z`))} n'a pas
+                                        pu être lu.
+                                    </>
+                                )}
+                                {item.kind === 'reports_to_verify' && (
+                                    <>
+                                        {item.count > 1 ? `${item.count} rapports` : '1 rapport'} <strong>à vérifier</strong>, pas encore compté
+                                        {item.count > 1 ? 's' : ''}.
+                                    </>
+                                )}
+                            </span>
+                            <Link
+                                href={
+                                    item.kind === 'reports_to_verify'
+                                        ? route('reports.history', { statut: 'to_verify' })
+                                        : item.kind === 'report_missing'
+                                          ? route('messages.create')
+                                          : item.kind === 'team_missing'
+                                            ? route('reports.create')
+                                            : route('messages.show', item.id!)
+                                }
+                                className="text-primary inline-flex min-h-11 shrink-0 items-center font-bold whitespace-nowrap underline-offset-4 hover:underline"
+                            >
                                 {
-                                    report_missing: 'Coller son message',
-                                    team_missing: 'Saisir le rapport',
-                                    message_parsed: 'Enregistrer',
-                                    message_failed: 'Relire',
-                                    reports_to_verify: 'Vérifier',
-                                }[item.kind]
-                            }
-                        </Link>
-                    </li>
-                ))}
-            </ul>
+                                    {
+                                        report_missing: 'Coller son message',
+                                        team_missing: 'Saisir le rapport',
+                                        message_parsed: 'Enregistrer',
+                                        message_failed: 'Relire',
+                                        reports_to_verify: 'Vérifier',
+                                    }[item.kind]
+                                }
+                            </Link>
+                            <button
+                                type="button"
+                                onClick={() => close([item.key])}
+                                aria-label="Masquer cette alerte"
+                                title="Masquer"
+                                className="text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring grid size-11 shrink-0 place-items-center rounded-lg focus-visible:ring-2 focus-visible:outline-none"
+                            >
+                                <X className="size-4" aria-hidden="true" />
+                            </button>
+                        </li>
+                    ))}
+                </ul>
+            )}
         </section>
     );
 }

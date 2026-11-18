@@ -104,4 +104,23 @@ class TeamController extends Controller
 
         return back();
     }
+
+    /**
+     * Closes alerts of Mes rapports with their cross. It comes back only if the situation changes.
+     */
+    public function dismissAlert(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'keys' => ['required', 'array', 'max:20'],
+            'keys.*' => ['required', 'string', 'max:100'],
+        ]);
+
+        $merchant = $this->merchantOf($request);
+
+        foreach ($data['keys'] as $key) {
+            $merchant->dismissAlert($key);
+        }
+
+        return back();
+    }
 }

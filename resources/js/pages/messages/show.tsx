@@ -1,6 +1,8 @@
 import FlashMessage from '@/components/flash-message';
 import InputError from '@/components/input-error';
 import { NativeSelect } from '@/components/native-select';
+import { adCostOf, buildAds, ProductAds } from '@/components/report-form/product-ads';
+import { type AdEntry, emptyAd, type SharedAd } from '@/components/report-form/use-report-form';
 import { DeleteButton } from '@/components/row-actions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,6 +39,7 @@ interface Proposal {
     warnings: string[];
     suggested_status: Status;
     recorded: { id: number; status: Status; revenue: number } | null;
+    shared_ads: SharedAd[];
 }
 
 interface Product {
@@ -78,6 +81,9 @@ type ProposalForm = {
     announced_total: string;
     note: string;
     lines: Line[];
+    /** Keyed by product id. */
+    ads: Record<string, AdEntry>;
+    no_ads: boolean;
 };
 
 const statusLabels: Record<Status, string> = {
@@ -308,7 +314,7 @@ function RecordedCard({ proposal }: { proposal: Proposal }) {
 }
 
 function ProposalCard({ proposal, products, agencyId, messageId }: { proposal: Proposal; products: Product[]; agencyId: number; messageId: number }) {
-    const { data, setData, post, processing, errors } = useForm<ProposalForm>({
+    const { data, setData, post, processing, errors, transform } = useForm<ProposalForm>({
         agency_id: agencyId,
         raw_message_id: messageId,
         period_start: proposal.period_start,
@@ -325,6 +331,8 @@ function ProposalCard({ proposal, products, agencyId, messageId }: { proposal: P
             quantity: String(line.quantity),
             amount: String(line.amount),
         })),
+        ads: {},
+        no_ads: false,
     });
 
     const fieldError = (key: string) => (errors as Record<string, string | undefined>)[key];
@@ -339,6 +347,23 @@ function ProposalCard({ proposal, products, agencyId, messageId }: { proposal: P
     const sales = data.lines.reduce((sum, line) => sum + toNumber(line.amount), 0);
     const purchaseCost = data.lines.reduce((sum, line) => sum + toNumber(line.quantity) * (productById(line.product_id)?.unit_cost ?? 0), 0);
     const fees = toNumber(data.delivery_fees) + toNumber(data.closing_fees) + toNumber(data.other_fees);
+
+    // The ad of each product, typed while checking the report, as on "Saisir un rapport".
+    const adProductIds = [...new Set(data.lines.map((line) => line.product_id).filter((id) => id !== ''))];
+    const sharedAdOf = (productId: string) => proposal.shared_ads.find((ad) => String(ad.product_id) === productId);
+    const sentAds = buildAds(adProductIds, data.ads, data.no_ads, sharedAdOf);
+    const adSpend = adProductIds.reduce((sum, id) => sum + adCostOf(data.ads[id] ?? emptyAd, sharedAdOf(id), data.no_ads), 0);
+    const adError = (productId: string, field: string) => {
+        const index = sentAds.findIndex((ad) => ad.product_id === productId);
+
+        return index === -1 ? undefined : fieldError(`ads.${index}.${field}`);
+    };
+
+    transform((current) => ({
+        ...current,
+        ads: buildAds([...new Set(current.lines.map((line) => line.product_id).filter((id) => id !== ''))], current.ads, current.no_ads, sharedAdOf),
+    }));
+
     const mismatch = data.announced_total !== '' && toNumber(data.announced_total) !== sales;
 
     const submit: FormEventHandler = (e) => {
@@ -453,7 +478,7 @@ function ProposalCard({ proposal, products, agencyId, messageId }: { proposal: P
                         </div>
                         <div className="grid gap-1">
                             <Label htmlFor={`${titleId}-amount-${index}`} className="text-muted-foreground text-xs">
-                                Argent encaissé (F)
+                                Encaissé (F)
                             </Label>
                             <Input
                                 id={`${titleId}-amount-${index}`}
@@ -493,6 +518,18 @@ function ProposalCard({ proposal, products, agencyId, messageId }: { proposal: P
                     Ajouter une ligne
                 </Button>
             </div>
+
+            <ProductAds
+                idPrefix={titleId}
+                productIds={adProductIds}
+                productName={(id) => productById(id)?.name ?? 'Produit'}
+                ads={data.ads}
+                onChange={(productId, changes) => setData('ads', { ...data.ads, [productId]: { ...(data.ads[productId] ?? emptyAd), ...changes } })}
+                noAds={data.no_ads}
+                onNoAds={(value) => setData('no_ads', value)}
+                sharedAdOf={sharedAdOf}
+                errorFor={adError}
+            />
 
             <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
                 <Money
@@ -540,9 +577,13 @@ function ProposalCard({ proposal, products, agencyId, messageId }: { proposal: P
                         <dd className="font-[family-name:var(--font-display)] text-lg font-bold tabular-nums">{formatFcfa(sales)}</dd>
                     </div>
                     <div>
-                        <dt className="text-muted-foreground text-xs">Reste avant publicité</dt>
+                        <dt className="text-muted-foreground text-xs">Publicité</dt>
+                        <dd className="font-[family-name:var(--font-display)] text-lg font-bold tabular-nums">{formatFcfa(adSpend)}</dd>
+                    </div>
+                    <div>
+                        <dt className="text-muted-foreground text-xs">Bénéfice net</dt>
                         <dd className="font-[family-name:var(--font-display)] text-lg font-bold tabular-nums">
-                            {formatFcfa(sales - purchaseCost - fees)}
+                            {formatFcfa(sales - purchaseCost - fees - adSpend)}
                         </dd>
                     </div>
                 </dl>

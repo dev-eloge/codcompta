@@ -150,15 +150,15 @@ export default function ReferenceIndex({ countries, products, today }: Props) {
 }
 
 const deliveryChoices: { value: Country['delivery_mode']; title: string; help: string }[] = [
-    { value: 'agency', title: 'Une agence', help: 'Elle garde le stock, livre et vous envoie son rapport.' },
-    { value: 'team', title: 'Ma propre équipe', help: 'Vos livreurs et closeuses, payés par vous.' },
-    { value: 'both', title: 'Les deux', help: 'Une partie par votre équipe, une partie par une agence.' },
+    { value: 'agency', title: 'Agence de livraison', help: 'Elle garde le stock, livre et vous envoie son rapport.' },
+    { value: 'team', title: 'Équipe interne', help: 'Vos livreurs et closeuses, payés par vous.' },
+    { value: 'both', title: 'Agence et équipe interne', help: 'Une partie par votre équipe, une partie par une agence.' },
 ];
 
 const deliveryLabel: Record<Country['delivery_mode'], string> = {
-    agency: 'une agence',
-    team: 'mon équipe',
-    both: 'agence et équipe',
+    agency: 'agence',
+    team: 'équipe interne',
+    both: 'agence et équipe interne',
 };
 
 function CountryForm() {
@@ -201,7 +201,7 @@ function CountryForm() {
                 Le code à 2 lettres du pays : TG, SN, CI, BJ…
             </p>
             <fieldset className="grid gap-2">
-                <legend className="mb-1 text-sm font-semibold">Qui livre vos commandes dans ce pays ?</legend>
+                <legend className="mb-1 text-sm font-semibold">Mode de livraison</legend>
                 {deliveryChoices.map((choice) => (
                     <label
                         key={choice.value}
@@ -399,7 +399,7 @@ function CountryCard({ country, countries }: { country: Country; countries: Coun
                         href={route('reference.team.edit', country.id)}
                         className="text-primary hover:bg-accent inline-flex min-h-11 items-center rounded-xl px-3 text-sm font-bold underline-offset-4 hover:underline"
                     >
-                        Qui livre : {deliveryLabel[country.delivery_mode]}
+                        Livraison : {deliveryLabel[country.delivery_mode]}
                     </Link>
                     <EditButton
                         label={`Modifier le pays ${country.name}`}

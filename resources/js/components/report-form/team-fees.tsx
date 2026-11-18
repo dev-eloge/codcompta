@@ -39,7 +39,7 @@ export function TeamFees({ form, idPrefix = '' }: { form: ReportFormState; idPre
 
             {selectedAgency.couriers.length > 0 && (
                 <MemberCounts
-                    title="Qui a livré aujourd'hui ?"
+                    title="Livraisons du jour, par livreur"
                     type="courier"
                     members={selectedAgency.couriers}
                     form={form}

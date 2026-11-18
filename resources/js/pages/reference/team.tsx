@@ -33,9 +33,9 @@ type TeamForm = {
 };
 
 const deliveryChoices: { value: DeliveryMode; title: string; help: string }[] = [
-    { value: 'agency', title: 'Une agence de livraison', help: 'Elle garde le stock, livre et vous envoie son rapport.' },
-    { value: 'team', title: 'Ma propre équipe', help: 'Vos livreurs, payés par vous. Vous gardez le stock.' },
-    { value: 'both', title: 'Les deux', help: 'Une partie par vos livreurs, une partie par une agence.' },
+    { value: 'agency', title: 'Agence de livraison', help: 'Elle garde le stock, livre et vous envoie son rapport.' },
+    { value: 'team', title: 'Équipe interne', help: 'Vos livreurs, payés par vous. Vous gardez le stock.' },
+    { value: 'both', title: 'Agence et équipe interne', help: 'Une partie par vos livreurs, une partie par une agence.' },
 ];
 
 const toRow = (member: TeamMember): MemberRow => ({
@@ -48,7 +48,7 @@ const money = (value: number) => (value === 0 ? '' : String(value));
 const toNumber = (value: string) => (value === '' ? 0 : Number(value));
 
 export default function Team({ country, couriers, closers }: Props) {
-    const title = `${country.name} : mon équipe`;
+    const title = `${country.name} : livraison`;
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Pays, livraison et produits', href: '/referentiel' },
         { title, href: `/referentiel/pays/${country.id}/equipe` },
@@ -88,9 +88,7 @@ export default function Team({ country, couriers, closers }: Props) {
 
                 <section className="glass rounded-2xl p-5 md:p-6">
                     <fieldset className="flex flex-col gap-3">
-                        <legend className="mb-3 text-lg font-bold">
-                            Qui livre vos commandes {/^[aeiouéèh]/i.test(country.name) ? 'en' : 'au'} {country.name} ?
-                        </legend>
+                        <legend className="mb-3 text-lg font-bold">Mode de livraison</legend>
                         <div className="grid gap-3 md:grid-cols-3">
                             {deliveryChoices.map((choice) => (
                                 <ChoiceCard
